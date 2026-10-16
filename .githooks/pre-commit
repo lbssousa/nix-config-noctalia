@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+FLAKE_ROOT="$(git rev-parse --show-toplevel)"
+cd "$FLAKE_ROOT"
+
+# Collect only the staged .nix files for the commit
+STAGED_NIX=$(git diff --cached --name-only --diff-filter=ACMR | grep '\.nix$' || true)
+
+if [[ -z "$STAGED_NIX" ]]; then
+  exit 0
+fi
+
+echo "🔍 Checking staged Nix files..."
+
+# Runs a nix command capturing stderr separately.
+# Fails if the exit code is != 0 OR if stderr contains evaluation warnings (^warning:).
+nix_check() {
+  local label="$1"
+  shift
+  local stderr_tmp
+  stderr_tmp=$(mktemp)
+  "$@" 2>"$stderr_tmp"
+  local exit_code=$?
+  if grep -q "^warning:" "$stderr_tmp"; then
+    cat "$stderr_tmp" >&2
+    echo "  ⚠️  Evaluation warnings detected in: ${label}" >&2
+    rm -f "$stderr_tmp"
+    return 1
+  fi
+  if [[ -s "$stderr_tmp" ]]; then
+    cat "$stderr_tmp" >&2
+  fi
+  rm -f "$stderr_tmp"
+  return "$exit_code"
+}
+
+# 1. Formatting
+echo "  → nixfmt (format)"
+# shellcheck disable=SC2086
+if ! nix_check "nixfmt" nix run nixpkgs#nixfmt -- --check $STAGED_NIX; then
+  echo ""
+  echo "❌ Files with incorrect formatting or evaluation warnings. Run to fix:"
+  echo "   nix run nixpkgs#nixfmt -- $STAGED_NIX"
+  echo "   (or: just fmt)"
+  exit 1
+fi
+
+# 2. Static lint
+echo "  → statix (lint)"
+if ! nix_check "statix" nix run nixpkgs#statix -- check .; then
+  echo ""
+  echo "❌ Lint errors (statix). Run to see details:"
+  echo "   just lint"
+  exit 1
+fi
+
+# 3. Dead code
+echo "  → deadnix (dead code)"
+if ! nix_check "deadnix" nix run nixpkgs#deadnix -- --fail .; then
+  echo ""
+  echo "❌ Dead code detected (deadnix). Run to see details:"
+  echo "   just deadcode"
+  exit 1
+fi
+
+echo "✅ Nix validations passed."

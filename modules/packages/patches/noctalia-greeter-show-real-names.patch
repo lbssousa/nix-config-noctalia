@@ -1,0 +1,273 @@
+diff --git a/docs/user/configuration.md b/docs/user/configuration.md
+index 6cd75ef..3a83841 100644
+--- a/docs/user/configuration.md
++++ b/docs/user/configuration.md
+@@ -54,6 +54,7 @@ Set these keys in `greeter.toml`. A command-line `--session` or `--user` value t
+ | `[appearance].scheme` | Color scheme: `Synced` or a built-in name such as `Noctalia` |
+ | `[appearance].password_style` | Password mask: `default` or `random` |
+ | `[appearance].hide_logo` | Hide the Noctalia brand logo |
++| `[appearance].show_real_names` | Show each user's AccountsService/GECOS full name in the picker instead of their username, falling back to the username when none is known |
+ | `[appearance].power_buttons_position` | Power controls: `bottom-right` (default), `bottom-left`, `top-left`, `top-right`, or `hidden` |
+ | `[appearance].scheme_selector_position` | Scheme picker: `top-right` (default), `top-left`, `bottom-left`, `bottom-right`, or `hidden` |
+ | `[appearance].theme_mode` | Theme mode for the Synced appearance, such as `dark` |
+diff --git a/examples/greeter.toml b/examples/greeter.toml
+index 84f1638..f4d3898 100644
+--- a/examples/greeter.toml
++++ b/examples/greeter.toml
+@@ -27,6 +27,9 @@ scheme = "Synced"
+ password_style = "random"
+ # Hide the Noctalia brand logo on the login screen.
+ hide_logo = false
++# Show each user's AccountsService/GECOS full name instead of their username,
++# falling back to the username when no full name is known.
++show_real_names = false
+ # Power controls: bottom-right (default), bottom-left, top-left, top-right, or hidden.
+ power_buttons_position = "bottom-right"
+ # Scheme picker: top-right (default), top-left, bottom-left, bottom-right, or hidden.
+diff --git a/src/accounts/accounts_icon.cpp b/src/accounts/accounts_icon.cpp
+index e2b895d..3e22b8c 100644
+--- a/src/accounts/accounts_icon.cpp
++++ b/src/accounts/accounts_icon.cpp
+@@ -128,6 +128,7 @@ namespace accounts {
+           entry.iconPath = *icon;
+         }
+       }
++      entry.realName = dbusUserStringProperty(connection, userPath, "RealName");
+       users.push_back(std::move(entry));
+     }
+     g_variant_iter_free(pathIter);
+diff --git a/src/accounts/accounts_icon.h b/src/accounts/accounts_icon.h
+index 10a5cc7..d568fae 100644
+--- a/src/accounts/accounts_icon.h
++++ b/src/accounts/accounts_icon.h
+@@ -11,6 +11,7 @@ namespace accounts {
+     std::string username;
+     uid_t uid = 0;
+     std::string iconPath;
++    std::optional<std::string> realName;
+   };
+ 
+   // Users known to org.freedesktop.Accounts (ListCachedUsers), including
+diff --git a/src/greeter/greeter_config_io.cpp b/src/greeter/greeter_config_io.cpp
+index e1cf03f..d45dbf5 100644
+--- a/src/greeter/greeter_config_io.cpp
++++ b/src/greeter/greeter_config_io.cpp
+@@ -65,6 +65,7 @@ namespace {
+     return key == "scheme"
+         || key == "password_style"
+         || key == "hide_logo"
++        || key == "show_real_names"
+         || key == "power_buttons_position"
+         || key == "scheme_selector_position"
+         || key == "theme_mode"
+@@ -228,6 +229,10 @@ namespace {
+             if (const auto value = entryNode.value<bool>()) {
+               config.appearanceHideLogo = *value;
+             }
++          } else if (entryView == "show_real_names") {
++            if (const auto value = entryNode.value<bool>()) {
++              config.appearanceShowRealNames = *value;
++            }
+           } else if (entryView == "power_buttons_position") {
+             config.appearancePowerButtonsPosition = stringValue(entryNode);
+           } else if (entryView == "scheme_selector_position") {
+@@ -497,6 +502,9 @@ namespace {
+     if (config.appearanceHideLogo.has_value()) {
+       appearance.insert_or_assign("hide_logo", *config.appearanceHideLogo);
+     }
++    if (config.appearanceShowRealNames.has_value()) {
++      appearance.insert_or_assign("show_real_names", *config.appearanceShowRealNames);
++    }
+     insertString(
+         appearance, "power_buttons_position", config.appearancePowerButtonsPosition,
+         [](toml::table& table, std::string_view key, const std::string& value) {
+@@ -936,8 +944,8 @@ namespace greeter::config {
+     out << "# and output layout/transforms when not set here. Session power actions/menu entries are\n";
+     out << "# Sync-only (sync.toml [session.power]/[[session.actions]]) and are not settable here.\n";
+     out << "# [session] default, [user] default\n";
+-    out << "# [appearance] scheme, password_style, hide_logo, power_buttons_position, scheme_selector_position, "
+-           "theme_mode, corner_radius_scale, font_family\n";
++    out << "# [appearance] scheme, password_style, hide_logo, show_real_names, power_buttons_position, "
++           "scheme_selector_position, theme_mode, corner_radius_scale, font_family\n";
+     out << "# [appearance.palette] full color role table, [appearance.wallpaper] path/fill_mode/fill_color\n";
+     out << "# [appearance.wallpapers.<connector>] per-output wallpaper overrides\n";
+     out << "# [output] name/layout/scale/scales/width/height/refresh_rate/transforms, "
+diff --git a/src/greeter/greeter_config_store.h b/src/greeter/greeter_config_store.h
+index 919522d..7cac8dd 100644
+--- a/src/greeter/greeter_config_store.h
++++ b/src/greeter/greeter_config_store.h
+@@ -46,6 +46,7 @@ namespace greeter::config {
+     std::optional<std::string> appearanceScheme;
+     std::optional<std::string> appearancePasswordStyle;
+     std::optional<bool> appearanceHideLogo;
++    std::optional<bool> appearanceShowRealNames;
+     // UI element positioning: "hidden", "bottom-left", "bottom-right", "top-left", "top-right"
+     std::optional<std::string> appearancePowerButtonsPosition;
+     std::optional<std::string> appearanceSchemeSelectorPosition;
+diff --git a/src/greeter/greeter_preferences.cpp b/src/greeter/greeter_preferences.cpp
+index eaa8cdd..d78a437 100644
+--- a/src/greeter/greeter_preferences.cpp
++++ b/src/greeter/greeter_preferences.cpp
+@@ -453,6 +453,9 @@ namespace greeter {
+     if (file.appearanceHideLogo.has_value()) {
+       prefs.hideLogo = *file.appearanceHideLogo;
+     }
++    if (file.appearanceShowRealNames.has_value()) {
++      prefs.showRealNames = *file.appearanceShowRealNames;
++    }
+     prefs.powerButtonsPosition = file.appearancePowerButtonsPosition;
+     prefs.schemeSelectorPosition = file.appearanceSchemeSelectorPosition;
+     if (file.authAllowEmptyPassword.has_value()) {
+diff --git a/src/greeter/greeter_preferences.h b/src/greeter/greeter_preferences.h
+index 9b53a89..c32ec5d 100644
+--- a/src/greeter/greeter_preferences.h
++++ b/src/greeter/greeter_preferences.h
+@@ -33,6 +33,7 @@ namespace greeter {
+     bool allowEmptyPassword = false;
+     int authRequestTimeoutSec = 60;
+     bool hideLogo = false;
++    bool showRealNames = false;
+     // UI element positioning: "hidden", "bottom-left", "bottom-right", "top-left", "top-right"
+     std::optional<std::string> powerButtonsPosition;
+     std::optional<std::string> schemeSelectorPosition;
+diff --git a/src/greeter/greeter_surface.cpp b/src/greeter/greeter_surface.cpp
+index 1e709b1..ecf42ca 100644
+--- a/src/greeter/greeter_surface.cpp
++++ b/src/greeter/greeter_surface.cpp
+@@ -113,6 +113,23 @@ namespace {
+             || sym == XKB_KEY_U);
+   }
+ 
++  // GECOS convention: full name is the first comma-separated field, may be empty.
++  [[nodiscard]] std::string gecosDisplayName(const char* gecos) {
++    if (gecos == nullptr) {
++      return {};
++    }
++    const std::string_view field(gecos, std::strcspn(gecos, ","));
++    std::size_t begin = 0;
++    while (begin < field.size() && std::isspace(static_cast<unsigned char>(field[begin])) != 0) {
++      ++begin;
++    }
++    std::size_t end = field.size();
++    while (end > begin && std::isspace(static_cast<unsigned char>(field[end - 1])) != 0) {
++      --end;
++    }
++    return std::string(field.substr(begin, end - begin));
++  }
++
+   void appendDummyUsers(std::vector<std::string>& users, std::vector<uid_t>& uids) {
+     const char* dummyEnv = std::getenv("NOCTALIA_GREETER_DUMMY_USERS");
+     if (dummyEnv == nullptr) {
+@@ -661,6 +678,7 @@ void GreeterSurface::applyInitialUserSelection() {
+     m_users.push_back(*initialUser);
+     m_userUids.push_back(0);
+     m_userIconPaths.push_back("");
++    m_userDisplayNames.push_back(*initialUser);
+     m_selectedUser = m_users.size() - 1;
+     setUsername(*initialUser);
+     m_passwordVisible = true;
+@@ -1091,7 +1109,7 @@ void GreeterSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
+   const float headerGlyphSize = Style::scaled(kHeaderUserIconBase) * glyphScale;
+ 
+   if (m_passwordVisible && !m_users.empty() && m_selectedUser < m_users.size()) {
+-    m_formSubtitleLabel->setText(m_users[m_selectedUser]);
++    m_formSubtitleLabel->setText(m_userDisplayNames[m_selectedUser]);
+     m_formSubtitleLabel->setVisible(true);
+   } else {
+     m_formSubtitleLabel->setVisible(false);
+@@ -1699,10 +1717,12 @@ void GreeterSurface::loadUsers() {
+   m_users.clear();
+   m_userUids.clear();
+   m_userIconPaths.clear();
++  m_userDisplayNames.clear();
+   static const std::unordered_set<std::string> kHiddenSystemUsers = {
+       "greeter", "greetd", "sddm", "lightdm", "gdm", "nobody",
+   };
+ 
++  const bool showRealNames = greeter::loadGreeterPreferences().showRealNames;
+   std::unordered_set<std::string> seen;
+ 
+   // Prefer AccountsService cached users (same source as ReGreet) so FreeIPA /
+@@ -1719,6 +1739,7 @@ void GreeterSurface::loadUsers() {
+     m_users.push_back(cached.username);
+     m_userUids.push_back(cached.uid);
+     m_userIconPaths.push_back(cached.iconPath);
++    m_userDisplayNames.push_back(showRealNames ? cached.realName.value_or(cached.username) : cached.username);
+   }
+   if (!cachedUsers.empty()) {
+     kLog.info("AccountsService: {} cached user(s), {} after filters", cachedUsers.size(), m_users.size());
+@@ -1754,6 +1775,14 @@ void GreeterSurface::loadUsers() {
+     m_users.push_back(user);
+     m_userUids.push_back(uid);
+     m_userIconPaths.push_back(accounts::iconFileForUid(uid).value_or(""));
++    std::string displayName = user;
++    if (showRealNames) {
++      std::string gecos = gecosDisplayName(pw->pw_gecos);
++      if (!gecos.empty()) {
++        displayName = std::move(gecos);
++      }
++    }
++    m_userDisplayNames.push_back(std::move(displayName));
+   }
+   ::endpwent();
+ 
+@@ -1765,12 +1794,16 @@ void GreeterSurface::loadUsers() {
+     m_users.push_back("greeter");
+     m_userUids.push_back(0);
+     m_userIconPaths.push_back("");
++    m_userDisplayNames.push_back("greeter");
+   }
+ 
+   appendDummyUsers(m_users, m_userUids);
+   while (m_userIconPaths.size() < m_users.size()) {
+     m_userIconPaths.push_back("");
+   }
++  while (m_userDisplayNames.size() < m_users.size()) {
++    m_userDisplayNames.push_back(m_users[m_userDisplayNames.size()]);
++  }
+ 
+   m_selectedUser = 0;
+   setUsername(m_users[m_selectedUser]);
+@@ -1783,7 +1816,9 @@ void GreeterSurface::loadSessions() {
+ 
+ void GreeterSurface::refreshSelectionLabels() {
+   if (m_userSelectLabel != nullptr) {
+-    const std::string userLabel = m_users.empty() ? "(none)" : m_users[std::min(m_selectedUser, m_users.size() - 1)];
++    const std::string userLabel = m_userDisplayNames.empty()
++        ? "(none)"
++        : m_userDisplayNames[std::min(m_selectedUser, m_userDisplayNames.size() - 1)];
+     m_userSelectLabel->setText(userLabel);
+     m_userSelectLabel->setColor(colorForRole(ColorRole::OnSurface));
+   }
+@@ -3208,7 +3243,7 @@ void GreeterSurface::refreshUserMenuRows() {
+ 
+   float contentW = anchorW;
+   for (const std::size_t userIndex : m_userMenuFilteredIndices) {
+-    const float textW = renderer->measureText(m_users[userIndex], Style::fontSizeBody()).width;
++    const float textW = renderer->measureText(m_userDisplayNames[userIndex], Style::fontSizeBody()).width;
+     contentW = std::max(contentW, rowIconReserve + textW + 2.0f * kUserMenuPadding);
+   }
+   const float screenW = m_root.width();
+@@ -3335,7 +3370,7 @@ void GreeterSurface::refreshUserMenuRows() {
+ 
+     auto label = std::make_unique<Label>();
+     auto* labelPtr = label.get();
+-    labelPtr->setText(m_users[userIndex]);
++    labelPtr->setText(m_userDisplayNames[userIndex]);
+     labelPtr->setFontSize(Style::fontSizeBody());
+     labelPtr->setColor(colorForRole(ColorRole::OnSurface));
+     labelPtr->setZIndex(52);
+diff --git a/src/greeter/greeter_surface.h b/src/greeter/greeter_surface.h
+index 148b7d2..a41aea7 100644
+--- a/src/greeter/greeter_surface.h
++++ b/src/greeter/greeter_surface.h
+@@ -288,6 +288,9 @@ class GreeterSurface {
+   std::vector<std::string> m_users;
+   std::vector<uid_t> m_userUids;
+   std::vector<std::string> m_userIconPaths;
++  // Display text per user, index-aligned with m_users. Holds the AccountsService/GECOS
++  // real name when [appearance] show_real_names is set and one is known, else the username.
++  std::vector<std::string> m_userDisplayNames;
+   std::vector<greeter::SessionOption> m_sessions;
+   std::size_t m_selectedUser = 0;
+   std::size_t m_selectedSession = 0;

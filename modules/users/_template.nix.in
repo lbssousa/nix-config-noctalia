@@ -1,0 +1,9 @@
+# Modelo usado pelo scripts/install.sh para criar modules/users/<usuario>.nix
+# (@USERNAME@, @UID@ e @SUDO@ são substituídos pelo script).
+{
+  my.users.@USERNAME@ = {
+    uid = @UID@;
+    sudo = @SUDO@;
+    home = { };
+  };
+}
