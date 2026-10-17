@@ -2,8 +2,9 @@
   flake.modules.nixos.yubikey =
     # System support for YubiKey/SmartCard (pcscd) and, opt-in, FIDO2/U2F auth.
     #
-    # PC/SC (smartcard access), fingerprint PAM wiring, and gnome-keyring are
-    # always on — they're independent of FIDO2/U2F. The pam_u2f-based PAM/PolKit
+    # PC/SC (smartcard access) and fingerprint PAM wiring are always on —
+    # they're independent of FIDO2/U2F. The Secret Service (oo7) lives in
+    # desktop/secret-service.nix. The pam_u2f-based PAM/PolKit
     # authentication itself (security.pam.u2f + the per-service u2f.enable
     # flags) is gated behind security.fido2Auth.enable, disabled by default:
     # enable it per-host once a YubiKey is actually enrolled
@@ -34,10 +35,9 @@
 
       config = lib.mkMerge [
         {
-          # Always on: PC/SC daemon (YubiKey PIV/OpenPGP, smartcards) and the
-          # secret-service keyring daemon — unrelated to FIDO2/U2F.
+          # Always on: PC/SC daemon (YubiKey PIV/OpenPGP, smartcards) —
+          # unrelated to FIDO2/U2F.
           services.pcscd.enable = true;
-          services.gnome.gnome-keyring.enable = true;
 
           security.pam.services = {
             # Sudo: fingerprint (sufficient) → password.
@@ -68,12 +68,6 @@
                 order = 500;
               };
             };
-
-            # TTY login (getty): password, keyring unlock on success.
-            # Note: nixpkgs' gdm.nix explicitly sets login.fprintAuth = false,
-            # since GNOME uses gdm-fingerprint as a separate PAM service for
-            # fingerprints.
-            login.enableGnomeKeyring = true;
 
             # polkit/pkexec: fingerprint (sufficient) → password.
             # fprintd order 10700: before yubikey-notify (10850) and pam_u2f (10900).

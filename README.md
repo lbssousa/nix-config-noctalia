@@ -77,7 +77,8 @@ lugar para ajustes locais do próprio usuário, que o Nix nunca apaga:
 Overrides **declarativos** por usuário ficam em `modules/users/<nome>.nix`
 (`home = { … }`); os módulos base usam `lib.mkDefault`, então esse arquivo vence.
 Exemplos: o dock da Noctalia é ligado para todos e desligado para o `abutre`;
-o leitor de PDF é Papers para todos e Zathura para o `abutre`.
+o leitor de PDF é Papers para todos e Zathura para o `abutre`; o gerenciador
+de arquivos é Nautilus para todos e flea para o `abutre`.
 
 ## Desktop
 
@@ -115,7 +116,7 @@ o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 |---|---|---|---|
 | `Super+Return` | terminal (ghostty) | `Super+Space` | launcher |
 | `Super+Shift+B` | Firefox | `Super+Alt+Space` | central de controle |
-| `Super+Shift+F` | flea (arquivos) | `Super+Escape` | menu de sessão |
+| `Super+Shift+F` | arquivos (Nautilus; flea para o `abutre`) | `Super+Escape` | menu de sessão |
 | `Super+Shift+N` | neovim | `Super+K` | cheatsheet de atalhos |
 | `Super+Alt+Return` | tmux | `Super+Ctrl+V` | histórico do clipboard |
 | `Super+Ctrl+Return` | herdr | `Super+Ctrl+E` | emojis |

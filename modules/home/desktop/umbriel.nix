@@ -79,7 +79,8 @@
           "Mod+Shift+Return" = once "spawn:firefox";
           "Mod+Shift+B" = once "spawn:firefox";
           "Mod+Shift+Alt+B" = once "spawn:firefox --private-window";
-          "Mod+Shift+F" = once "spawn:flea --gui";
+          # Gerenciador de arquivos padrão do usuário (my.fileManager).
+          "Mod+Shift+F" = once "spawn:${pkgs.gtk3}/bin/gtk-launch ${config.my.fileManager}";
           "Mod+Shift+N" = once "spawn:${cfg.terminal} -e nvim";
           "Mod+Shift+D" = once "spawn:${cfg.terminal} -e lazydocker";
           "Mod+Shift+Slash" = once "spawn:flatpak run com.bitwarden.desktop";

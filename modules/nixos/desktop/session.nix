@@ -28,9 +28,6 @@
         };
       };
 
-      # Chaveiro (Secret Service) desbloqueado no login gráfico.
-      security.pam.services.greetd.enableGnomeKeyring = true;
-
       hardware.bluetooth.powerOnBoot = true;
 
       xdg.portal = {
