@@ -1,13 +1,13 @@
 # libfprint with support for the Goodix 538d sensor (lbssousa fork)
-# Fork: https://github.com/lbssousa/libfprint (branch: goodix-538d-sigfm-gtls)
-# Based on libfprint 1.94.10 with Goodix TLS drivers and the SIGFM matcher (OpenCV).
+# Fork: https://github.com/lbssousa/libfprint (tag v1.94.100-goodix538d.1)
+# Based on libfprint 1.94.100 with Goodix TLS drivers and the SIGFM matcher.
 #
 # Drivers included beyond upstream:
 #   - goodixtls511  – Goodix 5110
 #   - goodixtls52xd – Goodix 52xd family
 #   - goodixtls53xd – Goodix 53xd family (includes 538d, USB 27c6:538d)
 #
-# The SIGFM matcher (sigfm/sigfm.cpp) uses OpenCV to capture small-area
+# The SIGFM matcher (reimplemented in C, no OpenCV) handles small-area
 # fingerprints where the standard minutiae matcher fails.
 {
   lib,
@@ -28,18 +28,17 @@
   docbook-xsl-nons,
   docbook_xml_dtd_43,
   openssl,
-  opencv4,
 }:
 
 stdenv.mkDerivation {
   pname = "libfprint-goodix";
-  version = "1.94.10-unstable-2026-08-27";
+  version = "1.94.100-goodix538d.1";
 
   src = fetchFromGitHub {
     owner = "lbssousa";
     repo = "libfprint";
-    rev = "4d9acb0013dd84903a9d1a16241a8fe2d4b2bf9c";
-    hash = "sha256-/+aAb2PfO+LCN3rmCi/LULgBcQnhocfr6TYpasmYY0A=";
+    tag = "v1.94.100-goodix538d.1";
+    hash = "sha256-9XLMdgyVQ0jHvjn+zqNeRXUAD1bsICgwUtu94CV5ICM=";
   };
 
   postPatch = ''
@@ -70,7 +69,6 @@ stdenv.mkDerivation {
     cairo
     libgudev
     openssl
-    opencv4
   ];
 
   mesonFlags = [
