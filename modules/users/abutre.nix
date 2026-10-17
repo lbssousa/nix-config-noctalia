@@ -42,8 +42,9 @@
           };
         };
 
-        # Chave age pessoal (sops-nix do HM), copiada do repositório nix-keys
-        # (git-crypt, desbloqueado com a chave GPG da YubiKey). Sem ela, os
+        # Chave age pessoal (sops-nix do HM). Na instalação pelo Bitwarden, o
+        # install.sh já a grava; com o nix-keys (git-crypt, desbloqueado com a
+        # chave GPG da YubiKey), esta ativação a copia de lá. Sem ela, os
         # segredos do HM simplesmente não são instalados até o próximo switch.
         sops.age.keyFile = personalAgeKey;
 
@@ -62,7 +63,7 @@
             if [ -f "$src" ] && ${pkgs.gnugrep}/bin/grep -q '^AGE-SECRET-KEY-' "$src"; then
               run ${pkgs.coreutils}/bin/install -Dm600 "$src" ${lib.escapeShellArg personalAgeKey}
             elif [ ! -f ${lib.escapeShellArg personalAgeKey} ]; then
-              warnEcho "Chave age pessoal ausente: clone e desbloqueie o nix-keys (git-crypt unlock) e rode o switch de novo."
+              warnEcho "Chave age pessoal ausente: copie AGE_KEY_ABUTRE do Bitwarden (secretspec get AGE_KEY_ABUTRE -P install) ou clone e desbloqueie o nix-keys, e rode o switch de novo."
             fi
           '';
         };

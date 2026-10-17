@@ -2,6 +2,8 @@
 # install.sh — Automated NixOS installation script
 #
 # Automates the steps described in INSTALLATION.md:
+#   0a. (--age-keys-from-bitwarden) Fetches the age keys and the GitHub SSH
+#       key from Bitwarden via SecretSpec, as the calling user
 #   0b. Clones and unlocks the nix-keys repository via git-crypt
 #   1.  Selects the host and target disk
 #   3.  Partitions and formats the disk with disko (Btrfs + LUKS + LVM, tmpfs root)
@@ -11,6 +13,7 @@
 #   6a. Creates the sbctl Secure Boot keys (all hosts use Secure Boot)
 #   6b. Copies the sops-nix system age key to /persist
 #   7.  Installs NixOS
+#   7b. (--age-keys-from-bitwarden) Copies each user's personal age key
 #   8.  Asks, for each user, whether to set a password now or on first login
 #   8b. Registers the YubiKey for U2F authentication (pamu2fcfg)
 #   9.  Home Manager is already activated by nixos-install (NixOS module)
@@ -21,6 +24,7 @@
 #                           [--user "login2:Name2:nosudo"] ...
 #                           [--nix-keys-dir <path>]
 #                           [--age-keys-backup <file>]
+#                           [--age-keys-from-bitwarden]
 #                           [--non-interactive]
 #                           [--help]
 #
@@ -39,6 +43,12 @@
 #                       (sops-nix). Alternative to --nix-keys-dir when you only have
 #                       the key file without the full repository. Copied to
 #                       /persist/etc/sops/age/keys.txt on the installed system.
+#   --age-keys-from-bitwarden
+#                       Reads the age keys (system and per user) and the GitHub
+#                       SSH key from Bitwarden, through the "install" profile of
+#                       secretspec.toml. Replaces nix-keys/git-crypt and the
+#                       YubiKey SSH flow. Run WITHOUT sudo, with `bw` unlocked
+#                       and BW_SESSION exported (see INSTALLATION.md).
 #   --non-interactive   Doesn't ask questions; fails if required information
 #                       isn't provided via flags
 #   --help, -h          Show help and exit
@@ -95,6 +105,80 @@ _run_pamu2fcfg() {
 }
 
 # ---------------------------------------------------------------------------
+# 0a. Bitwarden (via SecretSpec) — runs as the calling user, before sudo
+# ---------------------------------------------------------------------------
+# The `bw` session (BW_SESSION + the CLI data in the user's $HOME) belongs to
+# the live user, so the secrets are fetched here, before the re-execution as
+# root. They go to a 0700 directory in RAM ($XDG_RUNTIME_DIR), handed to the
+# root process via INSTALL_BW_KEYS_DIR and removed when the script exits:
+#   system.txt       ← AGE_KEY_SYSTEM (copied to /persist in step 6b)
+#   user-<login>.txt ← AGE_KEY_<LOGIN> (copied to the user's home in step 7b)
+#   known_hosts      ← pinned github.com host key for root's SSH
+# GITHUB_SSH_KEY goes straight from Bitwarden into ssh-agent (never on disk);
+# sudo -E passes SSH_AUTH_SOCK on to nixos-install.
+
+# GitHub's published ed25519 host key (docs.github.com, "GitHub's SSH key
+# fingerprints").
+GITHUB_KNOWN_HOST="github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl"
+
+_bw_fetch_secrets() {
+  local spec dir name login
+  spec="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/secretspec.toml"
+
+  require_cmd secretspec
+  require_cmd bw
+  require_cmd ssh-add
+  [[ -n "${BW_SESSION:-}" ]] || die "BW_SESSION not set. Run: bw login && export BW_SESSION=\"\$(bw unlock --raw)\""
+  bw sync >/dev/null || die "bw sync failed. Is the vault unlocked (BW_SESSION)?"
+
+  local -a ss=(secretspec --file "$spec" --profile install --reason "nix-config-noctalia install.sh")
+
+  dir="$(mktemp -d "${XDG_RUNTIME_DIR:-/dev/shm}/install-bw.XXXXXX")"
+  chmod 700 "$dir"
+  export INSTALL_BW_KEYS_DIR="$dir"
+
+  info "==> Step 0a: Fetching secrets from Bitwarden (secretspec profile 'install')"
+  (umask 077 && "${ss[@]}" get AGE_KEY_SYSTEM > "$dir/system.txt") \
+    || die "Could not read AGE_KEY_SYSTEM from Bitwarden (run: secretspec check -P install)."
+  grep -q '^AGE-SECRET-KEY-' "$dir/system.txt" || die "AGE_KEY_SYSTEM doesn't look like an age key."
+  success "System age key read."
+
+  # One AGE_KEY_<LOGIN> per user, as declared in the "install" profile.
+  for name in $(sed -n 's/^\(AGE_KEY_[A-Z0-9_]*\) *=.*/\1/p' "$spec"); do
+    [[ "$name" == "AGE_KEY_SYSTEM" ]] && continue
+    login="${name#AGE_KEY_}"
+    login="${login,,}"
+    if (umask 077 && "${ss[@]}" get "$name" > "$dir/user-$login.txt" 2>/dev/null) \
+      && grep -q '^AGE-SECRET-KEY-' "$dir/user-$login.txt"; then
+      success "Personal age key read for '$login'."
+    else
+      rm -f "$dir/user-$login.txt"
+      warn "No personal age key for '$login' in Bitwarden ($name). Skipping."
+    fi
+  done
+
+  printf '%s\n' "$GITHUB_KNOWN_HOST" > "$dir/known_hosts"
+
+  if [[ -z "${SSH_AUTH_SOCK:-}" ]]; then
+    eval "$(ssh-agent -s)" >/dev/null
+  fi
+  if "${ss[@]}" get GITHUB_SSH_KEY 2>/dev/null | ssh-add -t 4h - 2>/dev/null; then
+    success "GitHub SSH key loaded into ssh-agent (4 h)."
+  else
+    warn "GITHUB_SSH_KEY not available; nix-secrets (git+ssh) needs another key in the agent."
+  fi
+}
+
+_bw_mode=false
+for _arg in "$@"; do
+  [[ "$_arg" == "--age-keys-from-bitwarden" ]] && _bw_mode=true
+done
+if [[ "$_bw_mode" == "true" && -z "${INSTALL_BW_KEYS_DIR:-}" ]]; then
+  [[ $EUID -ne 0 ]] || die "--age-keys-from-bitwarden: run the script WITHOUT sudo (it elevates itself after reading Bitwarden)."
+  _bw_fetch_secrets
+fi
+
+# ---------------------------------------------------------------------------
 # Ensure running as root
 # ---------------------------------------------------------------------------
 
@@ -117,9 +201,16 @@ fi
 # both git clone and the flake evaluation use the FIDO2 path directly.
 # Root can read the config and private keys regardless of the 700/600 perms.
 NIX_SECRETS_SSH_CONFIG=""
+if [[ "$_bw_mode" == "true" ]]; then
+  # Bitwarden mode: the key is in the agent (SSH_AUTH_SOCK kept by sudo -E);
+  # only pin github.com, since root has no known_hosts in the live system.
+  [[ -d "${INSTALL_BW_KEYS_DIR:-}" ]] || die "INSTALL_BW_KEYS_DIR missing. Run the script without sudo."
+  trap 'rm -rf "$INSTALL_BW_KEYS_DIR"' EXIT
+  export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=$INSTALL_BW_KEYS_DIR/known_hosts -o StrictHostKeyChecking=yes"
+fi
 for _u in "${SUDO_USER:-}" $(find /home -maxdepth 2 -name config -path '*/.ssh/config' 2>/dev/null | sed 's|^/home/\([^/]*\)/\.ssh/config|\1|'); do
   _c="/home/$_u/.ssh/config"
-  if [[ -n "$_u" && "$_u" != "root" && -f "$_c" ]] && grep -q 'IdentityAgent' "$_c" 2>/dev/null; then
+  if [[ "$_bw_mode" != "true" && -n "$_u" && "$_u" != "root" && -f "$_c" ]] && grep -q 'IdentityAgent' "$_c" 2>/dev/null; then
     NIX_SECRETS_SSH_CONFIG="$_c"
     break
   fi
@@ -149,6 +240,7 @@ OPT_USERS_FULLNAME=()
 OPT_USERS_SUDO=()
 OPT_NIX_KEYS_DIR=""
 OPT_AGE_KEYS_BACKUP=""
+OPT_AGE_KEYS_FROM_BITWARDEN=false
 OPT_NON_INTERACTIVE=false
 
 while [[ $# -gt 0 ]]; do
@@ -157,6 +249,7 @@ while [[ $# -gt 0 ]]; do
     --disk)           OPT_DISK="$2";          shift 2 ;;
     --nix-keys-dir)   OPT_NIX_KEYS_DIR="$2";  shift 2 ;;
     --age-keys-backup) OPT_AGE_KEYS_BACKUP="$2"; shift 2 ;;
+    --age-keys-from-bitwarden) OPT_AGE_KEYS_FROM_BITWARDEN=true; shift ;;
     --user)
       # Format: "login:Full Name:sudo|nosudo"
       # The third field is optional (default: sudo).
@@ -190,6 +283,7 @@ Usage:
                           [--user "login2:Name2:nosudo"] ...
                           [--nix-keys-dir <path>]
                           [--age-keys-backup <file>]
+                          [--age-keys-from-bitwarden]
                           [--non-interactive] [--help]
 
 Options:
@@ -213,6 +307,11 @@ Options:
                       Alternative to --nix-keys-dir when you only have the file
                       without the full repository. Copied to
                       /persist/etc/sops/age/keys.txt on the installed system.
+  --age-keys-from-bitwarden
+                      Reads the age keys (system and per user) and the GitHub
+                      SSH key from Bitwarden, through the "install" profile of
+                      secretspec.toml, instead of nix-keys. Run WITHOUT sudo,
+                      with bw unlocked and BW_SESSION exported.
   --non-interactive   Doesn't ask questions; fails if required information
                       isn't provided via flags.
   --help, -h          Show this help and exit.
@@ -220,6 +319,10 @@ Options:
 Examples:
   # Fully interactive installation (recommended):
   bash scripts/install.sh
+
+  # Keys from Bitwarden (no nix-keys, no YubiKey):
+  export BW_SESSION="$(bw unlock --raw)"
+  bash scripts/install.sh --age-keys-from-bitwarden
 
   # Non-interactive installation, nix-keys at a custom path:
   bash scripts/install.sh \
@@ -231,6 +334,7 @@ Examples:
     --non-interactive
 
 This script automates the steps described in INSTALLATION.md:
+  0a. (--age-keys-from-bitwarden) Reads the keys from Bitwarden via SecretSpec
   0b. Clones and unlocks the nix-keys repository via git-crypt
   1.  Selects the host and target disk
   3.  Partitions and formats the disk with disko (Btrfs + LUKS + LVM, tmpfs root)
@@ -240,6 +344,7 @@ This script automates the steps described in INSTALLATION.md:
   6a. Creates the sbctl Secure Boot keys (all hosts use Secure Boot)
   6b. Copies the sops-nix system age key to /persist
   7.  Installs NixOS
+  7b. (--age-keys-from-bitwarden) Copies each user's personal age key
   8.  Sets passwords via passwd --root
   8b. Registers the YubiKey for U2F authentication (pamu2fcfg)
   9.  Home Manager is already activated by nixos-install (NixOS module)
@@ -358,8 +463,11 @@ fi
 echo
 info "==> Step 0b: nix-keys repository (sops-nix age keys)"
 
-# Priority: --nix-keys-dir flag > default (sibling of nix-config) > interactive
-if [[ -n "$OPT_NIX_KEYS_DIR" ]]; then
+# Priority: Bitwarden > --nix-keys-dir flag > default (sibling of nix-config) > interactive
+if [[ "$OPT_AGE_KEYS_FROM_BITWARDEN" == "true" ]]; then
+  info "Keys read from Bitwarden in step 0a. Skipping nix-keys."
+  [[ -z "$OPT_AGE_KEYS_BACKUP" ]] && OPT_AGE_KEYS_BACKUP="$INSTALL_BW_KEYS_DIR/system.txt"
+elif [[ -n "$OPT_NIX_KEYS_DIR" ]]; then
   if [[ ! -d "$OPT_NIX_KEYS_DIR" ]]; then
     die "--nix-keys-dir: directory '$OPT_NIX_KEYS_DIR' not found."
   fi
@@ -842,12 +950,12 @@ fi
 #
 # Source in priority order:
 #   1. --age-keys-backup <file>   (specified via flag)
-#   2. nix-keys/sops/age/keys.txt   (repository unlocked in step 0b)
-#   3. Interactive prompt           (manual path)
+#   2. Bitwarden                    (--age-keys-from-bitwarden, step 0a)
+#   3. nix-keys/sops/age/keys.txt   (repository unlocked in step 0b)
+#   4. Interactive prompt           (manual path)
 #
-# Note: each user's PERSONAL age key (nix-keys/sops/age/<user>/keys.txt)
-# is copied by the Home Manager activation script on first login — no need
-# to handle it here.
+# Note: each user's PERSONAL age key comes from Bitwarden in step 7b or, with
+# nix-keys, is copied by the Home Manager activation script on first login.
 
 echo
 info "==> Step 6b: Copy the sops-nix system age key to /persist"
@@ -984,6 +1092,36 @@ else
   echo "    --option accept-flake-config true \\"
   echo "    --option extra-substituters \"$NIX_COMMUNITY_SUBSTITUTER\" \\"
   echo "    --option extra-trusted-public-keys \"$NIX_COMMUNITY_KEY\""
+fi
+
+# ---------------------------------------------------------------------------
+# 7b. Personal age keys from Bitwarden
+# ---------------------------------------------------------------------------
+# Each user-<login>.txt read in step 0a becomes ~/.config/sops/age/keys.txt
+# (the sops.age.keyFile of the Home Manager sops-nix). Ownership comes from
+# /mnt/etc/passwd, written by nixos-install.
+
+if [[ "$OPT_AGE_KEYS_FROM_BITWARDEN" == "true" ]]; then
+  echo
+  info "==> Step 7b: Personal age keys (Bitwarden)"
+  shopt -s nullglob
+  for _key in "$INSTALL_BW_KEYS_DIR"/user-*.txt; do
+    _login="$(basename "$_key" .txt)"
+    _login="${_login#user-}"
+    _pw="$(grep "^${_login}:" /mnt/etc/passwd 2>/dev/null || true)"
+    if [[ -z "$_pw" ]]; then
+      info "'$_login' isn't a user of this installation. Skipping its key."
+      continue
+    fi
+    IFS=: read -r _ _ _uid _gid _ _home _ <<<"$_pw"
+    _dst_dir="/mnt${_home}/.config/sops/age"
+    for _d in "/mnt${_home}" "/mnt${_home}/.config" "/mnt${_home}/.config/sops" "$_dst_dir"; do
+      [[ -d "$_d" ]] || install -d -o "$_uid" -g "$_gid" -m 700 "$_d"
+    done
+    install -o "$_uid" -g "$_gid" -m 600 "$_key" "$_dst_dir/keys.txt"
+    success "Personal age key installed for '$_login'."
+  done
+  shopt -u nullglob
 fi
 
 # ---------------------------------------------------------------------------
@@ -1219,11 +1357,16 @@ echo -e "  After the first boot:"
 echo -e "    • Enroll the Secure Boot keys (firmware in Setup Mode): ${CYAN}sudo scripts/setup-secureboot.sh${RESET}"
 echo -e "      (see ${BOLD}INSTALLATION.md${RESET} → 'Secure Boot')"
 echo -e "    • Then enable automatic LUKS unlock via TPM2: ${CYAN}sudo scripts/enroll-tpm2.sh${RESET}"
-echo -e "    • Clone and unlock nix-keys for each user that uses sops in Home Manager:"
-echo -e "        ${CYAN}# Example for the abutre user:${RESET}"
-echo -e "        ${CYAN}git clone git@github.com:lbssousa/nix-keys.git \"\$(xdg-user-dir PROJECTS)/lbssousa/nix-keys\"${RESET}"
-echo -e "        ${CYAN}cd \"\$(xdg-user-dir PROJECTS)/lbssousa/nix-keys\" && git-crypt unlock${RESET}"
-echo -e "        ${CYAN}just switch        # activation copies the personal key automatically${RESET}"
+if [[ "$OPT_AGE_KEYS_FROM_BITWARDEN" == "true" ]]; then
+  echo -e "    • Personal age keys already installed from Bitwarden (step 7b)."
+  echo -e "    • Lock the Bitwarden CLI session in the live system: ${CYAN}bw lock${RESET}"
+else
+  echo -e "    • Clone and unlock nix-keys for each user that uses sops in Home Manager:"
+  echo -e "        ${CYAN}# Example for the abutre user:${RESET}"
+  echo -e "        ${CYAN}git clone git@github.com:lbssousa/nix-keys.git \"\$(xdg-user-dir PROJECTS)/lbssousa/nix-keys\"${RESET}"
+  echo -e "        ${CYAN}cd \"\$(xdg-user-dir PROJECTS)/lbssousa/nix-keys\" && git-crypt unlock${RESET}"
+  echo -e "        ${CYAN}just switch        # activation copies the personal key automatically${RESET}"
+fi
 echo
 if [[ "$_U2F_CONFIGURED" == "true" ]] && [[ ! -s "$_U2F_AUTHFILE" ]]; then
   echo -e "  ${YELLOW}${BOLD}⚠  WARNING: YubiKey not registered (step 8b incomplete).${RESET}"
