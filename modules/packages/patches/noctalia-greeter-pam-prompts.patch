@@ -1,5 +1,5 @@
 diff --git i/src/greeter/greeter_surface.cpp w/src/greeter/greeter_surface.cpp
-index ecf42ca..32ae2f6 100644
+index ecf42ca..dd7b569 100644
 --- i/src/greeter/greeter_surface.cpp
 +++ w/src/greeter/greeter_surface.cpp
 @@ -43,6 +43,7 @@
@@ -10,15 +10,53 @@ index ecf42ca..32ae2f6 100644
  #include <sys/types.h>
  #include <unordered_set>
  #include <wayland-client.h>
-@@ -73,6 +74,7 @@ namespace {
+@@ -73,6 +74,45 @@ namespace {
    }
  
    constexpr std::size_t kUserDropdownMaxVisibleRows = 8;
 +  constexpr std::string_view kPasswordPlaceholder = "Type password";
++
++  // greetd reports PAM failures as "pam_<function>: <CODE>". Turn the common
++  // ones into a sentence (the system is pt_BR); anything else is shown as is.
++  [[nodiscard]] std::string humanAuthError(std::string_view description) {
++    const auto sep = description.find(": ");
++    if (sep == std::string_view::npos) {
++      return std::string(description);
++    }
++    const std::string_view function = description.substr(0, sep);
++    const std::string_view code = description.substr(sep + 2);
++    const bool changing = function == "pam_chauthtok";
++
++    if (code == "AUTH_ERR" || code == "AUTHINFO_UNAVAIL") {
++      return changing ? "Senha atual incorreta. A senha não foi trocada." : "Senha incorreta.";
++    }
++    if (code == "TRY_AGAIN") {
++      return "As novas senhas não conferem. A senha não foi trocada.";
++    }
++    if (code == "AUTHTOK_ERR" || code == "AUTHTOK_RECOVERY_ERR") {
++      return "A nova senha foi recusada. Escolha outra.";
++    }
++    if (code == "PERM_DENIED") {
++      return changing ? "A troca de senha não foi permitida." : "Acesso negado.";
++    }
++    if (code == "NEW_AUTHTOK_REQD") {
++      return "Sua senha expirou e precisa ser trocada.";
++    }
++    if (code == "ACCT_EXPIRED") {
++      return "Esta conta expirou.";
++    }
++    if (code == "MAXTRIES") {
++      return "Tentativas demais. Aguarde um pouco e tente de novo.";
++    }
++    if (code == "USER_UNKNOWN") {
++      return "Usuário desconhecido.";
++    }
++    return std::string(description);
++  }
    const float kUserMenuPadding = Style::spaceSm();
    const float kUserMenuRowGap = Style::spaceXs();
    const float kUserMenuRowIconGap = Style::spaceSm();
-@@ -318,7 +320,7 @@ void GreeterSurface::initialize(RenderContext* context) {
+@@ -318,7 +358,7 @@ void GreeterSurface::initialize(RenderContext* context) {
    m_root.addChild(std::move(panel));
  
    auto pwField = std::make_unique<Input>();
@@ -27,7 +65,7 @@ index ecf42ca..32ae2f6 100644
    pwField->setPasswordMode(true);
    pwField->setControlHeight(Style::controlHeight());
    pwField->setOnChange([this](const std::string& value) { m_password = value; });
-@@ -1501,9 +1503,15 @@ void GreeterSurface::handleAuthMessage(const GreetdAuthMessage& message) {
+@@ -1501,9 +1541,15 @@ void GreeterSurface::handleAuthMessage(const GreetdAuthMessage& message) {
  
    if (message.type == GreetdAuthMessageType::Info || message.type == GreetdAuthMessageType::Error) {
      const bool isError = message.type == GreetdAuthMessageType::Error;
@@ -44,7 +82,7 @@ index ecf42ca..32ae2f6 100644
      if (isError) {
        clearPasswordInput();
      }
-@@ -1531,9 +1539,9 @@ void GreeterSurface::handleAuthMessage(const GreetdAuthMessage& message) {
+@@ -1531,9 +1577,9 @@ void GreeterSurface::handleAuthMessage(const GreetdAuthMessage& message) {
    }
  
    m_secretPromptWaiting = true;
@@ -57,7 +95,7 @@ index ecf42ca..32ae2f6 100644
    syncAuthInteractivity();
    commitImmediateFrame(false);
  }
-@@ -1548,6 +1556,7 @@ void GreeterSurface::postAuthResponse(const std::string& data) {
+@@ -1548,6 +1594,7 @@ void GreeterSurface::postAuthResponse(const std::string& data) {
    }
    clearPasswordInput();
    m_secretPromptWaiting = false;
@@ -65,7 +103,7 @@ index ecf42ca..32ae2f6 100644
    m_pendingReplies.push_back(AuthRequest::PostAuthData);
    syncAuthInteractivity();
    commitImmediateFrame(false);
-@@ -1588,6 +1597,7 @@ void GreeterSurface::setGreetdUnavailable(const std::string_view reason) {
+@@ -1588,6 +1635,7 @@ void GreeterSurface::setGreetdUnavailable(const std::string_view reason) {
  
  void GreeterSurface::beginSessionStart() {
    kLog.info("authentication successful");
@@ -73,7 +111,7 @@ index ecf42ca..32ae2f6 100644
  
    savePreferences();
  
-@@ -1647,6 +1657,7 @@ void GreeterSurface::beginSessionStart() {
+@@ -1647,6 +1695,7 @@ void GreeterSurface::beginSessionStart() {
  }
  
  bool GreeterSurface::resetAuthSession() {
@@ -81,17 +119,19 @@ index ecf42ca..32ae2f6 100644
    if (m_greetdClient != nullptr && m_authSessionStarted) {
      if (!m_greetdClient->requestCancelSession()) {
        m_authSessionStarted = false;
-@@ -1680,7 +1691,9 @@ void GreeterSurface::onAuthError(const GreetdError& error) {
+@@ -1680,8 +1729,10 @@ void GreeterSurface::onAuthError(const GreetdError& error) {
    m_hasPendingResponse = false;
    m_pendingResponse.clear();
    m_pendingReplies.clear();
 +  m_statusErrorSinceSubmit = false;
    clearPasswordInput();
+-  updateStatus(error.description, true);
 +  restorePasswordPrompt();
-   updateStatus(error.description, true);
++  updateStatus(humanAuthError(error.description), true);
    kLog.warn("authentication failed: {}", error.description);
    if (!resetAuthSession()) {
-@@ -1713,6 +1726,29 @@ void GreeterSurface::updateStatus(const std::string& text, bool isError) {
+     return;
+@@ -1713,6 +1764,29 @@ void GreeterSurface::updateStatus(const std::string& text, bool isError) {
    requestLayout();
  }
  

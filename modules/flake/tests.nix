@@ -3,9 +3,12 @@
 # (precisa de KVM).
 #
 # greetd-expired-password: login com senha expirada (`chage -d 0`). Um greeter
-# de teste fala o IPC do greetd (u32 de tamanho + JSON) e responde os prompts
-# secretos em ordem: senha atual no login, senha atual de novo no
-# pam_chauthtok, nova senha e confirmação. Sem o patch do greetd, o primeiro
+# de teste fala o IPC do greetd (u32 de tamanho + JSON) e roda cenários, um
+# usuário cada: responde os prompts secretos em ordem (senha atual no login,
+# senha atual de novo no pam_chauthtok, nova senha e confirmação). Os de erro
+# (senha atual errada, confirmação diferente) vêm antes e não podem abrir a
+# sessão nem mexer no shadow (pam_unix "required", ver secret-service.nix); o
+# último troca a senha e abre a sessão. Sem o patch do greetd, o primeiro
 # post_auth_message_response já volta "pam_acct_mgmt: NEW_AUTHTOK_REQD".
 { config, ... }:
 {
@@ -25,7 +28,11 @@
         LOG = "/tmp/greeter.log"
         DONE = "/tmp/greeter.done"
         GO = "/tmp/greeter.go"
-        ANSWERS = ["1234", "1234", "${newPassword}", "${newPassword}"]
+        SCENARIOS = [
+            ("bob", ["1234", "errada", "${newPassword}", "${newPassword}"]),
+            ("carol", ["1234", "1234", "${newPassword}", "Outra-Senha!"]),
+            ("alice", ["1234", "1234", "${newPassword}", "${newPassword}"]),
+        ]
 
         # greetd relança o greeter quando a sessão de teste termina.
         if os.path.exists(DONE):
@@ -59,19 +66,24 @@
             return reply
 
 
-        reply = request({"type": "create_session", "username": "alice"})
-        answers = list(ANSWERS)
-        while reply["type"] == "auth_message":
-            if reply["auth_message_type"] in ("secret", "visible"):
-                reply = request({"type": "post_auth_message_response",
-                                 "response": answers.pop(0)})
-            else:
-                reply = request({"type": "post_auth_message_response"})
-
-        if reply["type"] == "success":
-            reply = request({"type": "start_session", "cmd": ["true"],
-                             "env": []})
-        log.write("RESULT " + reply["type"] + "\n")
+        for user, answers in SCENARIOS:
+            log.write(f"SCENARIO {user}\n")
+            reply = request({"type": "create_session", "username": user})
+            while reply["type"] == "auth_message":
+                if reply["auth_message_type"] in ("secret", "visible"):
+                    response = answers.pop(0) if answers else ""
+                    reply = request({"type": "post_auth_message_response",
+                                     "response": response})
+                else:
+                    reply = request({"type": "post_auth_message_response"})
+            if reply["type"] == "success":
+                reply = request({"type": "start_session", "cmd": ["true"],
+                                 "env": []})
+                log.write(f"RESULT {user} {reply['type']}\n")
+                break
+            desc = reply.get("description", "")
+            log.write(f"RESULT {user} error {desc}\n")
+            request({"type": "cancel_session"})
         log.close()
         open(DONE, "w").close()
       '';
@@ -94,40 +106,52 @@
       legacyPackages.tests.greetd-expired-password = pkgs.testers.runNixOSTest {
         name = "greetd-expired-password";
 
-        nodes.machine = {
-          environment.systemPackages = [ checkPassword ];
+        nodes.machine =
+          { lib, ... }:
+          {
+            environment.systemPackages = [ checkPassword ];
 
-          users.users.alice = {
-            isNormalUser = true;
-            initialPassword = "1234";
-          };
+            users.users = lib.genAttrs [ "alice" "bob" "carol" ] (_: {
+              isNormalUser = true;
+              initialPassword = "1234";
+            });
 
-          services.greetd = {
-            enable = true;
-            package = patched.greetd;
-            settings.default_session.command = "${testGreeter}";
+            # Mesma pilha PAM do sistema: oo7 e pam_unix "required" na troca de
+            # senha (modules/nixos/desktop/secret-service.nix).
+            imports = [ config.flake.modules.nixos.secret-service ];
+
+            services.greetd = {
+              enable = true;
+              package = patched.greetd;
+              settings.default_session.command = "${testGreeter}";
+            };
           };
-        };
 
         testScript = ''
           machine.wait_for_unit("multi-user.target")
 
           with subtest("senha inicial expirada"):
-              machine.succeed("chage -d 0 alice")
+              for user in ["alice", "bob", "carol"]:
+                  machine.succeed(f"chage -d 0 {user}")
               machine.succeed("touch /tmp/greeter.go")
               machine.wait_for_file("/tmp/greeter.done")
               transcript = machine.succeed("cat /tmp/greeter.log")
               print(transcript)
 
           with subtest("troca feita na conversa do greetd"):
-              assert "RESULT success" in transcript, transcript
-              assert transcript.count('"auth_message_type": "secret"') == 4, transcript
+              assert "RESULT alice success" in transcript, transcript
               lastchg = machine.succeed("awk -F: '$1 == \"alice\" { print $3 }' /etc/shadow").strip()
               assert lastchg not in ("", "0"), f"sp_lstchg ainda {lastchg!r}"
 
           with subtest("a nova senha vale e a inicial não"):
               machine.succeed("check-password alice '${newPassword}'")
               machine.fail("check-password alice 1234")
+
+          with subtest("respostas recusadas não trocam a senha"):
+              for user in ["bob", "carol"]:
+                  assert f"RESULT {user} error" in transcript, transcript
+                  machine.succeed(f"check-password {user} 1234")
+                  machine.succeed(f"test \"$(awk -F: '$1 == \"{user}\" {{ print $3 }}' /etc/shadow)\" = 0")
         '';
       };
     };
