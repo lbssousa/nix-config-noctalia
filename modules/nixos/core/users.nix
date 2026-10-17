@@ -54,8 +54,8 @@ in
           ]
           ++ lib.optional u.sudo "wheel";
           shell = pkgs.fish;
-          # Só vale na criação da conta. Definida pelo install.sh ou, se ficar
-          # a inicial, trocada no primeiro login (ver detectInitialPasswords).
+          # Só vale na criação da conta; nasce expirada e é trocada no primeiro
+          # login (install.sh, passo 8, e detectInitialPasswords).
           inherit initialPassword;
         }) users;
       };

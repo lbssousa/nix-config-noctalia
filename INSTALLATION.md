@@ -88,7 +88,8 @@ O script:
 5. cria as chaves do Secure Boot em `/persist/etc/secureboot` (sbctl);
 6. copia a chave age do host para `/persist/etc/sops/age/keys.txt`;
 7. copia a configuração para `/persist/etc/nixos` e roda `nixos-install`;
-8. define as senhas (`/persist/etc/shadow`) e, opcionalmente, registra a
+8. deixa todos os usuários com a senha `1234` expirada, define (se quiser) a
+   senha do root, grava `/persist/etc/shadow` e, opcionalmente, registra a
    YubiKey para `pam_u2f` (`/persist/etc/u2f-mappings`).
 
 Modo não interativo:
@@ -103,9 +104,8 @@ sudo bash scripts/install.sh --host bigodon --disk /dev/nvme0n1 \
 ## Primeiro boot
 
 - O greeter (Noctalia Greeter) mostra o nome completo de cada usuário.
-- Usuários sem senha definida no passo 8 entram com `1234`, que já está
-  expirada: o greeter pede a senha atual (`1234`), a nova e a confirmação, e
-  só então abre a sessão. Isso depende dos patches do greetd e do Noctalia
+- Todos os usuários entram com `1234`, que já está expirada: o greeter pede
+  a senha atual (`1234`), a nova e a confirmação, e só então abre a sessão. Isso depende dos patches do greetd e do Noctalia
   Greeter no overlay (`modules/flake/packages.nix`); se a confirmação não
   bater, o login volta ao início e a senha continua expirada.
 - A chave age pessoal do `abutre` já foi gravada pelo passo 7b na instalação

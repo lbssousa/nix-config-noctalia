@@ -14,7 +14,7 @@
 #   6b. Copies the sops-nix system age key to /persist
 #   7.  Installs NixOS
 #   7b. (--age-keys-from-bitwarden) Copies each user's personal age key
-#   8.  Asks, for each user, whether to set a password now or on first login
+#   8.  Expires every user's initial password (1234), changed on first login
 #   8b. Registers the YubiKey for U2F authentication (pamu2fcfg)
 #   9.  Home Manager is already activated by nixos-install (NixOS module)
 #
@@ -347,7 +347,7 @@ This script automates the steps described in INSTALLATION.md:
   6b. Copies the sops-nix system age key to /persist
   7.  Installs NixOS
   7b. (--age-keys-from-bitwarden) Copies each user's personal age key
-  8.  Sets passwords via passwd --root
+  8.  Expires every user's initial password (1234) and optionally sets root's
   8b. Registers the YubiKey for U2F authentication (pamu2fcfg)
   9.  Home Manager is already activated by nixos-install (NixOS module)
 EOF
@@ -1127,16 +1127,19 @@ if [[ "$OPT_AGE_KEYS_FROM_BITWARDEN" == "true" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 8. Set passwords
+# 8. Initial passwords
 # ---------------------------------------------------------------------------
+# Every user gets the initial password 1234 (users.users.*.initialPassword in
+# modules/nixos/core/users.nix), already expired: on the first login the
+# greeter asks for it and then for a new one (greetd patched to call
+# pam_chauthtok). detectInitialPasswords would expire it on the first boot
+# anyway; doing it here also covers the very first login.
 
 echo
-info "==> Step 8: Set passwords"
-info "With impermanence (tmpfs on the root), /etc/shadow needs to be saved to"
-info "/persist/etc/shadow to survive the next boot."
+info "==> Step 8: Initial passwords (1234, changed on first login)"
 
 # Combine users already in the modules + created in this session, without duplicates.
-# This ensures every user of the installed system goes through the password prompt.
+# This ensures every user of the installed system gets the expired password.
 declare -A _passwd_users_seen=()
 _ALL_PASSWD_USERS=()
 for _u in "${_EXISTING_USERS[@]}" "${USERS_LOGIN[@]}"; do
@@ -1146,43 +1149,30 @@ for _u in "${_EXISTING_USERS[@]}" "${USERS_LOGIN[@]}"; do
   fi
 done
 
-# Ask individually for each user whether to set a password now.
-# "root" is handled separately in the following block.
+# chage/passwd --root /mnt write directly to /mnt/etc/shadow on the host
+# (without chroot), avoiding interference with the /etc/shadow bind mount
+# that restoreShadow may have created inside nixos-install's or
+# nixos-enter's mount namespace.
 for _user in "${_ALL_PASSWD_USERS[@]}"; do
   [[ "$_user" == "root" ]] && continue
 
-  # Check that the user exists on the installed system before asking.
-  # This filters out non-user entries (e.g. mkUser) and users not imported
-  # in configuration.nix. Requires that nixos-install (step 7) has completed.
+  # Skip names that aren't users of the installed system (requires that
+  # nixos-install, step 7, has completed).
   if ! grep -q "^${_user}:" /mnt/etc/passwd 2>/dev/null; then
     continue
   fi
 
-  echo
-  if confirm "Set a password for user '$_user' now?"; then
-    # passwd --root /mnt writes directly to /mnt/etc/shadow on the host
-    # (without chroot), avoiding interference with the /etc/shadow bind
-    # mount that restoreShadow may have created inside nixos-install's or
-    # nixos-enter's mount namespace.
-    if passwd --root /mnt "$_user"; then
-      success "Password for user '$_user' set."
-    else
-      warn "Could not set the password for '$_user'."
-    fi
+  if chage --root /mnt -d 0 "$_user"; then
+    success "'$_user': log in with 1234; the greeter then asks for a new password."
   else
-    # Keep the initial password (1234, users.nix) and expire it now: on the
-    # first login the greeter asks for it and then for a new one (greetd
-    # patched to call pam_chauthtok). detectInitialPasswords would expire it
-    # on the first boot anyway; doing it here also covers the first login.
-    if chage --root /mnt -d 0 "$_user"; then
-      info "Password for '$_user' not set: log in with 1234; the greeter then"
-      info "asks for a new password."
-    else
-      warn "Could not expire the initial password of '$_user'."
-    fi
+    warn "Could not expire the initial password of '$_user'."
   fi
 done
 
+# root isn't one of the my.users accounts: without a password it stays locked
+# (nixos-install runs with --no-root-password), which also locks the
+# emergency shell.
+echo
 if confirm "Set the root password?"; then
   if passwd --root /mnt root; then
     success "Root password set."
@@ -1194,14 +1184,14 @@ fi
 # Copy /etc/shadow to /persist/etc/shadow so passwords survive the boot
 # (the tmpfs root is wiped on every boot, /persist is preserved via Btrfs).
 #
-# Note: passwd --root /mnt writes passwords directly to /mnt/etc/shadow.
+# Note: chage/passwd --root /mnt write directly to /mnt/etc/shadow.
 # If the restoreShadow activation script (users.nix) created a bind mount
 # from /mnt/persist/etc/shadow → /mnt/etc/shadow inside nixos-install's
 # mount namespace and that bind mount propagated to the host,
 # /mnt/etc/shadow and /mnt/persist/etc/shadow point to the same file. Using
 # `install` for the copy is safe in that case (reads the current content,
 # writes to a new inode, replaces atomically). If the bind mount did NOT
-# propagate, /mnt/etc/shadow is the shadow modified by passwd and the copy
+# propagate, /mnt/etc/shadow is the shadow modified by chage/passwd and the copy
 # ensures it persists.
 mkdir -p /mnt/persist/etc
 if [ -s /mnt/etc/shadow ]; then
