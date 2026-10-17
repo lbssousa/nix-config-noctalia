@@ -93,6 +93,10 @@ o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 - **Noctalia Greeter** com o patch do PR
   [noctalia-greeter#131](https://github.com/noctalia-dev/noctalia-greeter/pull/131)
   (`appearance.show_real_names`): mostra o nome completo no login.
+- **Senha expirada no login gráfico:** patches locais no greetd (chama
+  `pam_chauthtok` quando o PAM devolve `NEW_AUTHTOK_REQD`) e no greeter
+  (mostra cada prompt no campo). Toda conta nova nasce com a senha `1234`
+  expirada e a troca no primeiro login.
 - **Flatpaks** (Flathub, atualizados diariamente): Firefox, Bitwarden,
   OnlyOffice, Xournal++, Papers, LocalSend, Zoom, OBS, Kdenlive, Pinta,
   Inkscape, FontForge, mais Flatseal, Warehouse e Bazaar. Ficam nativos os

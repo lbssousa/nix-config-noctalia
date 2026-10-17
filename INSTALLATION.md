@@ -103,8 +103,11 @@ sudo bash scripts/install.sh --host bigodon --disk /dev/nvme0n1 \
 ## Primeiro boot
 
 - O greeter (Noctalia Greeter) mostra o nome completo de cada usuário.
-- Usuários sem senha definida no passo 8 entram com `nixos` e são obrigados a
-  trocá-la (uma única vez; a flag fica em `/persist`).
+- Usuários sem senha definida no passo 8 entram com `1234`, que já está
+  expirada: o greeter pede a senha atual (`1234`), a nova e a confirmação, e
+  só então abre a sessão. Isso depende dos patches do greetd e do Noctalia
+  Greeter no overlay (`modules/flake/packages.nix`); se a confirmação não
+  bater, o login volta ao início e a senha continua expirada.
 - A chave age pessoal do `abutre` já foi gravada pelo passo 7b na instalação
   pelo Bitwarden. Na instalação pelo `nix-keys`, clone-o e desbloqueie-o em
   `~/Projetos/lbssousa/nix-keys` e rode `just switch`: a ativação copia a

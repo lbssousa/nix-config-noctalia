@@ -14,12 +14,25 @@ let
       yubikey-gpg-import = call ../packages/_yubikey-gpg-import/package.nix;
       flea = call ../packages/_flea/package.nix;
 
-      # Nome completo do usuário na tela de login: patch do PR aberto
-      # https://github.com/noctalia-dev/noctalia-greeter/pull/131
-      # (adiciona [appearance] show_real_names). Remover quando o PR for
-      # mergeado e chegar ao nixpkgs.
+      # Senha expirada (pam_acct_mgmt: NEW_AUTHTOK_REQD) no login gráfico.
+      # O greetd 0.10.3 só falhava; o patch chama pam_chauthtok na mesma
+      # conversa, e os prompts (senha atual, nova, confirmação) chegam ao
+      # greeter como auth_message. Patch local, sem PR upstream.
+      greetd = prev.greetd.overrideAttrs (old: {
+        patches = (old.patches or [ ]) ++ [ ../packages/patches/greetd-change-expired-authtok.patch ];
+      });
+
+      # Noctalia Greeter, dois patches (nesta ordem, ambos em greeter_surface.cpp):
+      #  - nome completo na tela de login: PR aberto
+      #    https://github.com/noctalia-dev/noctalia-greeter/pull/131
+      #    ([appearance] show_real_names); remover quando chegar ao nixpkgs;
+      #  - prompts PAM seguintes (troca de senha expirada) no placeholder do
+      #    campo, sem apagar o aviso do PAM no status; patch local.
       noctalia-greeter = prev.noctalia-greeter.overrideAttrs (old: {
-        patches = (old.patches or [ ]) ++ [ ../packages/patches/noctalia-greeter-show-real-names.patch ];
+        patches = (old.patches or [ ]) ++ [
+          ../packages/patches/noctalia-greeter-show-real-names.patch
+          ../packages/patches/noctalia-greeter-pam-prompts.patch
+        ];
       });
     };
 in
@@ -47,6 +60,7 @@ in
         "fprintd-goodix"
         "yubikey-gpg-import"
         "flea"
+        "greetd"
         "noctalia-greeter"
       ] (n: pkgs'.${n});
     };

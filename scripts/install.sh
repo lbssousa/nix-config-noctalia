@@ -1135,10 +1135,6 @@ info "==> Step 8: Set passwords"
 info "With impermanence (tmpfs on the root), /etc/shadow needs to be saved to"
 info "/persist/etc/shadow to survive the next boot."
 
-_USERS_WITH_PASSWORD=()
-# Safe username pattern for use in file names
-_SAFE_USERNAME='^[a-z_][a-z0-9_-]*$'
-
 # Combine users already in the modules + created in this session, without duplicates.
 # This ensures every user of the installed system goes through the password prompt.
 declare -A _passwd_users_seen=()
@@ -1170,22 +1166,20 @@ for _user in "${_ALL_PASSWD_USERS[@]}"; do
     # nixos-enter's mount namespace.
     if passwd --root /mnt "$_user"; then
       success "Password for user '$_user' set."
-      # Only record usernames with characters safe for file names
-      if [[ "$_user" =~ $_SAFE_USERNAME ]]; then
-        _USERS_WITH_PASSWORD+=("$_user")
-      fi
     else
       warn "Could not set the password for '$_user'."
     fi
   else
-    # Remove the temporary 'nixos' password from shadow so the user can
-    # create their own password directly on first login, without needing
-    # to type 'nixos'. The forceInitialPasswordChange service will run
-    # chage -d 0 on the first boot, requiring the password to be created
-    # before proceeding.
-    passwd --root /mnt -d "$_user" 2>/dev/null || true
-    info "Password for '$_user' not set. On first login, the user will be"
-    info "prompted to create a new password."
+    # Keep the initial password (1234, users.nix) and expire it now: on the
+    # first login the greeter asks for it and then for a new one (greetd
+    # patched to call pam_chauthtok). detectInitialPasswords would expire it
+    # on the first boot anyway; doing it here also covers the first login.
+    if chage --root /mnt -d 0 "$_user"; then
+      info "Password for '$_user' not set: log in with 1234; the greeter then"
+      info "asks for a new password."
+    else
+      warn "Could not expire the initial password of '$_user'."
+    fi
   fi
 done
 
@@ -1216,15 +1210,6 @@ if [ -s /mnt/etc/shadow ]; then
 else
   warn "/mnt/etc/shadow not found or empty; skipping copy to /persist."
 fi
-
-# Create flag files for users who already set a password during installation.
-# This prevents the system from forcing a password change on first login
-# for those users (the forced change via chage is for users with the
-# temporary 'nixos' password).
-for _user in "${_USERS_WITH_PASSWORD[@]}"; do
-  touch "/mnt/persist/.password-change-required-${_user}"
-  info "User '$_user': password pre-set — change won't be forced on first login."
-done
 
 # ---------------------------------------------------------------------------
 # 8b. Register the YubiKey for U2F authentication (pamu2fcfg)

@@ -2,6 +2,8 @@
 { config, inputs, ... }:
 let
   inherit (config.my) users;
+  # Senha inicial de toda conta nova; nasce expirada (ver detectInitialPasswords).
+  initialPassword = "1234";
 in
 {
   flake.modules.nixos.users =
@@ -52,9 +54,9 @@ in
           ]
           ++ lib.optional u.sudo "wheel";
           shell = pkgs.fish;
-          # Definida pelo install.sh; se ficar a inicial, a sessão avisa até a
-          # troca (ver detectInitialPasswords).
-          initialPassword = "nixos";
+          # Só vale na criação da conta. Definida pelo install.sh ou, se ficar
+          # a inicial, trocada no primeiro login (ver detectInitialPasswords).
+          inherit initialPassword;
         }) users;
       };
 
@@ -99,12 +101,15 @@ in
           '';
         };
 
-        # Aviso de senha inicial. O Noctalia Greeter não implementa a troca de
-        # senha expirada (pam_acct_mgmt: NEW_AUTHTOK_REQD), então a senha NÃO é
-        # expirada com `chage -d 0`. Em vez disso, a cada boot e a cada mudança
-        # em /etc/shadow, este serviço testa se a senha de cada usuário ainda é
-        # a inicial e marca /run/initial-password/<usuario>; a sessão mostra um
-        # aviso persistente até a troca (home/base/initial-password.nix).
+        # Senha inicial expirada. A cada boot e a cada mudança em /etc/shadow,
+        # este serviço testa se a senha de cada usuário ainda é a inicial; se
+        # for, expira-a (`chage -d 0`, só se ainda não estiver expirada, pois o
+        # chage reescreve o shadow e reativa este serviço) e marca
+        # /run/initial-password/<usuario>. No login, o greetd corrigido
+        # (overlay em modules/flake/packages.nix) chama pam_chauthtok e o
+        # greeter pede a senha atual, a nova e a confirmação. A marca alimenta
+        # o aviso dentro da sessão (home/base/initial-password.nix), que fica
+        # como reserva.
         services.detectInitialPasswords = lib.mkIf (usersWithInitialPassword != { }) {
           description = "Detect users still on their initial password";
           wantedBy = [ "multi-user.target" ];
@@ -113,19 +118,22 @@ in
           script = ''
             install -d -m 0755 /run/initial-password
             ${pkgs.python3}/bin/python3 -I - ${lib.escapeShellArgs (lib.attrNames usersWithInitialPassword)} <<'PY'
-            import ctypes, os, sys
+            import ctypes, os, subprocess, sys
             crypt = ctypes.CDLL("${pkgs.libxcrypt}/lib/libcrypt.so").crypt
             crypt.restype = ctypes.c_char_p
-            hashes = {}
+            entries = {}
             with open("/etc/shadow") as f:
                 for line in f:
                     parts = line.split(":")
-                    hashes[parts[0]] = parts[1]
+                    entries[parts[0]] = parts
             for user in sys.argv[1:]:
-                h = hashes.get(user, "")
+                parts = entries.get(user, ["", "", ""])
+                h, lastchg = parts[1], parts[2]
                 flag = "/run/initial-password/" + user
-                initial = h[:1] == "$" and crypt(b"nixos", h.encode()) == h.encode()
+                initial = h[:1] == "$" and crypt(b"${initialPassword}", h.encode()) == h.encode()
                 if initial:
+                    if lastchg != "0":
+                        subprocess.run(["${pkgs.shadow}/bin/chage", "-d", "0", user], check=True)
                     open(flag, "w").close()
                 elif os.path.exists(flag):
                     os.remove(flag)

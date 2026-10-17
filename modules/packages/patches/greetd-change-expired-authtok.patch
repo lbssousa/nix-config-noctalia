@@ -1,0 +1,55 @@
+diff --git i/greetd/src/pam/session.rs w/greetd/src/pam/session.rs
+index 0317fbf..fff4ee1 100644
+--- i/greetd/src/pam/session.rs
++++ w/greetd/src/pam/session.rs
+@@ -58,6 +58,18 @@ impl<'a> PamSession<'a> {
+         }
+     }
+ 
++    pub fn chauthtok(&mut self, flags: PamFlag) -> Result<(), PamError> {
++        self.last_code = pam_sys::chauthtok(self.handle, flags);
++        match self.last_code {
++            PamReturnCode::SUCCESS => Ok(()),
++            rc => Err(PamError::from_rc("pam_chauthtok", rc)),
++        }
++    }
++
++    pub fn last_code(&self) -> PamReturnCode {
++        self.last_code
++    }
++
+     pub fn setcred(&mut self, flags: PamFlag) -> Result<(), PamError> {
+         self.last_code = pam_sys::setcred(self.handle, flags);
+         match self.last_code {
+diff --git i/greetd/src/session/worker.rs w/greetd/src/session/worker.rs
+index 71c9d10..6cbc393 100644
+--- i/greetd/src/session/worker.rs
++++ w/greetd/src/session/worker.rs
+@@ -4,7 +4,7 @@ use nix::{
+     sys::wait::waitpid,
+     unistd::{execve, fork, initgroups, setgid, setsid, setuid, ForkResult},
+ };
+-use pam_sys::{PamFlag, PamItemType};
++use pam_sys::{PamFlag, PamItemType, PamReturnCode};
+ use serde::{Deserialize, Serialize};
+ 
+ use super::{
+@@ -129,7 +129,17 @@ fn worker(sock: &UnixDatagram) -> Result<(), Error> {
+     if authenticate {
+         pam.authenticate(PamFlag::NONE)?;
+     }
+-    pam.acct_mgmt(PamFlag::NONE)?;
++    if let Err(e) = pam.acct_mgmt(PamFlag::NONE) {
++        // An expired password (e.g. `chage -d 0`) is changed in the same
++        // conversation, before setcred/open_session, as login(1) and GDM do.
++        // Only when authenticating: sessions started without a greeter
++        // (initial_session) have nobody to answer the prompts.
++        if authenticate && pam.last_code() == PamReturnCode::NEW_AUTHTOK_REQD {
++            pam.chauthtok(PamFlag::CHANGE_EXPIRED_AUTHTOK)?;
++        } else {
++            return Err(e.into());
++        }
++    }
+ 
+     // Not the credentials you think.
+     pam.setcred(PamFlag::ESTABLISH_CRED)?;

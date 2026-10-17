@@ -1,0 +1,144 @@
+diff --git i/src/greeter/greeter_surface.cpp w/src/greeter/greeter_surface.cpp
+index ecf42ca..32ae2f6 100644
+--- i/src/greeter/greeter_surface.cpp
++++ w/src/greeter/greeter_surface.cpp
+@@ -43,6 +43,7 @@
+ #include <nlohmann/json.hpp>
+ #include <pwd.h>
+ #include <sstream>
++#include <string_view>
+ #include <sys/types.h>
+ #include <unordered_set>
+ #include <wayland-client.h>
+@@ -73,6 +74,7 @@ namespace {
+   }
+ 
+   constexpr std::size_t kUserDropdownMaxVisibleRows = 8;
++  constexpr std::string_view kPasswordPlaceholder = "Type password";
+   const float kUserMenuPadding = Style::spaceSm();
+   const float kUserMenuRowGap = Style::spaceXs();
+   const float kUserMenuRowIconGap = Style::spaceSm();
+@@ -318,7 +320,7 @@ void GreeterSurface::initialize(RenderContext* context) {
+   m_root.addChild(std::move(panel));
+ 
+   auto pwField = std::make_unique<Input>();
+-  pwField->setPlaceholder("Type password");
++  pwField->setPlaceholder(kPasswordPlaceholder);
+   pwField->setPasswordMode(true);
+   pwField->setControlHeight(Style::controlHeight());
+   pwField->setOnChange([this](const std::string& value) { m_password = value; });
+@@ -1501,9 +1503,15 @@ void GreeterSurface::handleAuthMessage(const GreetdAuthMessage& message) {
+ 
+   if (message.type == GreetdAuthMessageType::Info || message.type == GreetdAuthMessageType::Error) {
+     const bool isError = message.type == GreetdAuthMessageType::Error;
+-    if (!message.message.empty()) {
++    // An info line must not hide an error from the same step, e.g. pam_unix's
++    // "you are required to change your password" followed by "Changing
++    // password for <user>." before the expired-password prompts.
++    if (!message.message.empty() && (isError || !m_statusErrorSinceSubmit)) {
+       updateStatus(message.message, isError);
+     }
++    if (isError) {
++      m_statusErrorSinceSubmit = true;
++    }
+     if (isError) {
+       clearPasswordInput();
+     }
+@@ -1531,9 +1539,9 @@ void GreeterSurface::handleAuthMessage(const GreetdAuthMessage& message) {
+   }
+ 
+   m_secretPromptWaiting = true;
+-  if (!message.message.empty()) {
+-    updateStatus(message.message, false);
+-  }
++  // Later prompts of the same conversation (current/new/retype password for
++  // an expired account) go in the field, so the status keeps PAM's notice.
++  showPamPrompt(message.message, message.type == GreetdAuthMessageType::Secret);
+   syncAuthInteractivity();
+   commitImmediateFrame(false);
+ }
+@@ -1548,6 +1556,7 @@ void GreeterSurface::postAuthResponse(const std::string& data) {
+   }
+   clearPasswordInput();
+   m_secretPromptWaiting = false;
++  m_statusErrorSinceSubmit = false;
+   m_pendingReplies.push_back(AuthRequest::PostAuthData);
+   syncAuthInteractivity();
+   commitImmediateFrame(false);
+@@ -1588,6 +1597,7 @@ void GreeterSurface::setGreetdUnavailable(const std::string_view reason) {
+ 
+ void GreeterSurface::beginSessionStart() {
+   kLog.info("authentication successful");
++  restorePasswordPrompt();
+ 
+   savePreferences();
+ 
+@@ -1647,6 +1657,7 @@ void GreeterSurface::beginSessionStart() {
+ }
+ 
+ bool GreeterSurface::resetAuthSession() {
++  restorePasswordPrompt();
+   if (m_greetdClient != nullptr && m_authSessionStarted) {
+     if (!m_greetdClient->requestCancelSession()) {
+       m_authSessionStarted = false;
+@@ -1680,7 +1691,9 @@ void GreeterSurface::onAuthError(const GreetdError& error) {
+   m_hasPendingResponse = false;
+   m_pendingResponse.clear();
+   m_pendingReplies.clear();
++  m_statusErrorSinceSubmit = false;
+   clearPasswordInput();
++  restorePasswordPrompt();
+   updateStatus(error.description, true);
+   kLog.warn("authentication failed: {}", error.description);
+   if (!resetAuthSession()) {
+@@ -1713,6 +1726,29 @@ void GreeterSurface::updateStatus(const std::string& text, bool isError) {
+   requestLayout();
+ }
+ 
++void GreeterSurface::showPamPrompt(const std::string& prompt, bool secret) {
++  if (m_passwordField == nullptr) {
++    return;
++  }
++  // "New password: " → "New password".
++  std::string_view text = prompt;
++  while (!text.empty() && (text.back() == ' ' || text.back() == ':')) {
++    text.remove_suffix(1);
++  }
++  m_passwordField->setPlaceholder(text.empty() ? kPasswordPlaceholder : text);
++  m_passwordField->setPasswordMode(secret);
++  requestLayout();
++}
++
++void GreeterSurface::restorePasswordPrompt() {
++  if (m_passwordField == nullptr) {
++    return;
++  }
++  m_passwordField->setPlaceholder(kPasswordPlaceholder);
++  m_passwordField->setPasswordMode(true);
++  requestLayout();
++}
++
+ void GreeterSurface::loadUsers() {
+   m_users.clear();
+   m_userUids.clear();
+diff --git i/src/greeter/greeter_surface.h w/src/greeter/greeter_surface.h
+index a41aea7..cdfcd74 100644
+--- i/src/greeter/greeter_surface.h
++++ w/src/greeter/greeter_surface.h
+@@ -104,6 +104,8 @@ private:
+   [[nodiscard]] bool resetAuthSession();
+   void clearPasswordInput();
+   void updateStatus(const std::string& text, bool isError);
++  void showPamPrompt(const std::string& prompt, bool secret);
++  void restorePasswordPrompt();
+   void toggleUserMenu();
+   void openUserMenu();
+   void toggleSessionMenu();
+@@ -246,6 +248,7 @@ private:
+   bool m_authSessionStarted = false;
+   bool m_secretPromptWaiting = false; // greetd wants secret input from the user
+   bool m_hasPendingResponse = false;  // user-supplied input armed for next prompt
++  bool m_statusErrorSinceSubmit = false; // a PAM error arrived after the last answer
+   std::string m_pendingResponse;
+   std::deque<AuthRequest> m_pendingReplies;
+   std::function<void()> m_onExitRequested;

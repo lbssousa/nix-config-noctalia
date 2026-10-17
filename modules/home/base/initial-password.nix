@@ -1,5 +1,7 @@
 # Aviso persistente enquanto o usuário ainda usa a senha inicial (marcada em
-# /run/initial-password/<usuario> por modules/nixos/core/users.nix).
+# /run/initial-password/<usuario> por modules/nixos/core/users.nix). É só
+# reserva: a senha inicial nasce expirada, e o greeter exige a troca antes de
+# abrir a sessão.
 {
   flake.modules.homeManager.initial-password =
     { config, pkgs, ... }:

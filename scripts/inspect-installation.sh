@@ -355,18 +355,17 @@ if [[ -f "$ROOT/etc/shadow" && -f "$ROOT/persist/etc/shadow" ]]; then
   fi
 fi
 
-# Password-change flag files
+# Expired passwords: users who skipped step 8 keep the initial password
+# (1234, users.nix) expired, and the greeter asks for a new one on 1st login.
 echo
-info "==> Password change flag files (/persist/.password-change-required-*)"
-_flags=$(ls -1 "$ROOT/persist/.password-change-required-"* 2>/dev/null || true)
-if [[ -n "$_flags" ]]; then
-  ok "Pre-set password flags found (no forced change on first login):"
-  echo "$_flags" | while read -r _f; do
-    info "  $_f"
+info "==> Expired passwords (change required on first login)"
+_expired=$(awk -F: '$3 == "0" { print $1 }' "$ROOT/persist/etc/shadow" 2>/dev/null || true)
+if [[ -n "$_expired" ]]; then
+  echo "$_expired" | while read -r _u; do
+    info "  $_u (logs in with 1234, then sets a new password)"
   done
 else
-  info "No pre-set password flag found."
-  info "(Users with initialPassword='nixos' will be forced to change it on 1st login)"
+  info "None: every user already has their own password."
 fi
 
 # ---------------------------------------------------------------------------

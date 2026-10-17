@@ -107,8 +107,6 @@ echo    "  Nix configuration"
 [[ -f "$REPO_ROOT/modules/users/${OLD_NAME}.nix" ]] && \
     echo "    • modules/users/${OLD_NAME}.nix → modules/users/${NEW_NAME}.nix"
 echo    "  /persist"
-[[ -f "/persist/.password-change-required-${OLD_NAME}" ]] && \
-    echo "    • .password-change-required-${OLD_NAME} → .password-change-required-${NEW_NAME}"
 [[ -f "/persist/etc/u2f-mappings" ]] && grep -q "^${OLD_NAME}:" /persist/etc/u2f-mappings && \
     echo "    • u2f-mappings: entry '${OLD_NAME}' updated"
 echo
@@ -147,13 +145,6 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 
 info "Updating persisted files..."
-
-OLD_FLAG="/persist/.password-change-required-${OLD_NAME}"
-NEW_FLAG="/persist/.password-change-required-${NEW_NAME}"
-if [[ -f "$OLD_FLAG" ]]; then
-    mv "$OLD_FLAG" "$NEW_FLAG"
-    success "Password flag: ${OLD_FLAG##*/} → ${NEW_FLAG##*/}"
-fi
 
 U2F_FILE="/persist/etc/u2f-mappings"
 if [[ -f "$U2F_FILE" ]] && grep -q "^${OLD_NAME}:" "$U2F_FILE"; then

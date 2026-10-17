@@ -307,3 +307,9 @@ yubikey-test:
     echo "--  Authentication failed."
     exit 1
   fi
+
+# NixOS VM test: login with an expired password through the patched greetd
+# (modules/flake/tests.nix). Needs KVM.
+[group("verification")]
+test-greetd:
+  cd "{{flake_root}}" && nix build -L --no-link ".#legacyPackages.$(nix eval --raw --impure --expr builtins.currentSystem).tests.greetd-expired-password"
