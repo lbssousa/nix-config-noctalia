@@ -31,6 +31,7 @@ unset BW_PASSWORD BW_OTP
 git clone https://github.com/lbssousa/nix-config-noctalia /tmp/nix-config-noctalia
 cd /tmp/nix-config-noctalia
 secretspec check -P install               # confere se tudo está no cofre
+bash scripts/import-ssh-yubikey.sh        # SSH do nix-secrets com a YubiKey
 
 # 2. Instalação (SEM sudo: o script lê o Bitwarden e só então se eleva)
 bash scripts/install.sh --age-keys-from-bitwarden
@@ -43,13 +44,13 @@ O passo 0a do script lê, pelo perfil `install` do `secretspec.toml`:
 
 - `AGE_KEY_SYSTEM` → `/persist/etc/sops/age/keys.txt` (passo 6b);
 - `AGE_KEY_<LOGIN>` → `~/.config/sops/age/keys.txt` de cada usuário instalado
-  (passo 7b, depois do `nixos-install`);
-- `GITHUB_SSH_KEY` → direto para o `ssh-agent` (4 h, nunca vai para o disco),
-  usado pelo `nixos-install` para buscar o `nix-secrets`; a chave de host do
-  `github.com` é fixada no script.
+  (passo 7b, depois do `nixos-install`).
 
 As chaves age ficam num diretório 0700 em `$XDG_RUNTIME_DIR` (RAM), apagado ao
-fim do script. O `nix-keys`, o git-crypt e a YubiKey não são necessários.
+fim do script. O `nix-keys` e o git-crypt não são necessários; a YubiKey ainda
+dá o SSH para o `nix-secrets` (chave residente, `import-ssh-yubikey.sh`) e o
+OTP do login no Bitwarden. Outra chave já carregada no `ssh-agent` também
+serve para o `nix-secrets`.
 
 ### Com a YubiKey e o nix-keys
 
@@ -98,10 +99,10 @@ sudo bash scripts/install.sh --host bigodon --disk /dev/nvme0n1 \
 - O greeter (Noctalia Greeter) mostra o nome completo de cada usuário.
 - Usuários sem senha definida no passo 8 entram com `nixos` e são obrigados a
   trocá-la (uma única vez; a flag fica em `/persist`).
-- Para o `abutre`: clone e desbloqueie o `nix-keys` em
-  `~/Projetos/lbssousa/nix-keys` e rode `just switch` — a ativação copia a chave
-  age pessoal e o sops-nix do home-manager instala o handle da chave SSH do
-  GitHub em `~/.ssh/`.
+- A chave age pessoal do `abutre` já foi gravada pelo passo 7b na instalação
+  pelo Bitwarden. Na instalação pelo `nix-keys`, clone-o e desbloqueie-o em
+  `~/Projetos/lbssousa/nix-keys` e rode `just switch`: a ativação copia a
+  chave.
 
 ## Secure Boot
 
@@ -158,9 +159,7 @@ Bitwarden não suporta chaves `-sk`/FIDO2) antes do primeiro `just switch`.
 
 O perfil `install` do `secretspec.toml` declara o que a instalação precisa. No
 cofre, as chaves age são **notas seguras** (o arquivo `keys.txt` inteiro no
-corpo da nota) com títulos `secretspec/nix-config-noctalia/install/<CHAVE>`, e
-a chave do GitHub é um item **Chave SSH** chamado `GitHub lbssousa` (a mesma
-que o agente SSH do Bitwarden usa no sistema instalado).
+corpo da nota) com títulos `secretspec/nix-config-noctalia/install/<CHAVE>`.
 
 Migração, uma vez, com o `nix-keys` desbloqueado (`nix develop` traz o
 `secretspec`; o `bw` vem de `nix shell nixpkgs#bitwarden-cli`):

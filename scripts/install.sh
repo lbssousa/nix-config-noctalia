@@ -2,8 +2,8 @@
 # install.sh — Automated NixOS installation script
 #
 # Automates the steps described in INSTALLATION.md:
-#   0a. (--age-keys-from-bitwarden) Fetches the age keys and the GitHub SSH
-#       key from Bitwarden via SecretSpec, as the calling user
+#   0a. (--age-keys-from-bitwarden) Fetches the age keys from Bitwarden via
+#       SecretSpec, as the calling user
 #   0b. Clones and unlocks the nix-keys repository via git-crypt
 #   1.  Selects the host and target disk
 #   3.  Partitions and formats the disk with disko (Btrfs + LUKS + LVM, tmpfs root)
@@ -44,11 +44,11 @@
 #                       the key file without the full repository. Copied to
 #                       /persist/etc/sops/age/keys.txt on the installed system.
 #   --age-keys-from-bitwarden
-#                       Reads the age keys (system and per user) and the GitHub
-#                       SSH key from Bitwarden, through the "install" profile of
-#                       secretspec.toml. Replaces nix-keys/git-crypt and the
-#                       YubiKey SSH flow. Run WITHOUT sudo, with `bw` unlocked
-#                       and BW_SESSION exported (see INSTALLATION.md).
+#                       Reads the age keys (system and per user) from
+#                       Bitwarden, through the "install" profile of
+#                       secretspec.toml. Replaces nix-keys/git-crypt. Run
+#                       WITHOUT sudo, with `bw` unlocked and BW_SESSION
+#                       exported (see INSTALLATION.md).
 #   --non-interactive   Doesn't ask questions; fails if required information
 #                       isn't provided via flags
 #   --help, -h          Show help and exit
@@ -113,13 +113,8 @@ _run_pamu2fcfg() {
 # root process via INSTALL_BW_KEYS_DIR and removed when the script exits:
 #   system.txt       ← AGE_KEY_SYSTEM (copied to /persist in step 6b)
 #   user-<login>.txt ← AGE_KEY_<LOGIN> (copied to the user's home in step 7b)
-#   known_hosts      ← pinned github.com host key for root's SSH
-# GITHUB_SSH_KEY goes straight from Bitwarden into ssh-agent (never on disk);
-# sudo -E passes SSH_AUTH_SOCK on to nixos-install.
-
-# GitHub's published ed25519 host key (docs.github.com, "GitHub's SSH key
-# fingerprints").
-GITHUB_KNOWN_HOST="github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl"
+# SSH to github.com (nix-secrets) is unchanged: the YubiKey config written by
+# import-ssh-yubikey.sh, or any key in the agent (sudo -E keeps SSH_AUTH_SOCK).
 
 _bw_fetch_secrets() {
   local spec dir name login
@@ -127,18 +122,22 @@ _bw_fetch_secrets() {
 
   require_cmd secretspec
   require_cmd bw
-  require_cmd ssh-add
   [[ -n "${BW_SESSION:-}" ]] || die "BW_SESSION not set. Run: bw login && export BW_SESSION=\"\$(bw unlock --raw)\""
   bw sync >/dev/null || die "bw sync failed. Is the vault unlocked (BW_SESSION)?"
 
-  local -a ss=(secretspec --file "$spec" --profile install --reason "nix-config-noctalia install.sh")
+  # secretspec options go after the subcommand: ss get <name> ...
+  ss() {
+    local cmd="$1"
+    shift
+    secretspec "$cmd" --file "$spec" --profile install --reason "nix-config-noctalia install.sh" "$@"
+  }
 
   dir="$(mktemp -d "${XDG_RUNTIME_DIR:-/dev/shm}/install-bw.XXXXXX")"
   chmod 700 "$dir"
   export INSTALL_BW_KEYS_DIR="$dir"
 
   info "==> Step 0a: Fetching secrets from Bitwarden (secretspec profile 'install')"
-  (umask 077 && "${ss[@]}" get AGE_KEY_SYSTEM > "$dir/system.txt") \
+  (umask 077 && ss get AGE_KEY_SYSTEM > "$dir/system.txt") \
     || die "Could not read AGE_KEY_SYSTEM from Bitwarden (run: secretspec check -P install)."
   grep -q '^AGE-SECRET-KEY-' "$dir/system.txt" || die "AGE_KEY_SYSTEM doesn't look like an age key."
   success "System age key read."
@@ -148,7 +147,7 @@ _bw_fetch_secrets() {
     [[ "$name" == "AGE_KEY_SYSTEM" ]] && continue
     login="${name#AGE_KEY_}"
     login="${login,,}"
-    if (umask 077 && "${ss[@]}" get "$name" > "$dir/user-$login.txt" 2>/dev/null) \
+    if (umask 077 && ss get "$name" > "$dir/user-$login.txt" 2>/dev/null) \
       && grep -q '^AGE-SECRET-KEY-' "$dir/user-$login.txt"; then
       success "Personal age key read for '$login'."
     else
@@ -156,17 +155,6 @@ _bw_fetch_secrets() {
       warn "No personal age key for '$login' in Bitwarden ($name). Skipping."
     fi
   done
-
-  printf '%s\n' "$GITHUB_KNOWN_HOST" > "$dir/known_hosts"
-
-  if [[ -z "${SSH_AUTH_SOCK:-}" ]]; then
-    eval "$(ssh-agent -s)" >/dev/null
-  fi
-  if "${ss[@]}" get GITHUB_SSH_KEY 2>/dev/null | ssh-add -t 4h - 2>/dev/null; then
-    success "GitHub SSH key loaded into ssh-agent (4 h)."
-  else
-    warn "GITHUB_SSH_KEY not available; nix-secrets (git+ssh) needs another key in the agent."
-  fi
 }
 
 _bw_mode=false
@@ -202,15 +190,12 @@ fi
 # Root can read the config and private keys regardless of the 700/600 perms.
 NIX_SECRETS_SSH_CONFIG=""
 if [[ "$_bw_mode" == "true" ]]; then
-  # Bitwarden mode: the key is in the agent (SSH_AUTH_SOCK kept by sudo -E);
-  # only pin github.com, since root has no known_hosts in the live system.
   [[ -d "${INSTALL_BW_KEYS_DIR:-}" ]] || die "INSTALL_BW_KEYS_DIR missing. Run the script without sudo."
   trap 'rm -rf "$INSTALL_BW_KEYS_DIR"' EXIT
-  export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=$INSTALL_BW_KEYS_DIR/known_hosts -o StrictHostKeyChecking=yes"
 fi
 for _u in "${SUDO_USER:-}" $(find /home -maxdepth 2 -name config -path '*/.ssh/config' 2>/dev/null | sed 's|^/home/\([^/]*\)/\.ssh/config|\1|'); do
   _c="/home/$_u/.ssh/config"
-  if [[ "$_bw_mode" != "true" && -n "$_u" && "$_u" != "root" && -f "$_c" ]] && grep -q 'IdentityAgent' "$_c" 2>/dev/null; then
+  if [[ -n "$_u" && "$_u" != "root" && -f "$_c" ]] && grep -q 'IdentityAgent' "$_c" 2>/dev/null; then
     NIX_SECRETS_SSH_CONFIG="$_c"
     break
   fi
@@ -308,9 +293,9 @@ Options:
                       without the full repository. Copied to
                       /persist/etc/sops/age/keys.txt on the installed system.
   --age-keys-from-bitwarden
-                      Reads the age keys (system and per user) and the GitHub
-                      SSH key from Bitwarden, through the "install" profile of
-                      secretspec.toml, instead of nix-keys. Run WITHOUT sudo,
+                      Reads the age keys (system and per user) from Bitwarden,
+                      through the "install" profile of secretspec.toml,
+                      instead of nix-keys. Run WITHOUT sudo,
                       with bw unlocked and BW_SESSION exported.
   --non-interactive   Doesn't ask questions; fails if required information
                       isn't provided via flags.
