@@ -28,10 +28,6 @@
           # cobre o caso de ele não responder.
           auth.allow_empty_password = true;
         };
-        cursorTheme = {
-          package = pkgs.adwaita-icon-theme;
-          name = "Adwaita";
-        };
       };
 
       hardware.bluetooth.powerOnBoot = true;
@@ -50,7 +46,6 @@
         wl-clipboard
         libnotify
         xdg-utils
-        adwaita-icon-theme
       ];
     };
 }

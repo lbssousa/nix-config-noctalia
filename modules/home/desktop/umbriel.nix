@@ -51,12 +51,20 @@
           autostart = [ "flatpak run com.bitwarden.desktop" ];
         };
 
-        input.keyboard = {
-          layout = "br";
-          variant = "abnt2";
-          numlock_toggle = true;
+        input = {
+          keyboard = {
+            layout = "br";
+            variant = "abnt2";
+            numlock_toggle = true;
+          };
+          focus.follows_mouse = true;
+          # Mesmo cursor do sistema (nixos/desktop/cursor.nix); o Umbriel o
+          # exporta como XCURSOR_THEME/XCURSOR_SIZE para o que ele abre.
+          cursor = {
+            theme = "Adwaita";
+            size = 24;
+          };
         };
-        input.focus.follows_mouse = true;
 
         layout = {
           mode = "dwindle";

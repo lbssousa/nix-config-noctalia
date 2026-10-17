@@ -31,6 +31,7 @@ in
       m.session
       m.audio
       m.fonts
+      m.cursor
       m.secret-service
       m.firefox
       m.apps
