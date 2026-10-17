@@ -88,7 +88,7 @@ O script:
 5. cria as chaves do Secure Boot em `/persist/etc/secureboot` (sbctl);
 6. copia a chave age do host para `/persist/etc/sops/age/keys.txt`;
 7. copia a configuração para `/persist/etc/nixos` e roda `nixos-install`;
-8. deixa todos os usuários com a senha `1234` expirada, define (se quiser) a
+8. deixa todos os usuários sem senha e expirados, define (se quiser) a
    senha do root, grava `/persist/etc/shadow` e, opcionalmente, registra a
    YubiKey para `pam_u2f` (`/persist/etc/u2f-mappings`).
 
@@ -104,10 +104,13 @@ sudo bash scripts/install.sh --host bigodon --disk /dev/nvme0n1 \
 ## Primeiro boot
 
 - O greeter (Noctalia Greeter) mostra o nome completo de cada usuário.
-- Todos os usuários entram com `1234`, que já está expirada: o greeter pede
-  a senha atual (`1234`), a nova e a confirmação, e só então abre a sessão. Isso depende dos patches do greetd e do Noctalia
-  Greeter no overlay (`modules/flake/packages.nix`); se a confirmação não
-  bater, o login volta ao início e a senha continua expirada.
+- Todos os usuários começam sem senha, como no "definir senha no próximo
+  login" do GDM: ao escolher o usuário, o greeter mostra "Primeiro acesso" e
+  pede direto a nova senha e a confirmação, e só então abre a sessão. Isso
+  depende dos patches do greetd e do Noctalia Greeter no overlay
+  (`modules/flake/packages.nix`); se a confirmação não bater, o login volta ao
+  início e a conta continua sem senha. Senha vazia só é aceita enquanto a
+  conta está expirada (`modules/nixos/security/first-login.nix`).
 - A chave age pessoal do `abutre` já foi gravada pelo passo 7b na instalação
   pelo Bitwarden. Na instalação pelo `nix-keys`, clone-o e desbloqueie-o em
   `~/Projetos/lbssousa/nix-keys` e rode `just switch`: a ativação copia a

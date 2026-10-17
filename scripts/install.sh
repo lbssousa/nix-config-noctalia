@@ -14,7 +14,7 @@
 #   6b. Copies the sops-nix system age key to /persist
 #   7.  Installs NixOS
 #   7b. (--age-keys-from-bitwarden) Copies each user's personal age key
-#   8.  Expires every user's initial password (1234), changed on first login
+#   8.  Expires every user's empty initial password (set on first login)
 #   8b. Registers the YubiKey for U2F authentication (pamu2fcfg)
 #   9.  Home Manager is already activated by nixos-install (NixOS module)
 #
@@ -347,7 +347,7 @@ This script automates the steps described in INSTALLATION.md:
   6b. Copies the sops-nix system age key to /persist
   7.  Installs NixOS
   7b. (--age-keys-from-bitwarden) Copies each user's personal age key
-  8.  Expires every user's initial password (1234) and optionally sets root's
+  8.  Expires every user's empty initial password and optionally sets root's
   8b. Registers the YubiKey for U2F authentication (pamu2fcfg)
   9.  Home Manager is already activated by nixos-install (NixOS module)
 EOF
@@ -1129,14 +1129,16 @@ fi
 # ---------------------------------------------------------------------------
 # 8. Initial passwords
 # ---------------------------------------------------------------------------
-# Every user gets the initial password 1234 (users.users.*.initialPassword in
-# modules/nixos/core/users.nix), already expired: on the first login the
-# greeter asks for it and then for a new one (greetd patched to call
+# Every user starts without a password (users.users.*.initialHashedPassword
+# = "" in modules/nixos/core/users.nix), already expired — GDM's "set the
+# password at next login": the empty password only works while expired
+# (nullresetok, security/first-login.nix), and on the first login the greeter
+# asks just for the new password and its confirmation (greetd patched to call
 # pam_chauthtok). detectInitialPasswords would expire it on the first boot
 # anyway; doing it here also covers the very first login.
 
 echo
-info "==> Step 8: Initial passwords (1234, changed on first login)"
+info "==> Step 8: Initial passwords (none; each user sets theirs on first login)"
 
 # Combine users already in the modules + created in this session, without duplicates.
 # This ensures every user of the installed system gets the expired password.
@@ -1163,7 +1165,7 @@ for _user in "${_ALL_PASSWD_USERS[@]}"; do
   fi
 
   if chage --root /mnt -d 0 "$_user"; then
-    success "'$_user': log in with 1234; the greeter then asks for a new password."
+    success "'$_user': no password yet; the greeter asks for a new one on first login."
   else
     warn "Could not expire the initial password of '$_user'."
   fi

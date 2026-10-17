@@ -96,8 +96,10 @@ de arquivos é Nautilus para todos e flea para o `abutre`.
   (`appearance.show_real_names`): mostra o nome completo no login.
 - **Senha expirada no login gráfico:** patches locais no greetd (chama
   `pam_chauthtok` quando o PAM devolve `NEW_AUTHTOK_REQD`) e no greeter
-  (mostra cada prompt no campo). Toda conta nova nasce com a senha `1234`
-  expirada e a troca no primeiro login.
+  (mostra cada prompt no campo). Como no "definir senha no próximo login"
+  do GDM, toda conta nova nasce sem senha e expirada: ao escolher o usuário,
+  o greeter pede direto a nova senha e a confirmação (`nullresetok` no PAM:
+  senha vazia só entra enquanto expirada).
 - **Flatpaks** (Flathub, atualizados diariamente): Firefox, Bitwarden,
   OnlyOffice, Xournal++, Papers, LocalSend, Zoom, OBS, Kdenlive, Pinta,
   Inkscape, FontForge, mais Flatseal, Warehouse e Bazaar. Ficam nativos os

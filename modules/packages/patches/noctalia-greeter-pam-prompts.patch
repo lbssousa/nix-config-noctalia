@@ -1,5 +1,131 @@
+diff --git i/src/accounts/accounts_icon.cpp w/src/accounts/accounts_icon.cpp
+index 3e22b8c..c76abd9 100644
+--- i/src/accounts/accounts_icon.cpp
++++ w/src/accounts/accounts_icon.cpp
+@@ -65,6 +65,37 @@ namespace accounts {
+       return value;
+     }
+ 
++    // Object path of uid in org.freedesktop.Accounts, after checking that the
++    // object really is that uid.
++    std::optional<std::string> userObjectPathForUid(GDBusConnection* connection, const uid_t uid) {
++      GError* error = nullptr;
++      GVariant* result = g_dbus_connection_call_sync(
++          connection, "org.freedesktop.Accounts", "/org/freedesktop/Accounts", "org.freedesktop.Accounts",
++          "FindUserById", g_variant_new("(x)", static_cast<gint64>(uid)), G_VARIANT_TYPE("(o)"),
++          G_DBUS_CALL_FLAGS_NONE, 5000, nullptr, &error
++      );
++      if (result == nullptr) {
++        if (error != nullptr) {
++          g_error_free(error);
++        }
++        return std::nullopt;
++      }
++
++      const char* userPath = nullptr;
++      g_variant_get(result, "(&o)", &userPath);
++      const std::string userObjectPath = userPath != nullptr ? userPath : "";
++      g_variant_unref(result);
++      if (userObjectPath.empty()) {
++        return std::nullopt;
++      }
++
++      const std::optional<std::uint64_t> reportedUid = dbusUserUint64Property(connection, userObjectPath.c_str(), "Uid");
++      if (!reportedUid.has_value() || static_cast<uid_t>(*reportedUid) != uid) {
++        return std::nullopt;
++      }
++      return userObjectPath;
++    }
++
+     [[nodiscard]] bool iconPathReadable(const std::string& path) {
+       std::error_code ec;
+       return !path.empty() && std::filesystem::is_regular_file(path, ec) && !ec;
+@@ -147,35 +178,13 @@ namespace accounts {
+       return std::nullopt;
+     }
+ 
+-    GVariant* result = g_dbus_connection_call_sync(
+-        connection, "org.freedesktop.Accounts", "/org/freedesktop/Accounts", "org.freedesktop.Accounts", "FindUserById",
+-        g_variant_new("(x)", static_cast<gint64>(uid)), G_VARIANT_TYPE("(o)"), G_DBUS_CALL_FLAGS_NONE, 5000, nullptr,
+-        &error
+-    );
+-    if (result == nullptr) {
+-      if (error != nullptr) {
+-        g_error_free(error);
+-      }
++    const std::optional<std::string> userObjectPath = userObjectPathForUid(connection, uid);
++    if (!userObjectPath.has_value()) {
+       g_object_unref(connection);
+       return std::nullopt;
+     }
+ 
+-    const char* userPath = nullptr;
+-    g_variant_get(result, "(&o)", &userPath);
+-    const std::string userObjectPath = userPath != nullptr ? userPath : "";
+-    g_variant_unref(result);
+-    if (userObjectPath.empty()) {
+-      g_object_unref(connection);
+-      return std::nullopt;
+-    }
+-
+-    const std::optional<std::uint64_t> reportedUid = dbusUserUint64Property(connection, userObjectPath.c_str(), "Uid");
+-    if (!reportedUid.has_value() || static_cast<uid_t>(*reportedUid) != uid) {
+-      g_object_unref(connection);
+-      return std::nullopt;
+-    }
+-
+-    const std::optional<std::string> iconFile = dbusUserStringProperty(connection, userObjectPath.c_str(), "IconFile");
++    const std::optional<std::string> iconFile = dbusUserStringProperty(connection, userObjectPath->c_str(), "IconFile");
+     g_object_unref(connection);
+ 
+     if (!iconFile.has_value() || !iconPathReadable(*iconFile)) {
+@@ -184,4 +193,30 @@ namespace accounts {
+     return iconFile;
+   }
+ 
++  bool passwordSetAtLogin(const uid_t uid) {
++    // accountsservice: 0 = regular, 1 = SetAtLogin, 2 = none.
++    constexpr std::int32_t kPasswordModeSetAtLogin = 1;
++
++    GError* error = nullptr;
++    GDBusConnection* connection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
++    if (connection == nullptr) {
++      if (error != nullptr) {
++        g_error_free(error);
++      }
++      return false;
++    }
++
++    bool setAtLogin = false;
++    if (const auto userObjectPath = userObjectPathForUid(connection, uid)) {
++      if (const auto property = dbusUserProperty(connection, userObjectPath->c_str(), "PasswordMode")) {
++        if (g_variant_is_of_type(*property, G_VARIANT_TYPE_INT32)) {
++          setAtLogin = g_variant_get_int32(*property) == kPasswordModeSetAtLogin;
++        }
++        g_variant_unref(*property);
++      }
++    }
++    g_object_unref(connection);
++    return setAtLogin;
++  }
++
+ } // namespace accounts
+diff --git i/src/accounts/accounts_icon.h w/src/accounts/accounts_icon.h
+index d568fae..11647ef 100644
+--- i/src/accounts/accounts_icon.h
++++ w/src/accounts/accounts_icon.h
+@@ -21,4 +21,9 @@ namespace accounts {
+   // Returns a readable IconFile path for uid from org.freedesktop.Accounts.
+   [[nodiscard]] std::optional<std::string> iconFileForUid(uid_t uid);
+ 
++  // True when org.freedesktop.Accounts reports PasswordMode SetAtLogin for
++  // uid: the password is expired and must be chosen at login (GNOME's
++  // "set password at next login", i.e. an empty, expired password).
++  [[nodiscard]] bool passwordSetAtLogin(uid_t uid);
++
+ } // namespace accounts
 diff --git i/src/greeter/greeter_surface.cpp w/src/greeter/greeter_surface.cpp
-index ecf42ca..dd7b569 100644
+index ecf42ca..d4a699a 100644
 --- i/src/greeter/greeter_surface.cpp
 +++ w/src/greeter/greeter_surface.cpp
 @@ -43,6 +43,7 @@
@@ -10,11 +136,13 @@ index ecf42ca..dd7b569 100644
  #include <sys/types.h>
  #include <unordered_set>
  #include <wayland-client.h>
-@@ -73,6 +74,45 @@ namespace {
+@@ -73,6 +74,47 @@ namespace {
    }
  
    constexpr std::size_t kUserDropdownMaxVisibleRows = 8;
 +  constexpr std::string_view kPasswordPlaceholder = "Type password";
++  constexpr std::string_view kSetAtLoginHint = "Primeiro acesso: tecle Enter para definir sua senha.";
++  constexpr std::string_view kSetAtLoginStatus = "Primeiro acesso: defina sua senha.";
 +
 +  // greetd reports PAM failures as "pam_<function>: <CODE>". Turn the common
 +  // ones into a sentence (the system is pt_BR); anything else is shown as is.
@@ -56,7 +184,7 @@ index ecf42ca..dd7b569 100644
    const float kUserMenuPadding = Style::spaceSm();
    const float kUserMenuRowGap = Style::spaceXs();
    const float kUserMenuRowIconGap = Style::spaceSm();
-@@ -318,7 +358,7 @@ void GreeterSurface::initialize(RenderContext* context) {
+@@ -318,7 +360,7 @@ void GreeterSurface::initialize(RenderContext* context) {
    m_root.addChild(std::move(panel));
  
    auto pwField = std::make_unique<Input>();
@@ -65,7 +193,70 @@ index ecf42ca..dd7b569 100644
    pwField->setPasswordMode(true);
    pwField->setControlHeight(Style::controlHeight());
    pwField->setOnChange([this](const std::string& value) { m_password = value; });
-@@ -1501,9 +1541,15 @@ void GreeterSurface::handleAuthMessage(const GreetdAuthMessage& message) {
+@@ -621,6 +663,9 @@ void GreeterSurface::initialize(RenderContext* context) {
+   applyScheme(m_selectedScheme);
+   refreshSelectionLabels();
+   applyInitialUserSelection();
++  if (m_passwordVisible) {
++    refreshSetAtLogin();
++  }
+ 
+   if (const auto& diagnostics = greeter::config::configDiagnostics(); !diagnostics.empty()) {
+     const auto& diagnostic = diagnostics.front();
+@@ -1037,6 +1082,22 @@ void GreeterSurface::enterPasswordStep(std::size_t userIndex) {
+   refreshSelectionLabels();
+   notifyStateChanged();
+   commitImmediateFrame(true);
++
++  // Like GDM: an account without a password goes straight to choosing one.
++  refreshSetAtLogin();
++  if (m_selectedSetAtLogin) {
++    tryAuthenticate();
++  }
++}
++
++void GreeterSurface::refreshSetAtLogin() {
++  const uid_t uid = m_selectedUser < m_userUids.size() ? m_userUids[m_selectedUser] : 0;
++  m_selectedSetAtLogin = uid != 0 && accounts::passwordSetAtLogin(uid);
++  if (m_selectedSetAtLogin) {
++    updateStatus(std::string(kSetAtLoginHint), false);
++  } else if (m_status == kSetAtLoginHint) {
++    updateStatus("", false);
++  }
+ }
+ 
+ void GreeterSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
+@@ -1397,7 +1458,7 @@ void GreeterSurface::tryAuthenticate() {
+     commitImmediateFrame(false);
+     return;
+   }
+-  if (m_password.empty() && !m_allowEmptyPassword) {
++  if (m_password.empty() && !m_allowEmptyPassword && !m_selectedSetAtLogin) {
+     updateStatus("Enter a password", true);
+     commitImmediateFrame(false);
+     return;
+@@ -1407,9 +1468,17 @@ void GreeterSurface::tryAuthenticate() {
+     if (m_onAuthBeginRequested && !m_onAuthBeginRequested(this)) {
+       return;
+     }
+-    // Arm the typed input (possibly empty) to answer the first secret prompt.
+-    m_pendingResponse = m_password;
+-    m_hasPendingResponse = true;
++    // First login of an account without a password: pam_unix skips the
++    // password prompt of an empty, expired password and goes straight to the
++    // new one, so nothing is armed; the prompts drive the field.
++    m_setAtLoginFlow = m_selectedSetAtLogin && m_password.empty();
++    if (m_setAtLoginFlow) {
++      updateStatus(std::string(kSetAtLoginStatus), false);
++    } else {
++      // Arm the typed input (possibly empty) to answer the first secret prompt.
++      m_pendingResponse = m_password;
++      m_hasPendingResponse = true;
++    }
+     m_authenticating = true;
+     kLog.info("greetd: create_session for '{}'", m_username);
+     if (!m_greetdClient->requestCreateSession(m_username)) {
+@@ -1501,9 +1570,17 @@ void GreeterSurface::handleAuthMessage(const GreetdAuthMessage& message) {
  
    if (message.type == GreetdAuthMessageType::Info || message.type == GreetdAuthMessageType::Error) {
      const bool isError = message.type == GreetdAuthMessageType::Error;
@@ -73,7 +264,9 @@ index ecf42ca..dd7b569 100644
 +    // An info line must not hide an error from the same step, e.g. pam_unix's
 +    // "you are required to change your password" followed by "Changing
 +    // password for <user>." before the expired-password prompts.
-+    if (!message.message.empty() && (isError || !m_statusErrorSinceSubmit)) {
++    // While setting a first password, PAM's "you must change your password"
++    // is expected; the status keeps the first-login line instead.
++    if (!message.message.empty() && !m_setAtLoginFlow && (isError || !m_statusErrorSinceSubmit)) {
        updateStatus(message.message, isError);
      }
 +    if (isError) {
@@ -82,7 +275,7 @@ index ecf42ca..dd7b569 100644
      if (isError) {
        clearPasswordInput();
      }
-@@ -1531,9 +1577,9 @@ void GreeterSurface::handleAuthMessage(const GreetdAuthMessage& message) {
+@@ -1531,9 +1608,9 @@ void GreeterSurface::handleAuthMessage(const GreetdAuthMessage& message) {
    }
  
    m_secretPromptWaiting = true;
@@ -95,7 +288,7 @@ index ecf42ca..dd7b569 100644
    syncAuthInteractivity();
    commitImmediateFrame(false);
  }
-@@ -1548,6 +1594,7 @@ void GreeterSurface::postAuthResponse(const std::string& data) {
+@@ -1548,6 +1625,7 @@ void GreeterSurface::postAuthResponse(const std::string& data) {
    }
    clearPasswordInput();
    m_secretPromptWaiting = false;
@@ -103,27 +296,30 @@ index ecf42ca..dd7b569 100644
    m_pendingReplies.push_back(AuthRequest::PostAuthData);
    syncAuthInteractivity();
    commitImmediateFrame(false);
-@@ -1588,6 +1635,7 @@ void GreeterSurface::setGreetdUnavailable(const std::string_view reason) {
+@@ -1588,6 +1666,8 @@ void GreeterSurface::setGreetdUnavailable(const std::string_view reason) {
  
  void GreeterSurface::beginSessionStart() {
    kLog.info("authentication successful");
++  m_setAtLoginFlow = false;
 +  restorePasswordPrompt();
  
    savePreferences();
  
-@@ -1647,6 +1695,7 @@ void GreeterSurface::beginSessionStart() {
+@@ -1647,6 +1727,8 @@ void GreeterSurface::beginSessionStart() {
  }
  
  bool GreeterSurface::resetAuthSession() {
++  m_setAtLoginFlow = false;
 +  restorePasswordPrompt();
    if (m_greetdClient != nullptr && m_authSessionStarted) {
      if (!m_greetdClient->requestCancelSession()) {
        m_authSessionStarted = false;
-@@ -1680,8 +1729,10 @@ void GreeterSurface::onAuthError(const GreetdError& error) {
+@@ -1680,8 +1762,11 @@ void GreeterSurface::onAuthError(const GreetdError& error) {
    m_hasPendingResponse = false;
    m_pendingResponse.clear();
    m_pendingReplies.clear();
 +  m_statusErrorSinceSubmit = false;
++  m_setAtLoginFlow = false;
    clearPasswordInput();
 -  updateStatus(error.description, true);
 +  restorePasswordPrompt();
@@ -131,7 +327,7 @@ index ecf42ca..dd7b569 100644
    kLog.warn("authentication failed: {}", error.description);
    if (!resetAuthSession()) {
      return;
-@@ -1713,6 +1764,29 @@ void GreeterSurface::updateStatus(const std::string& text, bool isError) {
+@@ -1713,6 +1798,29 @@ void GreeterSurface::updateStatus(const std::string& text, bool isError) {
    requestLayout();
  }
  
@@ -162,23 +358,26 @@ index ecf42ca..dd7b569 100644
    m_users.clear();
    m_userUids.clear();
 diff --git i/src/greeter/greeter_surface.h w/src/greeter/greeter_surface.h
-index a41aea7..cdfcd74 100644
+index a41aea7..bce6974 100644
 --- i/src/greeter/greeter_surface.h
 +++ w/src/greeter/greeter_surface.h
-@@ -104,6 +104,8 @@ private:
+@@ -104,6 +104,9 @@ private:
    [[nodiscard]] bool resetAuthSession();
    void clearPasswordInput();
    void updateStatus(const std::string& text, bool isError);
 +  void showPamPrompt(const std::string& prompt, bool secret);
 +  void restorePasswordPrompt();
++  void refreshSetAtLogin();
    void toggleUserMenu();
    void openUserMenu();
    void toggleSessionMenu();
-@@ -246,6 +248,7 @@ private:
+@@ -246,6 +249,9 @@ private:
    bool m_authSessionStarted = false;
    bool m_secretPromptWaiting = false; // greetd wants secret input from the user
    bool m_hasPendingResponse = false;  // user-supplied input armed for next prompt
 +  bool m_statusErrorSinceSubmit = false; // a PAM error arrived after the last answer
++  bool m_selectedSetAtLogin = false; // selected user has no password yet (expired)
++  bool m_setAtLoginFlow = false;     // conversation that sets that first password
    std::string m_pendingResponse;
    std::deque<AuthRequest> m_pendingReplies;
    std::function<void()> m_onExitRequested;

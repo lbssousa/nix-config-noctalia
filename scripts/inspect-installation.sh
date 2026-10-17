@@ -355,14 +355,14 @@ if [[ -f "$ROOT/etc/shadow" && -f "$ROOT/persist/etc/shadow" ]]; then
   fi
 fi
 
-# Expired passwords: users who skipped step 8 keep the initial password
-# (1234, users.nix) expired, and the greeter asks for a new one on 1st login.
+# Expired passwords: every user starts without a password, expired (step 8,
+# users.nix), and the greeter asks for a new one on the first login.
 echo
 info "==> Expired passwords (change required on first login)"
 _expired=$(awk -F: '$3 == "0" { print $1 }' "$ROOT/persist/etc/shadow" 2>/dev/null || true)
 if [[ -n "$_expired" ]]; then
   echo "$_expired" | while read -r _u; do
-    info "  $_u (logs in with 1234, then sets a new password)"
+    info "  $_u (sets a password on the first login)"
   done
 else
   info "None: every user already has their own password."

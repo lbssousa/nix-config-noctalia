@@ -2,14 +2,18 @@
 # `nix flake check` do CI continuar só avaliando; rode com `just test-greetd`
 # (precisa de KVM).
 #
-# greetd-expired-password: login com senha expirada (`chage -d 0`). Um greeter
+# greetd-expired-password: primeiro login de uma conta sem senha e expirada
+# (`chage -d 0`), como o "definir senha no próximo login" do GDM. Um greeter
 # de teste fala o IPC do greetd (u32 de tamanho + JSON) e roda cenários, um
-# usuário cada: responde os prompts secretos em ordem (senha atual no login,
-# senha atual de novo no pam_chauthtok, nova senha e confirmação). Os de erro
-# (senha atual errada, confirmação diferente) vêm antes e não podem abrir a
-# sessão nem mexer no shadow (pam_unix "required", ver secret-service.nix); o
-# último troca a senha e abre a sessão. Sem o patch do greetd, o primeiro
-# post_auth_message_response já volta "pam_acct_mgmt: NEW_AUTHTOK_REQD".
+# usuário cada, respondendo os prompts secretos em ordem. Numa conta sem senha
+# e expirada o pam_unix nem pede a senha: a conversa começa na nova senha e
+# na confirmação (sem "senha atual"). Os de erro vêm antes e
+# não podem abrir a sessão nem mexer no shadow:
+#   - bob: senha vazia não expirada → o nullresetok recusa (first-login.nix);
+#   - carol: confirmação diferente → pam_unix "required" (secret-service.nix).
+# O último (alice) define a senha e abre a sessão. Sem o patch do greetd, o
+# primeiro post_auth_message_response já volta
+# "pam_acct_mgmt: NEW_AUTHTOK_REQD".
 { config, ... }:
 {
   perSystem =
@@ -29,9 +33,9 @@
         DONE = "/tmp/greeter.done"
         GO = "/tmp/greeter.go"
         SCENARIOS = [
-            ("bob", ["1234", "errada", "${newPassword}", "${newPassword}"]),
-            ("carol", ["1234", "1234", "${newPassword}", "Outra-Senha!"]),
-            ("alice", ["1234", "1234", "${newPassword}", "${newPassword}"]),
+            ("bob", [""]),
+            ("carol", ["${newPassword}", "Outra-Senha!"]),
+            ("alice", ["${newPassword}", "${newPassword}"]),
         ]
 
         # greetd relança o greeter quando a sessão de teste termina.
@@ -88,7 +92,8 @@
         open(DONE, "w").close()
       '';
 
-      # Confere a senha de um usuário contra o /etc/shadow (crypt da libxcrypt).
+      # Confere a senha de um usuário contra o /etc/shadow (crypt da libxcrypt);
+      # hash vazio confere com a senha vazia.
       checkPassword = pkgs.writers.writePython3Bin "check-password" { flakeIgnore = [ "E501" ]; } ''
         import ctypes
         import sys
@@ -99,6 +104,8 @@
         with open("/etc/shadow") as f:
             hashes = {p[0]: p[1] for p in (line.split(":") for line in f)}
         h = hashes[user].encode()
+        if not h:
+            sys.exit(0 if not password else 1)
         sys.exit(0 if crypt(password, h) == h else 1)
       '';
     in
@@ -111,14 +118,18 @@
           {
             environment.systemPackages = [ checkPassword ];
 
+            # Sem senha, como as contas do sistema (users.nix).
             users.users = lib.genAttrs [ "alice" "bob" "carol" ] (_: {
               isNormalUser = true;
-              initialPassword = "1234";
+              initialHashedPassword = "";
             });
 
-            # Mesma pilha PAM do sistema: oo7 e pam_unix "required" na troca de
-            # senha (modules/nixos/desktop/secret-service.nix).
-            imports = [ config.flake.modules.nixos.secret-service ];
+            # Mesma pilha PAM do sistema: nullresetok (first-login.nix), oo7 e
+            # pam_unix "required" na troca de senha (secret-service.nix).
+            imports = with config.flake.modules.nixos; [
+              first-login
+              secret-service
+            ];
 
             services.greetd = {
               enable = true;
@@ -130,28 +141,32 @@
         testScript = ''
           machine.wait_for_unit("multi-user.target")
 
-          with subtest("senha inicial expirada"):
-              for user in ["alice", "bob", "carol"]:
+          with subtest("contas sem senha; só alice e carol expiradas"):
+              for user in ["alice", "carol"]:
                   machine.succeed(f"chage -d 0 {user}")
               machine.succeed("touch /tmp/greeter.go")
               machine.wait_for_file("/tmp/greeter.done")
               transcript = machine.succeed("cat /tmp/greeter.log")
               print(transcript)
 
-          with subtest("troca feita na conversa do greetd"):
+          with subtest("senha definida direto, sem pedir a senha atual"):
               assert "RESULT alice success" in transcript, transcript
+              alice = transcript.split("SCENARIO alice")[1]
+              assert "Current password" not in alice and '"Password: "' not in alice, alice
+              assert alice.count('"auth_message_type": "secret"') == 2, alice
               lastchg = machine.succeed("awk -F: '$1 == \"alice\" { print $3 }' /etc/shadow").strip()
               assert lastchg not in ("", "0"), f"sp_lstchg ainda {lastchg!r}"
-
-          with subtest("a nova senha vale e a inicial não"):
               machine.succeed("check-password alice '${newPassword}'")
-              machine.fail("check-password alice 1234")
+              machine.fail("check-password alice '''")
 
-          with subtest("respostas recusadas não trocam a senha"):
-              for user in ["bob", "carol"]:
-                  assert f"RESULT {user} error" in transcript, transcript
-                  machine.succeed(f"check-password {user} 1234")
-                  machine.succeed(f"test \"$(awk -F: '$1 == \"{user}\" {{ print $3 }}' /etc/shadow)\" = 0")
+          with subtest("senha vazia não expirada não entra"):
+              assert "RESULT bob error pam_authenticate: AUTH_ERR" in transcript, transcript
+              machine.succeed("check-password bob '''")
+
+          with subtest("confirmação diferente não define a senha"):
+              assert "RESULT carol error pam_chauthtok" in transcript, transcript
+              machine.succeed("check-password carol '''")
+              machine.succeed("test \"$(awk -F: '$1 == \"carol\" { print $3 }' /etc/shadow)\" = 0")
         '';
       };
     };

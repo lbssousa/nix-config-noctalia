@@ -26,6 +26,7 @@ in
       m.bitwarden
       m.selinux
       m.sshd
+      m.first-login
       # desktop
       m.session
       m.audio

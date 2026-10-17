@@ -21,6 +21,12 @@
           # Patch do PR noctalia-greeter#131 (ver modules/flake/packages.nix):
           # mostra o nome completo (AccountsService RealName/GECOS).
           appearance.show_real_names = true;
+          # Enter com o campo vazio envia: é o primeiro login de uma conta sem
+          # senha (security/first-login.nix). Quem decide é o PAM, que só
+          # aceita senha vazia em conta expirada. O patch do greeter já começa
+          # esse fluxo sozinho quando o AccountsService diz SetAtLogin; isto
+          # cobre o caso de ele não responder.
+          auth.allow_empty_password = true;
         };
         cursorTheme = {
           package = pkgs.adwaita-icon-theme;

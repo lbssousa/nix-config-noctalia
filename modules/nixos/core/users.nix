@@ -2,8 +2,6 @@
 { config, inputs, ... }:
 let
   inherit (config.my) users;
-  # Senha inicial de toda conta nova; nasce expirada (ver detectInitialPasswords).
-  initialPassword = "1234";
 in
 {
   flake.modules.nixos.users =
@@ -54,9 +52,11 @@ in
           ]
           ++ lib.optional u.sudo "wheel";
           shell = pkgs.fish;
-          # Só vale na criação da conta; nasce expirada e é trocada no primeiro
-          # login (install.sh, passo 8, e detectInitialPasswords).
-          inherit initialPassword;
+          # Só vale na criação da conta: sem senha e expirada, como o "definir
+          # senha no próximo login" do GDM; a senha é escolhida no primeiro
+          # login (install.sh passo 8, detectInitialPasswords e
+          # security/first-login.nix).
+          initialHashedPassword = "";
         }) users;
       };
 
@@ -101,37 +101,36 @@ in
           '';
         };
 
-        # Senha inicial expirada. A cada boot e a cada mudança em /etc/shadow,
-        # este serviço testa se a senha de cada usuário ainda é a inicial; se
-        # for, expira-a (`chage -d 0`, só se ainda não estiver expirada, pois o
-        # chage reescreve o shadow e reativa este serviço) e marca
-        # /run/initial-password/<usuario>. No login, o greetd corrigido
-        # (overlay em modules/flake/packages.nix) chama pam_chauthtok e o
-        # greeter pede a senha atual, a nova e a confirmação. A marca alimenta
-        # o aviso dentro da sessão (home/base/initial-password.nix), que fica
-        # como reserva.
+        # Conta ainda sem senha. A cada boot e a cada mudança em /etc/shadow,
+        # este serviço procura usuários com a senha vazia; se houver, expira-a
+        # (`chage -d 0`, só se ainda não estiver expirada, pois o chage
+        # reescreve o shadow e reativa este serviço) e marca
+        # /run/initial-password/<usuario>. Senha vazia só entra expirada
+        # (nullresetok, security/first-login.nix); no login, o greetd
+        # corrigido (overlay em modules/flake/packages.nix) chama
+        # pam_chauthtok e o greeter pede só a nova senha e a confirmação. A
+        # marca alimenta o aviso dentro da sessão
+        # (home/base/initial-password.nix), que fica como reserva.
         services.detectInitialPasswords = lib.mkIf (usersWithInitialPassword != { }) {
-          description = "Detect users still on their initial password";
+          description = "Expire passwords of users who haven't set one yet";
           wantedBy = [ "multi-user.target" ];
           after = [ "local-fs.target" ];
           serviceConfig.Type = "oneshot";
           script = ''
             install -d -m 0755 /run/initial-password
             ${pkgs.python3}/bin/python3 -I - ${lib.escapeShellArgs (lib.attrNames usersWithInitialPassword)} <<'PY'
-            import ctypes, os, subprocess, sys
-            crypt = ctypes.CDLL("${pkgs.libxcrypt}/lib/libcrypt.so").crypt
-            crypt.restype = ctypes.c_char_p
+            import os, subprocess, sys
             entries = {}
             with open("/etc/shadow") as f:
                 for line in f:
                     parts = line.split(":")
                     entries[parts[0]] = parts
             for user in sys.argv[1:]:
-                parts = entries.get(user, ["", "", ""])
-                h, lastchg = parts[1], parts[2]
+                if user not in entries:
+                    continue
+                h, lastchg = entries[user][1], entries[user][2]
                 flag = "/run/initial-password/" + user
-                initial = h[:1] == "$" and crypt(b"${initialPassword}", h.encode()) == h.encode()
-                if initial:
+                if h == "":
                     if lastchg != "0":
                         subprocess.run(["${pkgs.shadow}/bin/chage", "-d", "0", user], check=True)
                     open(flag, "w").close()
