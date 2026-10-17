@@ -18,45 +18,36 @@ o Secure Boot e o TPM2, feitos depois do primeiro boot.
 
 ### Com o Bitwarden (recomendado)
 
+No ambiente live, como o usuário comum (**sem** sudo):
+
 ```bash
-# 1. No ambiente live, como o usuário comum (não root)
-nix-shell -p git openssh bitwarden-cli secretspec
-# Login com a YubiKey OTP como segundo fator (--method 3): a senha mestra vai
-# por variável de ambiente e o código é digitado pelo toque LONGO na YubiKey
-# (slot 2; o slot 1 guarda o desafio-resposta HMAC-SHA1).
-read -r -s -p "Senha mestra: " BW_PASSWORD; echo; export BW_PASSWORD
-read -r -p "Segure a YubiKey por ~3 s (OTP no toque longo): " BW_OTP
-export BW_SESSION="$(bw login <e-mail> --passwordenv BW_PASSWORD --method 3 --code "$BW_OTP" --raw)"
-unset BW_PASSWORD BW_OTP
-git clone https://github.com/lbssousa/nix-config-noctalia /tmp/nix-config-noctalia
-cd /tmp/nix-config-noctalia
-secretspec check -P install               # confere se tudo está no cofre
-bash scripts/import-ssh-yubikey.sh        # SSH do nix-secrets com a YubiKey
-
-# 2. Instalação (SEM sudo: o script lê o Bitwarden e só então se eleva)
-bash scripts/install.sh --age-keys-from-bitwarden
-
-# 3. No fim
-bw lock
+nix-shell -p git --run "git clone https://github.com/lbssousa/nix-config-noctalia /tmp/nix-config-noctalia"
+bash /tmp/nix-config-noctalia/scripts/install-from-bitwarden.sh
 ```
 
-O passo 0a do script lê, pelo perfil `install` do `secretspec.toml`:
+O `install-from-bitwarden.sh` faz o resto:
 
-- `AGE_KEY_SYSTEM` → `/persist/etc/sops/age/keys.txt` (passo 6b);
-- `AGE_KEY_<LOGIN>` → `~/.config/sops/age/keys.txt` de cada usuário instalado
-  (passo 7b, depois do `nixos-install`).
+1. traz `git`, `openssh`, `bitwarden-cli`, `secretspec` e `gum` (via `nix-shell`);
+2. entra no Bitwarden: e-mail, senha mestra e o código OTP da YubiKey (toque
+   **longo**, slot 2; o slot 1 guarda o desafio-resposta HMAC-SHA1). Outro
+   segundo fator: `BW_2FA_METHOD=0` (aplicativo autenticador);
+3. confere o perfil `install` do `secretspec.toml` no cofre;
+4. importa as chaves SSH residentes da YubiKey para o `nix-secrets`
+   (`import-ssh-yubikey.sh`; pule com `--no-yubikey-ssh` se outra chave do
+   `ssh-agent` já alcança o GitHub);
+5. roda `install.sh --age-keys-from-bitwarden` (que se eleva sozinho);
+6. tranca o `bw` ao sair, mesmo em caso de erro.
 
-As chaves age ficam num diretório 0700 em `$XDG_RUNTIME_DIR` (RAM), apagado ao
-fim do script. O `nix-keys` e o git-crypt não são necessários; a YubiKey ainda
-dá o SSH para o `nix-secrets` (chave residente, `import-ssh-yubikey.sh`) e o
-OTP do login no Bitwarden. Outra chave já carregada no `ssh-agent` também
-serve para o `nix-secrets`.
+Opções do `install.sh` (`--host`, `--disk`, `--user`, ...) são repassadas; o
+e-mail pode vir de `--email` ou `BW_EMAIL`.
 
-O `~/.ssh/config` que o `import-ssh-yubikey.sh` gera reaproveita a conexão
-por 10 min (`ControlMaster`): um toque na YubiKey cobre todas as buscas do
-`nix-secrets` nessa janela, também as do root. As chaves de host do
-`github.com` vêm fixadas no `install.sh` (o root do live não tem
-`known_hosts`).
+Das chaves do perfil `install`, `AGE_KEY_SYSTEM` vai para
+`/persist/etc/sops/age/keys.txt` e cada `AGE_KEY_<LOGIN>` para
+`~/.config/sops/age/keys.txt` do usuário, depois do `nixos-install`. Até lá
+elas ficam num diretório 0700 em `$XDG_RUNTIME_DIR` (RAM), apagado ao fim. O
+`~/.ssh/config` gerado pelo `import-ssh-yubikey.sh` reaproveita a conexão por
+10 min (`ControlMaster`): um toque na YubiKey cobre todas as buscas do
+`nix-secrets`, também as do root.
 
 ### Com a YubiKey e o nix-keys
 
@@ -76,10 +67,18 @@ git -C /tmp/nix-keys crypt unlock
 sudo bash /tmp/nix-config-noctalia/scripts/install.sh
 ```
 
-O script:
+O script faz **todas as perguntas antes de qualquer ação**, num formulário
+com o `gum` (como o instalador do Omarchy): host, disco, senha do LUKS,
+usuários novos, chave age do sistema (se não veio do Bitwarden nem do
+`nix-keys`) e, opcionalmente, a senha do root (guardada só como hash). Em
+seguida mostra um resumo e pede uma única confirmação; nada toca o disco
+antes disso. Em qualquer pergunta, Esc recomeça o formulário e Ctrl+C cancela.
 
-1. lê as chaves do Bitwarden ou desbloqueia o `nix-keys` (chaves age do sops-nix);
-2. pergunta o host e o disco, e grava o disco em `modules/hosts/<host>/default.nix`;
+Depois da confirmação, o script:
+
+1. lê as chaves do Bitwarden ou desbloqueia o `nix-keys` (chaves age do
+   sops-nix) — isso acontece antes do formulário;
+2. grava o disco em `modules/hosts/<host>/default.nix`;
 3. particiona com o disko (`--flake .#<host>`): ESP + LUKS (`crypted`) → LVM
    (`root_vg`: swap para hibernação + btrfs com `@home @nix @persist @log
    @containers @flatpak @snapshots`); `/` é tmpfs;
@@ -88,15 +87,16 @@ O script:
 5. cria as chaves do Secure Boot em `/persist/etc/secureboot` (sbctl);
 6. copia a chave age do host para `/persist/etc/sops/age/keys.txt`;
 7. copia a configuração para `/persist/etc/nixos` e roda `nixos-install`;
-8. deixa todos os usuários sem senha e expirados, define (se quiser) a
-   senha do root, grava `/persist/etc/shadow` e, opcionalmente, registra a
-   YubiKey para `pam_u2f` (`/persist/etc/u2f-mappings`).
+8. deixa todos os usuários sem senha e expirados, aplica a senha do root
+   escolhida no formulário, grava `/persist/etc/shadow` e registra a
+   YubiKey para `pam_u2f` (`/persist/etc/u2f-mappings`), se estiver conectada.
 
-Modo não interativo:
+Modo não interativo (sem `gum`; sem `--luks-password-file`, o disko pede a
+senha do LUKS no terminal):
 
 ```bash
 sudo bash scripts/install.sh --host bigodon --disk /dev/nvme0n1 \
-  --user "abutre:Laércio:sudo" --non-interactive
+  --user "abutre:Laércio:sudo" --luks-password-file /run/luks.txt --non-interactive
 ```
 
 `bash scripts/inspect-installation.sh` confere o resultado antes do reboot.
@@ -173,21 +173,20 @@ O perfil `install` do `secretspec.toml` declara o que a instalação precisa. No
 cofre, as chaves age são **notas seguras** (o arquivo `keys.txt` inteiro no
 corpo da nota) com títulos `secretspec/nix-config-noctalia/install/<CHAVE>`.
 
-Migração, uma vez, com o `nix-keys` desbloqueado (`nix develop` traz o
-`secretspec`; o `bw` vem de `nix shell nixpkgs#bitwarden-cli`):
+Migração, uma vez, com o `nix-keys` desbloqueado ao lado deste repositório:
 
 ```bash
-export BW_SESSION="$(bw unlock --raw)"
-secretspec set AGE_KEY_SYSTEM -P install --from-file ../nix-keys/sops/age/keys.txt
-secretspec set AGE_KEY_ABUTRE -P install --from-file ../nix-keys/sops/age/abutre/keys.txt
-secretspec check -P install
-
-# Confira se as chaves públicas batem com os recipients do .sops.yaml do nix-secrets
-secretspec get AGE_KEY_SYSTEM -P install | age-keygen -y
+nix develop -c just bw-store-age-keys   # ou: --nix-keys-dir <dir>
 ```
 
+O script entra no Bitwarden como o `install-from-bitwarden.sh`, grava cada
+`AGE_KEY_*` declarada a partir do `nix-keys` (`sops/age/keys.txt` para o
+sistema, `sops/age/<login>/keys.txt` para os usuários), roda o
+`secretspec check` e mostra a chave pública de cada uma — confira com os
+recipients do `.sops.yaml` do `nix-secrets`.
+
 Para outro usuário com segredos no home-manager, declare `AGE_KEY_<LOGIN>` no
-perfil `install` e grave a chave do mesmo jeito. Mantenha o `nix-keys` como
+perfil `install` e rode a migração de novo. Mantenha o `nix-keys` como
 cópia fria até a primeira instalação pelo Bitwarden dar certo.
 
 ## Problemas comuns

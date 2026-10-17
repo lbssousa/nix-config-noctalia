@@ -133,8 +133,8 @@ A tabela completa está em `modules/home/desktop/umbriel.nix`.
 
 ## Ferramentas
 
-`nix develop` traz `just`, `nixfmt`, `statix`, `deadnix`, `nvd`, `sops`, `age`
-e `secretspec`. O `secretspec.toml` declara os segredos de desenvolvimento/CI
+`nix develop` traz `just`, `nixfmt`, `statix`, `deadnix`, `nvd`, `sops`, `age`,
+`secretspec` e `bitwarden-cli`. O `secretspec.toml` declara os segredos de desenvolvimento/CI
 (o sops-nix continua cuidando dos segredos do sistema).
 
 O CI (`.github/workflows/validate.yml`) precisa do secret

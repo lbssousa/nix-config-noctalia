@@ -20,6 +20,7 @@
           age
           ssh-to-age
           secretspec
+          bitwarden-cli
           jq
         ];
       };

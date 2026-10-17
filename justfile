@@ -164,6 +164,12 @@ validate:
   just --justfile "{{justfile_file}}" deadcode
   just --justfile "{{justfile_file}}" check --show-trace
 
+# Run inside `nix develop`.
+# Copies the age keys from an unlocked nix-keys clone to Bitwarden (secretspec "install").
+[group("secrets")]
+bw-store-age-keys *args:
+  bash "{{flake_root}}/scripts/store-age-keys-in-bitwarden.sh" {{args}}
+
 # Registers a YubiKey in the system authfile for the given user (default: current user).
 # First key: creates the line in the authfile. Additional key: appends to the existing line.
 # Reference: security/yubikey/setup.sh (dotfiles)

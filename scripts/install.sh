@@ -5,7 +5,8 @@
 #   0a. (--age-keys-from-bitwarden) Fetches the age keys from Bitwarden via
 #       SecretSpec, as the calling user
 #   0b. Clones and unlocks the nix-keys repository via git-crypt
-#   1.  Selects the host and target disk
+#   1.  Asks every question (gum form) and shows a summary to confirm
+#   2.  Writes the chosen disk to the host file
 #   3.  Partitions and formats the disk with disko (Btrfs + LUKS + LVM, tmpfs root)
 #   3b. Activates the disk swap in the live environment (prevents OOM during install)
 #   4.  Creates modules/users/<user>.nix from modules/users/_template.nix.in
@@ -25,6 +26,7 @@
 #                           [--nix-keys-dir <path>]
 #                           [--age-keys-backup <file>]
 #                           [--age-keys-from-bitwarden]
+#                           [--luks-password-file <file>]
 #                           [--non-interactive]
 #                           [--help]
 #
@@ -48,7 +50,11 @@
 #                       Bitwarden, through the "install" profile of
 #                       secretspec.toml. Replaces nix-keys/git-crypt. Run
 #                       WITHOUT sudo, with `bw` unlocked and BW_SESSION
-#                       exported (see INSTALLATION.md).
+#                       exported — install-from-bitwarden.sh does all that.
+#   --luks-password-file
+#                       File with the LUKS passphrase. Without it, the
+#                       interactive form asks for it (and, with
+#                       --non-interactive, disko asks on the terminal).
 #   --non-interactive   Doesn't ask questions; fails if required information
 #                       isn't provided via flags
 #   --help, -h          Show help and exit
@@ -72,14 +78,6 @@ warn()    { echo -e "${YELLOW}[WARN]${RESET} $*"; }
 error()   { echo -e "${RED}[ERRO]${RESET} $*" >&2; }
 die()     { error "$*"; exit 1; }
 
-confirm() {
-  # confirm "message" → returns 0 if the user types y/Y
-  local msg="$1"
-  local resp
-  echo -e "${YELLOW}${msg}${RESET} [y/N] " >&2
-  read -r resp
-  [[ "$resp" =~ ^[yY]$ ]]
-}
 
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "Command '$1' not found. Make sure you're in the NixOS live environment."
@@ -105,6 +103,30 @@ _run_pamu2fcfg() {
 }
 
 # ---------------------------------------------------------------------------
+# gum (interactive prompts)
+# ---------------------------------------------------------------------------
+# The questions use gum, like the Omarchy installer. The live ISO doesn't ship
+# it, so the script re-runs itself inside `nix-shell -p gum`. Its absolute path
+# goes to the root process in INSTALL_GUM (sudo -E keeps the environment, but
+# not necessarily a PATH with gum in it).
+
+_interactive=true
+for _arg in "$@"; do
+  [[ "$_arg" == "--non-interactive" ]] && _interactive=false
+done
+if [[ "$_interactive" == "true" && -z "${INSTALL_GUM:-}" ]]; then
+  if ! command -v gum >/dev/null 2>&1; then
+    [[ -z "${_INSTALL_GUM_SHELL:-}" ]] || die "gum still missing inside nix-shell."
+    info "Fetching gum via nix-shell..."
+    _INSTALL_GUM_SHELL=1 exec nix-shell -p gum --run "$(printf '%q ' bash "${BASH_SOURCE[0]}" "$@")"
+  fi
+  INSTALL_GUM="$(command -v gum)"
+  export INSTALL_GUM
+fi
+
+gum() { command "${INSTALL_GUM:-gum}" "$@"; }
+
+# ---------------------------------------------------------------------------
 # 0a. Bitwarden (via SecretSpec) — runs as the calling user, before sudo
 # ---------------------------------------------------------------------------
 # The `bw` session (BW_SESSION + the CLI data in the user's $HOME) belongs to
@@ -122,7 +144,7 @@ _bw_fetch_secrets() {
 
   require_cmd secretspec
   require_cmd bw
-  [[ -n "${BW_SESSION:-}" ]] || die "BW_SESSION not set. Run: bw login && export BW_SESSION=\"\$(bw unlock --raw)\""
+  [[ -n "${BW_SESSION:-}" ]] || die "BW_SESSION not set. Use scripts/install-from-bitwarden.sh, which logs in to Bitwarden."
   bw sync >/dev/null || die "bw sync failed. Is the vault unlocked (BW_SESSION)?"
 
   # secretspec options go after the subcommand: ss get <name> ...
@@ -243,6 +265,7 @@ OPT_USERS_SUDO=()
 OPT_NIX_KEYS_DIR=""
 OPT_AGE_KEYS_BACKUP=""
 OPT_AGE_KEYS_FROM_BITWARDEN=false
+OPT_LUKS_PASSWORD_FILE=""
 OPT_NON_INTERACTIVE=false
 
 while [[ $# -gt 0 ]]; do
@@ -252,6 +275,7 @@ while [[ $# -gt 0 ]]; do
     --nix-keys-dir)   OPT_NIX_KEYS_DIR="$2";  shift 2 ;;
     --age-keys-backup) OPT_AGE_KEYS_BACKUP="$2"; shift 2 ;;
     --age-keys-from-bitwarden) OPT_AGE_KEYS_FROM_BITWARDEN=true; shift ;;
+    --luks-password-file) OPT_LUKS_PASSWORD_FILE="$2"; shift 2 ;;
     --user)
       # Format: "login:Full Name:sudo|nosudo"
       # The third field is optional (default: sudo).
@@ -286,6 +310,7 @@ Usage:
                           [--nix-keys-dir <path>]
                           [--age-keys-backup <file>]
                           [--age-keys-from-bitwarden]
+                          [--luks-password-file <file>]
                           [--non-interactive] [--help]
 
 Options:
@@ -313,7 +338,11 @@ Options:
                       Reads the age keys (system and per user) from Bitwarden,
                       through the "install" profile of secretspec.toml,
                       instead of nix-keys. Run WITHOUT sudo,
-                      with bw unlocked and BW_SESSION exported.
+                      with bw unlocked and BW_SESSION exported
+                      (scripts/install-from-bitwarden.sh does that).
+  --luks-password-file
+                      File with the LUKS passphrase. Without it, the form
+                      asks for it (with --non-interactive, disko asks).
   --non-interactive   Doesn't ask questions; fails if required information
                       isn't provided via flags.
   --help, -h          Show this help and exit.
@@ -322,9 +351,8 @@ Examples:
   # Fully interactive installation (recommended):
   bash scripts/install.sh
 
-  # Keys from Bitwarden (no nix-keys, no YubiKey):
-  export BW_SESSION="$(bw unlock --raw)"
-  bash scripts/install.sh --age-keys-from-bitwarden
+  # Keys from Bitwarden (no nix-keys): login, checks and this script
+  bash scripts/install-from-bitwarden.sh
 
   # Non-interactive installation, nix-keys at a custom path:
   bash scripts/install.sh \
@@ -335,10 +363,16 @@ Examples:
     --user "macaco:nosudo" \
     --non-interactive
 
+Every question (host, disk, LUKS passphrase, users, system age key, root
+password) comes first, followed by a summary and a single confirmation;
+nothing touches the disk before that. In the prompts, Esc starts the
+questions over and Ctrl+C cancels.
+
 This script automates the steps described in INSTALLATION.md:
   0a. (--age-keys-from-bitwarden) Reads the keys from Bitwarden via SecretSpec
   0b. Clones and unlocks the nix-keys repository via git-crypt
-  1.  Selects the host and target disk
+  1.  Asks every question (gum form) and shows a summary to confirm
+  2.  Writes the chosen disk to the host file
   3.  Partitions and formats the disk with disko (Btrfs + LUKS + LVM, tmpfs root)
   3b. Activates the disk swap in the live environment (prevents OOM during install)
   4.  Creates modules/users/<user>.nix from modules/users/_template.nix.in
@@ -355,27 +389,6 @@ EOF
     *) die "Unknown option: $1. Use --help to see the available options." ;;
   esac
 done
-
-ask() {
-  # ask VAR "prompt" ["default"]
-  local var="$1" prompt="$2" default="${3:-}"
-  if [[ "$OPT_NON_INTERACTIVE" == "true" ]]; then
-    [[ -n "${!var:-}" ]] || die "Non-interactive mode: '$var' not set. Use --${var//_/-} <value>."
-    return
-  fi
-  local current="${!var:-$default}"
-  local display_default=""
-  [[ -n "$current" ]] && display_default=" [${current}]"
-  echo -ne "${BOLD}${prompt}${display_default}: ${RESET}"
-  local input
-  read -r input
-  # If nothing was typed, keep the value already set (via flag or default)
-  if [[ -n "$input" ]]; then
-    printf -v "$var" '%s' "$input"
-  elif [[ -z "${!var:-}" && -n "$default" ]]; then
-    printf -v "$var" '%s' "$default"
-  fi
-}
 
 # ---------------------------------------------------------------------------
 # 0. Prerequisites
@@ -461,6 +474,7 @@ fi
 # Unlocking via git-crypt requires the YubiKey (GPG) or the exported symmetric key.
 # Without the system key, sops-nix can't decrypt secrets during NixOS
 # activation (Wi-Fi, etc.) and the service fails silently at boot.
+# This step runs before the form: it only reads, and needs the YubiKey.
 
 echo
 info "==> Step 0b: nix-keys repository (sops-nix age keys)"
@@ -478,21 +492,19 @@ elif [[ -n "$OPT_NIX_KEYS_DIR" ]]; then
 elif [[ -d "$NIX_KEYS_DIR_DEFAULT/.git" ]]; then
   NIX_KEYS_DIR="$NIX_KEYS_DIR_DEFAULT"
   info "nix-keys found at: $NIX_KEYS_DIR"
+elif [[ -n "$OPT_AGE_KEYS_BACKUP" ]]; then
+  info "System age key given via --age-keys-backup. Skipping nix-keys."
 elif [[ "$OPT_NON_INTERACTIVE" == "true" ]]; then
-  # Non-interactive mode without nix-keys: just warn. The key can come via --age-keys-backup.
-  if [[ -z "$OPT_AGE_KEYS_BACKUP" ]]; then
-    warn "nix-keys not found at $NIX_KEYS_DIR_DEFAULT and --age-keys-backup not specified."
-    warn "sops-nix secrets (Wi-Fi, etc.) won't be available without the system age key."
-    warn "Use --nix-keys-dir or --age-keys-backup to provide the key."
-  fi
+  # Non-interactive mode without nix-keys: just warn.
+  warn "nix-keys not found at $NIX_KEYS_DIR_DEFAULT and --age-keys-backup not specified."
+  warn "sops-nix secrets (Wi-Fi, etc.) won't be available without the system age key."
+  warn "Use --nix-keys-dir or --age-keys-backup to provide the key."
 else
-  echo
   warn "nix-keys not found at $NIX_KEYS_DIR_DEFAULT."
-  info "The nix-keys repository contains the sops-nix age keys."
-  info "Without it, system secrets (e.g. Wi-Fi via sops-nix) won't work."
-  echo
-  echo -ne "${BOLD}SSH URL of the nix-keys repository (Enter to skip): ${RESET}"
-  read -r _nix_keys_url
+  info "It holds the sops-nix age keys; without them, system secrets (e.g. Wi-Fi) won't work."
+  _nix_keys_url="$(gum input --prompt "nix-keys URL> " \
+    --placeholder "git@github.com:lbssousa/nix-keys.git (Enter to skip)")" \
+    || die "Installation cancelled."
   if [[ -n "$_nix_keys_url" ]]; then
     info "Cloning nix-keys into $NIX_KEYS_DIR_DEFAULT..."
     # GIT_SSH_COMMAND (with the user's ~/.ssh/config via -F) is already
@@ -503,10 +515,10 @@ else
       success "nix-keys cloned into $NIX_KEYS_DIR."
     else
       warn "Failed to clone nix-keys. Check the URL and SSH connectivity."
-      warn "You can use --age-keys-backup to provide the key manually."
+      warn "The form will ask for the path of the system age key instead."
     fi
   else
-    warn "nix-keys skipped. sops-nix secrets won't be configured for this installation."
+    warn "nix-keys skipped. The form will ask for the path of the system age key."
   fi
 fi
 
@@ -515,85 +527,282 @@ if [[ -n "$NIX_KEYS_DIR" ]]; then
   PRIVATE_AGE_KEY_REPO="$NIX_KEYS_DIR/sops/age/keys.txt"
 fi
 
-# Check whether nix-keys needs unlocking via git-crypt
+# Check whether nix-keys needs unlocking via git-crypt: once decrypted, the age
+# key starts with 'AGE-SECRET-KEY-' (a missing file counts as locked).
 if [[ -n "$NIX_KEYS_DIR" && -d "$NIX_KEYS_DIR/.git-crypt" ]]; then
-  # Check whether it's already unlocked: the age key starts with
-  # 'AGE-SECRET-KEY-' once decrypted. If the file is binary or doesn't have
-  # this prefix, it's locked.
-  _age_system_key="$NIX_KEYS_DIR/sops/age/keys.txt"
-  _nix_keys_locked=false
-  if [[ -f "$_age_system_key" ]]; then
-    if ! grep -q '^AGE-SECRET-KEY-' "$_age_system_key" 2>/dev/null; then
-      _nix_keys_locked=true
-    fi
-  else
-    # File doesn't exist in the index yet — treat as locked to try unlocking
-    _nix_keys_locked=true
-  fi
-
-  if [[ "$_nix_keys_locked" == "true" ]]; then
-    warn "nix-keys is locked by git-crypt."
-    warn "The YubiKey (GPG) or the exported symmetric key is required to unlock it."
-
-    if ! command -v git-crypt >/dev/null 2>&1; then
-      warn "git-crypt not found. Run before continuing:"
-      warn "  nix-shell -p git-crypt gnupg"
-      if [[ "$OPT_NON_INTERACTIVE" == "true" ]]; then
-        die "Non-interactive mode: nix-keys locked and git-crypt not available."
-      fi
-    else
-      if [[ "$OPT_NON_INTERACTIVE" == "true" ]]; then
-        die "Non-interactive mode: nix-keys locked. Unlock it before running the script."
-      fi
-
-      echo
-      info "To unlock via YubiKey (GPG), make sure the YubiKey is inserted."
-      info "To unlock via symmetric key, provide the path to the exported file."
-      echo -ne "${BOLD}Path to the git-crypt symmetric key (Enter to use GPG via YubiKey): ${RESET}"
-      read -r _git_crypt_key_path
-
-      if [[ -n "$_git_crypt_key_path" ]]; then
-        (cd "$NIX_KEYS_DIR" && git-crypt unlock "$_git_crypt_key_path") \
-          && success "nix-keys unlocked successfully." \
-          || die "Failed to unlock nix-keys. Check the symmetric key."
-      else
-        info "Trying to unlock via GPG (YubiKey)..."
-        (cd "$NIX_KEYS_DIR" && git-crypt unlock) \
-          && success "nix-keys unlocked via GPG successfully." \
-          || die "Failed to unlock nix-keys via GPG. Check that the YubiKey is inserted and GPG is configured."
-      fi
-    fi
-  else
+  if grep -q '^AGE-SECRET-KEY-' "$NIX_KEYS_DIR/sops/age/keys.txt" 2>/dev/null; then
     success "nix-keys is already unlocked."
+  else
+    warn "nix-keys is locked by git-crypt."
+    command -v git-crypt >/dev/null 2>&1 \
+      || die "git-crypt not found. Run the script inside: nix-shell -p git-crypt gnupg"
+    [[ "$OPT_NON_INTERACTIVE" != "true" ]] \
+      || die "Non-interactive mode: nix-keys locked. Unlock it before running the script."
+
+    _git_crypt_key_path="$(gum input --prompt "git-crypt key> " \
+      --placeholder "path to the exported symmetric key (Enter: GPG via YubiKey)")" \
+      || die "Installation cancelled."
+    if [[ -n "$_git_crypt_key_path" ]]; then
+      (cd "$NIX_KEYS_DIR" && git-crypt unlock "$_git_crypt_key_path") \
+        && success "nix-keys unlocked successfully." \
+        || die "Failed to unlock nix-keys. Check the symmetric key."
+    else
+      info "Trying to unlock via GPG (YubiKey)..."
+      (cd "$NIX_KEYS_DIR" && git-crypt unlock) \
+        && success "nix-keys unlocked via GPG successfully." \
+        || die "Failed to unlock nix-keys via GPG. Check that the YubiKey is inserted and GPG is configured."
+    fi
   fi
 fi
 
 # ---------------------------------------------------------------------------
-# 1. Select the host
+# 1. Questions (gum form) and confirmation
 # ---------------------------------------------------------------------------
+# Every answer is collected here, before anything is written: host, disk,
+# LUKS passphrase, users, system age key and root password. A summary then
+# asks for a single confirmation. As in Omarchy's setup form, each prompt
+# returns gum's status: 0 = answered, 1 = Esc (start the questions over),
+# 130 = Ctrl+C (cancel). Values given via flags aren't asked again.
 
 echo
-info "==> Step 1: Select the host"
+info "==> Step 1: Installation questions"
 
-# Detect available hosts
+FORM_BACK=1
+
 mapfile -t AVAILABLE_HOSTS < <(find "$HOSTS_DIR" -maxdepth 1 -mindepth 1 -type d ! -name '_*' -exec basename {} \; | sort)
+[[ ${#AVAILABLE_HOSTS[@]} -gt 0 ]] || die "No host found in $HOSTS_DIR/"
 
-if [[ ${#AVAILABLE_HOSTS[@]} -eq 0 ]]; then
-  die "No host found in $HOSTS_DIR/"
-fi
-
-echo "Available hosts:"
-for h in "${AVAILABLE_HOSTS[@]}"; do
-  echo "  - $h"
+# Already-existing user files (files starting with "_" are helpers).
+_EXISTING_USERS=()
+for _f in "$USERS_DIR/"*.nix; do
+  _bname="$(basename "$_f" .nix)"
+  [[ "$_bname" == _* ]] && continue
+  _EXISTING_USERS+=("$_bname")
 done
 
-ask OPT_HOST "Host name" "${AVAILABLE_HOSTS[0]}"
-[[ -n "$OPT_HOST" ]] || die "Host name is required."
-[[ -d "$HOSTS_DIR/$OPT_HOST" ]] || die "Host '$OPT_HOST' not found in $HOSTS_DIR/"
+HOST=""
+DISK=""
+LUKS_PASSWORD=""
+USERS_LOGIN=()
+USERS_FULLNAME=()
+USERS_SUDO=()
+USERS_OVERWRITE=()
+AGE_KEY_FILE=""
+ROOT_HASH=""
 
-success "Host selected: $OPT_HOST"
+# notice "message": validation feedback inside the form
+notice() {
+  gum style --foreground 1 "$*"
+  sleep 1
+}
 
-HOST="$OPT_HOST"
+# yes/no question; 0 = yes, 1 = no, anything else = Ctrl+C
+_ask_yes_no() {
+  gum confirm "$@"
+}
+
+# Hashes a password read from stdin (yescrypt, like NixOS' own passwd).
+_hash_password() {
+  if command -v mkpasswd >/dev/null 2>&1; then
+    mkpasswd -m yescrypt --stdin
+  else
+    nix run nixpkgs#mkpasswd \
+      --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
+      --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY" \
+      -- -m yescrypt --stdin
+  fi
+}
+
+# _ask_secret VAR "prompt" "placeholder": masked input, typed twice
+_ask_secret() {
+  local __var="$1" prompt="$2" placeholder="$3" __value __again st
+  while true; do
+    __value="$(gum input --password --prompt "$prompt> " --placeholder "$placeholder")" && st=0 || st=$?
+    ((st == 0)) || return "$st"
+    __again="$(gum input --password --prompt "Confirm> " --placeholder "Type it again")" && st=0 || st=$?
+    ((st == 0)) || return "$st"
+    if [[ -z "$__value" ]]; then
+      notice "It can't be blank."
+    elif [[ "$__value" != "$__again" ]]; then
+      notice "They didn't match. Try again."
+    else
+      printf -v "$__var" '%s' "$__value"
+      return 0
+    fi
+  done
+}
+
+_form_host() {
+  local st
+  HOST="$OPT_HOST"
+  if [[ -z "$HOST" ]]; then
+    HOST="$(gum choose --header "Host to install" "${AVAILABLE_HOSTS[@]}")" && st=0 || st=$?
+    ((st == 0)) || return "$st"
+  fi
+  [[ -d "$HOSTS_DIR/$HOST" ]] || die "Host '$HOST' not found in $HOSTS_DIR/"
+}
+
+_form_disk() {
+  local st line
+  DISK="$OPT_DISK"
+  if [[ -z "$DISK" ]]; then
+    line="$(lsblk -dpno NAME,SIZE,TRAN,MODEL,TYPE | awk '$NF == "disk" && $1 !~ /zram/' | sed 's/ *disk$//' \
+      | gum choose --header "Disk to ERASE and install on")" && st=0 || st=$?
+    ((st == 0)) || return "$st"
+    DISK="${line%% *}"
+  fi
+  [[ -b "$DISK" ]] || die "Device '$DISK' not found or is not a block device."
+}
+
+_form_luks() {
+  LUKS_PASSWORD=""
+  if [[ -n "$OPT_LUKS_PASSWORD_FILE" ]]; then
+    [[ -f "$OPT_LUKS_PASSWORD_FILE" ]] || die "--luks-password-file: '$OPT_LUKS_PASSWORD_FILE' not found."
+    LUKS_PASSWORD="$(<"$OPT_LUKS_PASSWORD_FILE")"
+    [[ -n "$LUKS_PASSWORD" ]] || die "--luks-password-file: '$OPT_LUKS_PASSWORD_FILE' is empty."
+    return 0
+  fi
+  [[ "$OPT_NON_INTERACTIVE" == "true" ]] && return 0 # disko asks on the terminal
+  _ask_secret LUKS_PASSWORD "LUKS passphrase" "Unlocks the disk at boot (until TPM2 is enrolled)"
+}
+
+_form_users() {
+  local st login fname sudo more=true i
+  USERS_LOGIN=("${OPT_USERS_LOGIN[@]}")
+  USERS_FULLNAME=("${OPT_USERS_FULLNAME[@]}")
+  USERS_SUDO=("${OPT_USERS_SUDO[@]}")
+  USERS_OVERWRITE=()
+
+  if [[ "$OPT_NON_INTERACTIVE" == "true" ]]; then
+    [[ ${#USERS_LOGIN[@]} -gt 0 || ${#_EXISTING_USERS[@]} -gt 0 ]] \
+      || die "Non-interactive mode: no user defined. Use --user 'login:Name:sudo'."
+    for i in "${!USERS_LOGIN[@]}"; do USERS_OVERWRITE[i]=false; done
+    return 0
+  fi
+
+  if [[ ${#USERS_LOGIN[@]} -eq 0 ]]; then
+    if [[ ${#_EXISTING_USERS[@]} -gt 0 ]]; then
+      _ask_yes_no --default=false "Users already defined: ${_EXISTING_USERS[*]}. Create more?" && st=0 || st=$?
+      case "$st" in 0) ;; 1) more=false ;; *) return "$st" ;; esac
+    fi
+    while [[ "$more" == "true" ]]; do
+      login="$(gum input --prompt "Login> " --placeholder "lowercase letters, digits, - and _ (like abutre)")" && st=0 || st=$?
+      ((st == 0)) || return "$st"
+      if ! [[ "$login" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+        notice "Invalid login: use lowercase letters, digits, hyphens and underscores."
+        continue
+      fi
+      fname="$(gum input --prompt "Full name> " --placeholder "$login (Enter keeps the login)")" && st=0 || st=$?
+      ((st == 0)) || return "$st"
+      _ask_yes_no "Grant sudo (wheel) to '$login'?" && st=0 || st=$?
+      case "$st" in 0) sudo=true ;; 1) sudo=false ;; *) return "$st" ;; esac
+      USERS_LOGIN+=("$login")
+      USERS_FULLNAME+=("${fname:-$login}")
+      USERS_SUDO+=("$sudo")
+      _ask_yes_no --default=false "Add another user?" && st=0 || st=$?
+      case "$st" in 0) ;; 1) more=false ;; *) return "$st" ;; esac
+    done
+  fi
+
+  for i in "${!USERS_LOGIN[@]}"; do
+    USERS_OVERWRITE[i]=false
+    [[ -f "$USERS_DIR/${USERS_LOGIN[i]}.nix" ]] || continue
+    _ask_yes_no --default=false "modules/users/${USERS_LOGIN[i]}.nix already exists. Overwrite it?" && st=0 || st=$?
+    case "$st" in 0) USERS_OVERWRITE[i]=true ;; 1) ;; *) return "$st" ;; esac
+  done
+}
+
+# Source of the system age key, in priority order: --age-keys-backup,
+# Bitwarden (step 0a), nix-keys (step 0b), then the form (path or skip).
+_form_age_key() {
+  local st
+  AGE_KEY_FILE="$OPT_AGE_KEYS_BACKUP"
+  [[ -z "$AGE_KEY_FILE" && -f "$PRIVATE_AGE_KEY_REPO" ]] && AGE_KEY_FILE="$PRIVATE_AGE_KEY_REPO"
+  if [[ -n "$AGE_KEY_FILE" ]]; then
+    [[ -f "$AGE_KEY_FILE" ]] || die "System age key '$AGE_KEY_FILE' not found."
+    return 0
+  fi
+  [[ "$OPT_NON_INTERACTIVE" == "true" ]] && return 0
+  while true; do
+    AGE_KEY_FILE="$(gum input --prompt "System age key> " \
+      --placeholder "path to keys.txt (Enter to skip: no sops-nix secrets)")" && st=0 || st=$?
+    ((st == 0)) || return "$st"
+    [[ -z "$AGE_KEY_FILE" || -f "$AGE_KEY_FILE" ]] && return 0
+    notice "File '$AGE_KEY_FILE' not found."
+  done
+}
+
+# root isn't one of the my.users accounts: without a password it stays locked
+# (nixos-install runs with --no-root-password), which also locks the
+# emergency shell. Only the hash is kept.
+_form_root() {
+  local st password=""
+  ROOT_HASH=""
+  [[ "$OPT_NON_INTERACTIVE" == "true" ]] && return 0
+  _ask_yes_no --default=false "Set a root password? (otherwise root stays locked)" && st=0 || st=$?
+  case "$st" in 0) ;; 1) return 0 ;; *) return "$st" ;; esac
+  _ask_secret password "Root password" "Also unlocks the emergency shell" || return
+  ROOT_HASH="$(printf '%s' "$password" | _hash_password)" || die "Could not hash the root password."
+}
+
+_form() {
+  _form_host && _form_disk && _form_luks && _form_users && _form_age_key && _form_root
+}
+
+_form_summary() {
+  local users="" i sudo age_src luks="asked by disko" root="locked"
+
+  for i in "${!USERS_LOGIN[@]}"; do
+    sudo="sudo"
+    [[ "${USERS_SUDO[i]}" == "false" ]] && sudo="no sudo"
+    users+="${users:+, }${USERS_LOGIN[i]} (${USERS_FULLNAME[i]:-${USERS_LOGIN[i]}}, $sudo)"
+  done
+  [[ -n "$LUKS_PASSWORD" ]] && luks="passphrase set"
+  [[ -n "$ROOT_HASH" ]] && root="set"
+  if [[ "$OPT_AGE_KEYS_FROM_BITWARDEN" == "true" ]]; then
+    age_src="Bitwarden (system + personal keys)"
+  else
+    age_src="${AGE_KEY_FILE:-none (no sops-nix secrets)}"
+  fi
+
+  gum style --border rounded --border-foreground 212 --padding "1 2" \
+    "$(gum style --bold --foreground 212 "Installation summary")" \
+    "" \
+    "Host            $HOST" \
+    "Disk            $DISK  $(lsblk -dno SIZE,MODEL "$DISK" | xargs)" \
+    "                $(gum style --bold --foreground 1 "ALL DATA ON IT WILL BE ERASED")" \
+    "LUKS            $luks" \
+    "New users       ${users:-none}" \
+    "Existing users  ${_EXISTING_USERS[*]:-none}" \
+    "System age key  $age_src" \
+    "Root password   $root"
+}
+
+if [[ "$OPT_NON_INTERACTIVE" == "true" ]]; then
+  [[ -n "$OPT_HOST" ]] || die "Non-interactive mode: use --host <host>."
+  [[ -n "$OPT_DISK" ]] || die "Non-interactive mode: use --disk <device>."
+  _form
+else
+  while true; do
+    _form && _st=0 || _st=$?
+    case "$_st" in
+      0) ;;
+      "$FORM_BACK") info "Starting the questions over."; continue ;;
+      *) die "Installation cancelled." ;;
+    esac
+    _form_summary
+    gum confirm --default=false --affirmative "Erase and install" --negative "Back" \
+      "Erase $DISK and install $HOST?" && _st=0 || _st=$?
+    case "$_st" in
+      0) break ;;
+      1) info "Starting the questions over." ;;
+      *) die "Installation cancelled." ;;
+    esac
+  done
+fi
+
+success "Host: $HOST — disk: $DISK"
+
 # The flake attribute is simply the host name (nixosConfigurations.<host>).
 # The host file (modules/hosts/<host>/default.nix) holds the disko device.
 FLAKE_SYSTEM_ATTR="$HOST"
@@ -601,24 +810,12 @@ CFG_FILE="$HOSTS_DIR/$HOST/default.nix"
 HW_FILE="$HOSTS_DIR/$HOST/_hardware-configuration.nix"
 
 # ---------------------------------------------------------------------------
-# 2. Select the disk
+# 2. Write the disk to the host file
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Step 2: Select the installation disk"
+info "==> Step 2: Installation disk"
 
-echo "Available disks:"
-lsblk -d -o NAME,SIZE,MODEL,TYPE | grep disk || true
-echo
-
-ask OPT_DISK "Disk device (e.g. /dev/nvme0n1)"
-[[ -n "$OPT_DISK" ]] || die "Disk device is required."
-[[ -b "$OPT_DISK" ]] || die "Device '$OPT_DISK' not found or is not a block device."
-
-success "Disk selected: $OPT_DISK"
-DISK="$OPT_DISK"
-
-# Update the host file with the correct disk
 # Extracts the value in quotes after 'device = ' using sed (more portable than grep -P)
 CURRENT_DISK=$(sed -n 's|.*device = "\([^"]*\)".*|\1|p' "$CFG_FILE" | head -1)
 if [[ "$CURRENT_DISK" != "$DISK" ]]; then
@@ -633,20 +830,22 @@ fi
 # ---------------------------------------------------------------------------
 # 3. Partition and format the disk
 # ---------------------------------------------------------------------------
+# The LUKS passphrase from the form goes to disko on stdin: its luks type
+# (askPassword) reads it twice — passphrase and confirmation — with `read -s`.
 
 echo
-info "==> Step 3: Partition and format the disk"
+info "==> Step 3: Partition and format the disk ($DISK)"
 
-warn "⚠️  WARNING: the command below WILL ERASE ALL DATA ON $DISK!"
-if [[ "$OPT_NON_INTERACTIVE" != "true" ]] && ! confirm "Continue formatting $DISK?"; then
-  die "Formatting cancelled by the user."
+_disko=(nix run github:nix-community/disko
+  --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER"
+  --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY"
+  -- --mode disko --flake "$CONFIG_DIR#$FLAKE_SYSTEM_ATTR")
+if [[ -n "$LUKS_PASSWORD" ]]; then
+  printf '%s\n%s\n' "$LUKS_PASSWORD" "$LUKS_PASSWORD" | "${_disko[@]}"
+else
+  "${_disko[@]}"
 fi
-
-info "Running disko..."
-nix run github:nix-community/disko \
-  --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
-  --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY" \
-  -- --mode disko --flake "$CONFIG_DIR#$FLAKE_SYSTEM_ATTR"
+unset LUKS_PASSWORD
 success "Disk partitioned and formatted successfully."
 
 # ---------------------------------------------------------------------------
@@ -688,10 +887,6 @@ fi
 echo
 info "==> Step 4: Create user accounts"
 
-USERS_LOGIN=()
-USERS_FULLNAME=()
-USERS_SUDO=()
-
 # Finds the next free numeric uid by scanning the existing modules/users/*.nix
 # files for "uid = N;" and returning max+1 (or 1000 if none is set yet).
 _next_free_uid() {
@@ -705,15 +900,12 @@ _next_free_uid() {
 }
 
 _create_user_file() {
-  local user="$1" sudo_flag="$2"
+  local user="$1" sudo_flag="$2" overwrite="$3"
   local user_file="$USERS_DIR/$user.nix"
 
-  if [[ -f "$user_file" ]]; then
-    warn "File $user_file already exists."
-    if ! confirm "Overwrite it?"; then
-      info "Keeping the existing file for $user."
-      return
-    fi
+  if [[ -f "$user_file" && "$overwrite" != "true" ]]; then
+    info "Keeping the existing file for $user."
+    return
   fi
 
   local uid
@@ -728,133 +920,11 @@ _create_user_file() {
   success "User file $user_file created (uid: $uid, sudo: $sudo_flag)."
 }
 
-# Detect already-existing user files (files starting with "_" are helpers).
-_EXISTING_USERS=()
-for _f in "$USERS_DIR/"*.nix; do
-  _bname="$(basename "$_f" .nix)"
-  [[ "$_bname" == _* ]] && continue
-  _EXISTING_USERS+=("$_bname")
-done
-
-if [[ ${#_EXISTING_USERS[@]} -gt 0 ]]; then
-  echo
-  info "Users already defined in the modules:"
-  for _eu in "${_EXISTING_USERS[@]}"; do
-    echo "  • $_eu"
-  done
+if [[ ${#USERS_LOGIN[@]} -eq 0 ]]; then
+  info "No new user. Using only the already-defined ones: ${_EXISTING_USERS[*]}"
 fi
-
-if [[ "$OPT_NON_INTERACTIVE" == "true" ]]; then
-  if [[ ${#OPT_USERS_LOGIN[@]} -eq 0 ]]; then
-    if [[ ${#_EXISTING_USERS[@]} -gt 0 ]]; then
-      info "No additional user specified via --user. Using only the already-defined users."
-    else
-      die "Non-interactive mode: no user defined. Use --user 'login:Name:sudo'."
-    fi
-  fi
-  USERS_LOGIN=("${OPT_USERS_LOGIN[@]}")
-  USERS_FULLNAME=("${OPT_USERS_FULLNAME[@]}")
-  USERS_SUDO=("${OPT_USERS_SUDO[@]}")
-else
-  # Pre-populate with users passed via flags
-  USERS_LOGIN=("${OPT_USERS_LOGIN[@]}")
-  USERS_FULLNAME=("${OPT_USERS_FULLNAME[@]}")
-  USERS_SUDO=("${OPT_USERS_SUDO[@]}")
-
-  # If users are already defined, ask whether to create additional ones
-  if [[ ${#_EXISTING_USERS[@]} -gt 0 && ${#USERS_LOGIN[@]} -eq 0 ]]; then
-    if ! confirm "Do you want to create additional users besides the already-defined ones?"; then
-      # No new user to create; skip the loop
-      true
-    else
-      # Enter the loop to create additional users
-      while true; do
-        if [[ ${#USERS_LOGIN[@]} -gt 0 ]]; then
-          echo
-          echo "Users to create:"
-          for _i in "${!USERS_LOGIN[@]}"; do
-            _sudo_label="with sudo"
-            [[ "${USERS_SUDO[$_i]}" == "false" ]] && _sudo_label="without sudo"
-            echo "  $((_i + 1)). ${USERS_LOGIN[$_i]} (${USERS_FULLNAME[$_i]:-}) — $_sudo_label"
-          done
-          if ! confirm "Add another user?"; then
-            break
-          fi
-        fi
-
-        echo -ne "${BOLD}Username (login): ${RESET}"
-        read -r _tmp_login
-        if [[ -z "$_tmp_login" ]]; then
-          warn "Empty username, try again."
-          continue
-        fi
-        if ! [[ "$_tmp_login" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
-          error "Invalid username: '$_tmp_login'. Use only lowercase letters, digits, hyphens and underscores."
-          continue
-        fi
-
-        echo -ne "${BOLD}Full name [$_tmp_login]: ${RESET}"
-        read -r _tmp_fname
-        [[ -z "$_tmp_fname" ]] && _tmp_fname="$_tmp_login"
-
-        echo -ne "${BOLD}Grant sudo (wheel) permission? [Y/n]: ${RESET}"
-        read -r _tmp_sudo_resp
-        _tmp_sudo="true"
-        [[ "$_tmp_sudo_resp" =~ ^[nN]$ ]] && _tmp_sudo="false"
-
-        USERS_LOGIN+=("$_tmp_login")
-        USERS_FULLNAME+=("$_tmp_fname")
-        USERS_SUDO+=("$_tmp_sudo")
-      done
-    fi
-  else
-    while true; do
-      if [[ ${#USERS_LOGIN[@]} -gt 0 ]]; then
-        echo
-        echo "Users to create:"
-        for _i in "${!USERS_LOGIN[@]}"; do
-          _sudo_label="with sudo"
-          [[ "${USERS_SUDO[$_i]}" == "false" ]] && _sudo_label="without sudo"
-          echo "  $((_i + 1)). ${USERS_LOGIN[$_i]} (${USERS_FULLNAME[$_i]:-}) — $_sudo_label"
-        done
-        if ! confirm "Add another user?"; then
-          break
-        fi
-      fi
-
-      echo -ne "${BOLD}Username (login): ${RESET}"
-      read -r _tmp_login
-      if [[ -z "$_tmp_login" ]]; then
-        warn "Empty username, try again."
-        continue
-      fi
-      if ! [[ "$_tmp_login" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
-        error "Invalid username: '$_tmp_login'. Use only lowercase letters, digits, hyphens and underscores."
-        continue
-      fi
-
-      echo -ne "${BOLD}Full name [$_tmp_login]: ${RESET}"
-      read -r _tmp_fname
-      [[ -z "$_tmp_fname" ]] && _tmp_fname="$_tmp_login"
-
-      echo -ne "${BOLD}Grant sudo (wheel) permission? [Y/n]: ${RESET}"
-      read -r _tmp_sudo_resp
-      _tmp_sudo="true"
-      [[ "$_tmp_sudo_resp" =~ ^[nN]$ ]] && _tmp_sudo="false"
-
-      USERS_LOGIN+=("$_tmp_login")
-      USERS_FULLNAME+=("$_tmp_fname")
-      USERS_SUDO+=("$_tmp_sudo")
-    done
-
-    if [[ ${#USERS_LOGIN[@]} -eq 0 ]]; then
-      die "At least one user must be defined."
-    fi
-  fi
-fi
-
 for _i in "${!USERS_LOGIN[@]}"; do
-  _create_user_file "${USERS_LOGIN[$_i]}" "${USERS_SUDO[$_i]:-true}"
+  _create_user_file "${USERS_LOGIN[$_i]}" "${USERS_SUDO[$_i]:-true}" "${USERS_OVERWRITE[$_i]:-false}"
 done
 
 # Full names are NOT stored in modules/users/<user>.nix — they're read from
@@ -950,11 +1020,8 @@ fi
 # NixOS activation (e.g. Wi-Fi profiles, certificates).
 # It must exist at /persist/etc/sops/age/keys.txt before the first boot.
 #
-# Source in priority order:
-#   1. --age-keys-backup <file>   (specified via flag)
-#   2. Bitwarden                    (--age-keys-from-bitwarden, step 0a)
-#   3. nix-keys/sops/age/keys.txt   (repository unlocked in step 0b)
-#   4. Interactive prompt           (manual path)
+# The source was chosen in step 1 (AGE_KEY_FILE): --age-keys-backup,
+# Bitwarden (step 0a), nix-keys (step 0b) or a path typed in the form.
 #
 # Note: each user's PERSONAL age key comes from Bitwarden in step 7b or, with
 # nix-keys, is copied by the Home Manager activation script on first login.
@@ -963,34 +1030,14 @@ echo
 info "==> Step 6b: Copy the sops-nix system age key to /persist"
 
 _AGE_KEYS_DST="/mnt/persist/etc/sops/age/keys.txt"
-_DEFAULT_AGE_KEYS_BACKUP="$PRIVATE_AGE_KEY_REPO"
 
-if [[ -z "$OPT_AGE_KEYS_BACKUP" && -f "$_DEFAULT_AGE_KEYS_BACKUP" ]]; then
-  OPT_AGE_KEYS_BACKUP="$_DEFAULT_AGE_KEYS_BACKUP"
-  info "Using the age key from $NIX_KEYS_DIR (unlocked in step 0b)."
-fi
-
-if [[ "$OPT_NON_INTERACTIVE" != "true" && -z "$OPT_AGE_KEYS_BACKUP" ]]; then
-  info "The system age key is required for sops-nix to decrypt secrets"
-  info "(e.g. Wi-Fi password) during NixOS activation. Without it, the system boots but"
-  info "the secrets won't be applied until the key is copied manually."
-  echo -ne "${BOLD}Path to the system age key keys.txt (Enter to skip): ${RESET}"
-  read -r OPT_AGE_KEYS_BACKUP
-fi
-
-if [[ -n "$OPT_AGE_KEYS_BACKUP" ]]; then
-  # Reject paths with newlines
-  if [[ "$OPT_AGE_KEYS_BACKUP" == *$'\n'* ]]; then
-    die "Invalid path for the keys.txt backup."
-  fi
-  if [[ ! -f "$OPT_AGE_KEYS_BACKUP" ]]; then
-    die "Backup file '$OPT_AGE_KEYS_BACKUP' not found."
-  fi
+if [[ -n "$AGE_KEY_FILE" ]]; then
   install -d -o root -g root -m 700 "$(dirname "$_AGE_KEYS_DST")"
-  install -o root -g root -m 600 "$OPT_AGE_KEYS_BACKUP" "$_AGE_KEYS_DST"
+  install -o root -g root -m 600 "$AGE_KEY_FILE" "$_AGE_KEYS_DST"
   success "Age key copied to $_AGE_KEYS_DST."
 else
-  info "No keys.txt backup provided. Skipping."
+  warn "No system age key. sops-nix secrets (Wi-Fi, etc.) won't be applied until"
+  warn "it's copied to /persist/etc/sops/age/keys.txt."
 fi
 
 # ---------------------------------------------------------------------------
@@ -1004,96 +1051,87 @@ info "==> Step 7: Install NixOS"
 # written to /mnt/etc/nixos itself would be gone on the first boot, when
 # preservation turns /etc/nixos into a symlink to /persist/etc/nixos. The
 # /mnt/etc/nixos symlink below only serves nixos-install.
-if [[ "$OPT_NON_INTERACTIVE" == "true" ]] || confirm "Copy the configuration to /mnt/persist/etc/nixos and run nixos-install?"; then
-  mkdir -p /mnt/persist/etc/nixos /mnt/etc
-  # rsync is preferable but may not be available; use cp as a fallback
-  if command -v rsync >/dev/null 2>&1; then
-    rsync -a --delete "$CONFIG_DIR/" /mnt/persist/etc/nixos/
-  else
-    cp -r "$CONFIG_DIR/." /mnt/persist/etc/nixos/
-  fi
-  [[ -L /mnt/etc/nixos ]] || { rm -rf /mnt/etc/nixos; ln -s ../persist/etc/nixos /mnt/etc/nixos; }
-  success "Configuration copied to /mnt/persist/etc/nixos (linked at /mnt/etc/nixos)."
-
-  # Re-index user files, configuration and the private layer at /mnt/etc/nixos
-  # to make sure Nix sees them when evaluating the copied flake.
-  #
-  # Why this is necessary:
-  #   rsync copies the .git/ directory (including the index) from the source
-  #   repo, but the copied git index may contain entries with object hashes
-  #   pointing to the local live CD's store — not to the files under
-  #   /mnt/etc/nixos. Redoing git add at the destination ensures the index
-  #   at /mnt/etc/nixos reflects the LOCAL files, making them visible to
-  #   Nix's flake evaluator (which uses the git index to determine which
-  #   files to include in the flake source).
-  for _i in "${!USERS_LOGIN[@]}"; do
-    _ufile_rel="modules/users/${USERS_LOGIN[$_i]}.nix"
-    if [[ -f "/mnt/etc/nixos/$_ufile_rel" ]]; then
-      git -C /mnt/etc/nixos add "$_ufile_rel" 2>/dev/null || true
-      success "File $_ufile_rel re-indexed at /mnt/etc/nixos."
-    else
-      warn "File $_ufile_rel not found at /mnt/etc/nixos after rsync!"
-    fi
-  done
-
-  # Re-index the host files (the disk device may have changed in step 2)
-  git -C /mnt/etc/nixos add \
-    "modules/hosts/$HOST/default.nix" \
-    "modules/hosts/$HOST/_hardware-configuration.nix" 2>/dev/null || true
-
-  info "Running nixos-install..."
-  # Passes the binary caches explicitly so nixos-install uses them even if
-  # the live CD's nix.conf doesn't have them. This avoids compiling from
-  # scratch and fragile dependency downloads.
-  # --no-root-password: the root password is set exclusively in step 8,
-  # where the copy to /persist/etc/shadow is guaranteed. Without this flag,
-  # nixos-install would also ask for a root password, but that password
-  # would never reach /persist/etc/shadow (the copy happens in step 8,
-  # after nixos-install).
-  nixos-install \
-    --flake "/mnt/etc/nixos#$FLAKE_SYSTEM_ATTR" \
-    --no-root-password \
-    --option accept-flake-config true \
-    --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
-    --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY"
-  success "NixOS installed successfully!"
-
-  # -----------------------------------------------------------------------
-  # 7c. Copy Wi-Fi connections from the live CD to the installed system
-  # -----------------------------------------------------------------------
-  # The /etc/NetworkManager/system-connections directory is already
-  # declared in modules/nixos/core/preservation.nix to be persisted (symlink
-  # to /persist/etc/NetworkManager/system-connections). By
-  # copying the profiles here, they'll be available immediately on the
-  # first boot — with no need to retype the SSID and password. The
-  # declarative networks (modules/nixos/hardware/wifi-home.nix) are created by
-  # NixOS on activation, complementing the copied profiles.
-  # 600 permissions are mandatory: NetworkManager ignores/rejects profiles
-  # with more open permissions.
-  echo
-  info "==> Step 7c: Copy Wi-Fi connections to the installed system"
-  _NM_SRC="/etc/NetworkManager/system-connections"
-  _NM_DST="/mnt/persist/etc/NetworkManager/system-connections"
-  _nm_copied=0
-  if [[ -d "$_NM_SRC" ]]; then
-    while IFS= read -r -d '' _profile; do
-      mkdir -p "$_NM_DST"
-      install -m 600 "$_profile" "$_NM_DST/"
-      ((_nm_copied++)) || true
-    done < <(find "$_NM_SRC" -maxdepth 1 -type f -print0)
-  fi
-  if ((_nm_copied > 0)); then
-    success "$_nm_copied Wi-Fi connection(s) copied to $_NM_DST."
-  else
-    info "No Wi-Fi connection found on the live CD. Skipping."
-  fi
+mkdir -p /mnt/persist/etc/nixos /mnt/etc
+# rsync is preferable but may not be available; use cp as a fallback
+if command -v rsync >/dev/null 2>&1; then
+  rsync -a --delete "$CONFIG_DIR/" /mnt/persist/etc/nixos/
 else
-  warn "Installation skipped. Run manually:"
-  echo "  cp -r $CONFIG_DIR /mnt/etc/nixos"
-  echo "  nixos-install --flake /mnt/etc/nixos#$FLAKE_SYSTEM_ATTR \\"
-  echo "    --option accept-flake-config true \\"
-  echo "    --option extra-substituters \"$NIX_COMMUNITY_SUBSTITUTER\" \\"
-  echo "    --option extra-trusted-public-keys \"$NIX_COMMUNITY_KEY\""
+  cp -r "$CONFIG_DIR/." /mnt/persist/etc/nixos/
+fi
+[[ -L /mnt/etc/nixos ]] || { rm -rf /mnt/etc/nixos; ln -s ../persist/etc/nixos /mnt/etc/nixos; }
+success "Configuration copied to /mnt/persist/etc/nixos (linked at /mnt/etc/nixos)."
+
+# Re-index user files, configuration and the private layer at /mnt/etc/nixos
+# to make sure Nix sees them when evaluating the copied flake.
+#
+# Why this is necessary:
+#   rsync copies the .git/ directory (including the index) from the source
+#   repo, but the copied git index may contain entries with object hashes
+#   pointing to the local live CD's store — not to the files under
+#   /mnt/etc/nixos. Redoing git add at the destination ensures the index
+#   at /mnt/etc/nixos reflects the LOCAL files, making them visible to
+#   Nix's flake evaluator (which uses the git index to determine which
+#   files to include in the flake source).
+for _i in "${!USERS_LOGIN[@]}"; do
+  _ufile_rel="modules/users/${USERS_LOGIN[$_i]}.nix"
+  if [[ -f "/mnt/etc/nixos/$_ufile_rel" ]]; then
+    git -C /mnt/etc/nixos add "$_ufile_rel" 2>/dev/null || true
+    success "File $_ufile_rel re-indexed at /mnt/etc/nixos."
+  else
+    warn "File $_ufile_rel not found at /mnt/etc/nixos after rsync!"
+  fi
+done
+
+# Re-index the host files (the disk device may have changed in step 2)
+git -C /mnt/etc/nixos add \
+  "modules/hosts/$HOST/default.nix" \
+  "modules/hosts/$HOST/_hardware-configuration.nix" 2>/dev/null || true
+
+info "Running nixos-install..."
+# Passes the binary caches explicitly so nixos-install uses them even if
+# the live CD's nix.conf doesn't have them. This avoids compiling from
+# scratch and fragile dependency downloads.
+# --no-root-password: the root password is set exclusively in step 8,
+# where the copy to /persist/etc/shadow is guaranteed. Without this flag,
+# nixos-install would also ask for a root password, but that password
+# would never reach /persist/etc/shadow (the copy happens in step 8,
+# after nixos-install).
+nixos-install \
+  --flake "/mnt/etc/nixos#$FLAKE_SYSTEM_ATTR" \
+  --no-root-password \
+  --option accept-flake-config true \
+  --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
+  --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY"
+success "NixOS installed successfully!"
+
+# -----------------------------------------------------------------------
+# 7c. Copy Wi-Fi connections from the live CD to the installed system
+# -----------------------------------------------------------------------
+# The /etc/NetworkManager/system-connections directory is already
+# declared in modules/nixos/core/preservation.nix to be persisted (symlink
+# to /persist/etc/NetworkManager/system-connections). By
+# copying the profiles here, they'll be available immediately on the
+# first boot — with no need to retype the SSID and password. The
+# declarative networks (modules/nixos/hardware/wifi-home.nix) are created by
+# NixOS on activation, complementing the copied profiles.
+# 600 permissions are mandatory: NetworkManager ignores/rejects profiles
+# with more open permissions.
+echo
+info "==> Step 7c: Copy Wi-Fi connections to the installed system"
+_NM_SRC="/etc/NetworkManager/system-connections"
+_NM_DST="/mnt/persist/etc/NetworkManager/system-connections"
+_nm_copied=0
+if [[ -d "$_NM_SRC" ]]; then
+  while IFS= read -r -d '' _profile; do
+    mkdir -p "$_NM_DST"
+    install -m 600 "$_profile" "$_NM_DST/"
+    ((_nm_copied++)) || true
+  done < <(find "$_NM_SRC" -maxdepth 1 -type f -print0)
+fi
+if ((_nm_copied > 0)); then
+  success "$_nm_copied Wi-Fi connection(s) copied to $_NM_DST."
+else
+  info "No Wi-Fi connection found on the live CD. Skipping."
 fi
 
 # ---------------------------------------------------------------------------
@@ -1171,12 +1209,9 @@ for _user in "${_ALL_PASSWD_USERS[@]}"; do
   fi
 done
 
-# root isn't one of the my.users accounts: without a password it stays locked
-# (nixos-install runs with --no-root-password), which also locks the
-# emergency shell.
-echo
-if confirm "Set the root password?"; then
-  if passwd --root /mnt root; then
+# Root password: hashed in step 1 (otherwise root stays locked).
+if [[ -n "$ROOT_HASH" ]]; then
+  if usermod --root /mnt -p "$ROOT_HASH" root; then
     success "Root password set."
   else
     warn "Could not set the root password."
@@ -1338,7 +1373,7 @@ echo -e "      (see ${BOLD}INSTALLATION.md${RESET} → 'Secure Boot')"
 echo -e "    • Then enable automatic LUKS unlock via TPM2: ${CYAN}sudo scripts/enroll-tpm2.sh${RESET}"
 if [[ "$OPT_AGE_KEYS_FROM_BITWARDEN" == "true" ]]; then
   echo -e "    • Personal age keys already installed from Bitwarden (step 7b)."
-  echo -e "    • Lock the Bitwarden CLI session in the live system: ${CYAN}bw lock${RESET}"
+  echo -e "    • install-from-bitwarden.sh locks the Bitwarden CLI on exit (otherwise: ${CYAN}bw lock${RESET})."
 else
   echo -e "    • Clone and unlock nix-keys for each user that uses sops in Home Manager:"
   echo -e "        ${CYAN}# Example for the abutre user:${RESET}"
