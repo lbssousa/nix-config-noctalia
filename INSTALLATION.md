@@ -21,8 +21,13 @@ o Secure Boot e o TPM2, feitos depois do primeiro boot.
 ```bash
 # 1. No ambiente live, como o usuário comum (não root)
 nix-shell -p git openssh bitwarden-cli secretspec
-bw login                                  # 2FA por TOTP, e-mail ou YubiKey OTP
-export BW_SESSION="$(bw unlock --raw)"
+# Login com a YubiKey OTP como segundo fator (--method 3): a senha mestra vai
+# por variável de ambiente e o código é digitado pelo toque LONGO na YubiKey
+# (slot 2; o slot 1 guarda o desafio-resposta HMAC-SHA1).
+read -r -s -p "Senha mestra: " BW_PASSWORD; echo; export BW_PASSWORD
+read -r -p "Segure a YubiKey por ~3 s (OTP no toque longo): " BW_OTP
+export BW_SESSION="$(bw login <e-mail> --passwordenv BW_PASSWORD --method 3 --code "$BW_OTP" --raw)"
+unset BW_PASSWORD BW_OTP
 git clone https://github.com/lbssousa/nix-config-noctalia /tmp/nix-config-noctalia
 cd /tmp/nix-config-noctalia
 secretspec check -P install               # confere se tudo está no cofre
