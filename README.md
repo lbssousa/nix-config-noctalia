@@ -14,6 +14,8 @@ de usuário vêm preferencialmente do Flathub (declarados com o
 - **Bitwarden** (Flatpak) é o gerenciador de senhas e o agente SSH de todos os
   usuários: `SSH_AUTH_SOCK` aponta para o socket do Bitwarden desde o início
   da sessão, e as chaves SSH (ex.: a do GitHub/`nix-secrets`) ficam no cofre.
+  Cada conexão é reaproveitada por 10 min (`ControlMaster`), então a
+  autorização no Bitwarden é pedida uma vez por host nessa janela.
   Ligue uma vez em Configurações → "Ativar agente SSH" (e, se quiser,
   "Iniciar na bandeja" e o desbloqueio biométrico).
 

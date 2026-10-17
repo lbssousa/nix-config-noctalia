@@ -52,6 +52,12 @@ dá o SSH para o `nix-secrets` (chave residente, `import-ssh-yubikey.sh`) e o
 OTP do login no Bitwarden. Outra chave já carregada no `ssh-agent` também
 serve para o `nix-secrets`.
 
+O `~/.ssh/config` que o `import-ssh-yubikey.sh` gera reaproveita a conexão
+por 10 min (`ControlMaster`): um toque na YubiKey cobre todas as buscas do
+`nix-secrets` nessa janela, também as do root. As chaves de host do
+`github.com` vêm fixadas no `install.sh` (o root do live não tem
+`known_hosts`).
+
 ### Com a YubiKey e o nix-keys
 
 ```bash

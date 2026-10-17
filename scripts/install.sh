@@ -191,7 +191,6 @@ fi
 NIX_SECRETS_SSH_CONFIG=""
 if [[ "$_bw_mode" == "true" ]]; then
   [[ -d "${INSTALL_BW_KEYS_DIR:-}" ]] || die "INSTALL_BW_KEYS_DIR missing. Run the script without sudo."
-  trap 'rm -rf "$INSTALL_BW_KEYS_DIR"' EXIT
 fi
 for _u in "${SUDO_USER:-}" $(find /home -maxdepth 2 -name config -path '*/.ssh/config' 2>/dev/null | sed 's|^/home/\([^/]*\)/\.ssh/config|\1|'); do
   _c="/home/$_u/.ssh/config"
@@ -200,9 +199,27 @@ for _u in "${SUDO_USER:-}" $(find /home -maxdepth 2 -name config -path '*/.ssh/c
     break
   fi
 done
+# With -F, "~" in the user config still expands to /root, so root would have
+# no known_hosts and the first connection would ask to trust github.com —
+# which fails ("Host key verification failed") when Nix runs git without a
+# terminal. Pin GitHub's published host keys (docs.github.com, "GitHub's SSH
+# key fingerprints") instead; command-line -o options win over the config.
+GITHUB_KNOWN_HOSTS="$(mktemp /run/install-github-known-hosts.XXXXXX)"
+cat > "$GITHUB_KNOWN_HOSTS" <<'EOF'
+github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
+github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
+EOF
+chmod 644 "$GITHUB_KNOWN_HOSTS"
+# Temporary files of this run: the pinned known_hosts and, in Bitwarden mode,
+# the age keys read in step 0a.
+trap 'rm -f "$GITHUB_KNOWN_HOSTS"; [[ -z "${INSTALL_BW_KEYS_DIR:-}" ]] || rm -rf "$INSTALL_BW_KEYS_DIR"' EXIT
+
 if [[ -n "$NIX_SECRETS_SSH_CONFIG" ]]; then
   info "Root runs with HOME=/root; using user SSH config ($NIX_SECRETS_SSH_CONFIG) for SSH-backed flake inputs."
-  export GIT_SSH_COMMAND="ssh -F \"$NIX_SECRETS_SSH_CONFIG\""
+  export GIT_SSH_COMMAND="ssh -F \"$NIX_SECRETS_SSH_CONFIG\" -o UserKnownHostsFile=\"$GITHUB_KNOWN_HOSTS\" -o StrictHostKeyChecking=yes"
+else
+  export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=\"$GITHUB_KNOWN_HOSTS\" -o StrictHostKeyChecking=yes"
 fi
 
 # ---------------------------------------------------------------------------

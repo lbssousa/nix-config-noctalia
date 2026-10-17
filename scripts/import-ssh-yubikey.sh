@@ -231,6 +231,15 @@ echo
 #     IdentitiesOnly yes
 #     IdentityAgent none
 #     AddKeysToAgent no
+#     ControlMaster auto
+#     ControlPersist 10m
+#     ControlPath /home/<user>/.ssh/cm/%C
+#
+# The master connection is reused for 10 minutes, so one YubiKey touch covers
+# every fetch in that window (nix-keys clone, disko evaluation, nixos-install).
+# ControlPath is absolute because install.sh runs as root with this config
+# (ssh -F): "~" would point at /root, and root could not reuse the user's
+# master (root may connect to another user's mux socket).
 
 info "==> Step 3.5: Generate ${OPT_SSH_DIR}/config (per-key Host blocks)"
 
@@ -249,6 +258,7 @@ fi
 
 if [[ "${_OVERWRITE_CONFIG:-false}" == "true" ]]; then
   : > "$_CONFIG_FILE"
+  install -d -m 700 "${OPT_SSH_DIR}/cm"
 
   declare -A _host_keys=()
 
@@ -298,6 +308,9 @@ if [[ "${_OVERWRITE_CONFIG:-false}" == "true" ]]; then
       printf '  IdentitiesOnly yes\n' >> "$_CONFIG_FILE"
       printf '  IdentityAgent none\n' >> "$_CONFIG_FILE"
       printf '  AddKeysToAgent no\n' >> "$_CONFIG_FILE"
+      printf '  ControlMaster auto\n' >> "$_CONFIG_FILE"
+      printf '  ControlPersist 10m\n' >> "$_CONFIG_FILE"
+      printf '  ControlPath %s/cm/%%C\n' "$OPT_SSH_DIR" >> "$_CONFIG_FILE"
       success "Host block generated for '$_host' (${#_keys[@]} key(s))."
     done
     success "$_CONFIG_FILE generated with ${#_host_keys[@]} Host block(s)."
