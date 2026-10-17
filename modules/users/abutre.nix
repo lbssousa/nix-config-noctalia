@@ -17,8 +17,6 @@
       in
       {
         my = {
-          # GitHub via chave FIDO2 residente da YubiKey, sem agente SSH.
-          sshGithub.enable = true;
           # Assinatura de commits com a chave OpenPGP da YubiKey.
           yubikeyGpg.enable = true;
           # Neovim completo (nixvim com LSPs).

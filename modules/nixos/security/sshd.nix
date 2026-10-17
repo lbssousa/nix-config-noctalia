@@ -23,8 +23,8 @@
         ];
       };
 
-      # Nenhum agente SSH no sistema: as chaves FIDO2 residentes da YubiKey
-      # são usadas diretamente pelo cliente (ver home/security/ssh.nix).
+      # O agente SSH é o do Bitwarden, por usuário (ver
+      # home/security/bitwarden.nix).
       programs.ssh.startAgent = false;
     };
 }

@@ -1,9 +1,33 @@
 # Aplicativos gráficos e TUIs padrão — levantados a partir do sistema Omarchy
-# do usuário, todos como pacotes Nix nativos (sem Flatpak).
+# do usuário.
+#
+# Os aplicativos gráficos de usuário vêm do Flathub (services.flatpak.packages,
+# ver flatpak.nix); ficam nativos só o que integra com o sistema ou com o fluxo
+# de terminal: terminais, arquivos/discos, visualizadores de teclado (zathura,
+# imv, mpv), editores de código (FHS, com as toolchains do host), o que os
+# plugins da Noctalia chamam e as TUIs.
 {
   flake.modules.nixos.apps =
     { pkgs, ... }:
     {
+      services.flatpak.packages = [
+        # Escritório, notas e PDF
+        "org.onlyoffice.desktopeditors"
+        "com.github.xournalpp.xournalpp"
+        "org.gnome.Papers"
+
+        # Rede
+        "org.localsend.localsend_app"
+        "us.zoom.Zoom"
+
+        # Gráficos, áudio e vídeo
+        "com.obsproject.Studio"
+        "org.kde.kdenlive"
+        "com.github.PintaProject.Pinta"
+        "org.inkscape.Inkscape"
+        "org.fontforge.FontForge"
+      ];
+
       environment.systemPackages = with pkgs; [
         # Terminais
         ghostty
@@ -15,28 +39,13 @@
         sushi
         flea
         gnome-disk-utility
-        papers
         zathura
         imv
         mpv
         mpvScripts.mpris
 
-        # Escritório e notas
-        onlyoffice-desktopeditors
-        xournalpp
-
-        # Rede e utilitários
-        localsend
-        keepassxc
-        zoom-us
-
-        # Gráficos, áudio e vídeo
+        # Gravação de tela (usada pelo plugin screen_recorder da Noctalia)
         gpu-screen-recorder
-        obs-studio
-        kdePackages.kdenlive
-        pinta
-        inkscape
-        fontforge-gtk
 
         # Editores
         zed-editor-fhs

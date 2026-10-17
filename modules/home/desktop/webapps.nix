@@ -1,8 +1,10 @@
-# Web apps no estilo Omarchy, abertos no Firefox em janela própria.
+# Web apps no estilo Omarchy, abertos no Firefox (Flatpak) em janela própria.
 #
-# Cada web app usa um perfil dedicado (~/.mozilla/firefox/webapp-<id>), para
-# ter processo e app_id Wayland próprios: o dock e o alternador de janelas
-# tratam cada um como um aplicativo, e o userChrome.css esconde abas e barras.
+# Cada web app usa um perfil dedicado (~/.var/app/org.mozilla.firefox/webapps/
+# <id>, dentro da área do Flatpak), para ter processo e app_id Wayland
+# próprios: o dock e o alternador de janelas tratam cada um como um
+# aplicativo, e o userChrome.css esconde abas e barras. O userChrome.css é
+# copiado na ativação, não ligado à store: o sandbox não enxerga /nix/store.
 #
 # As entradas ficam no perfil do home-manager (XDG_DATA_DIRS), então o usuário
 # pode ocultar ou substituir qualquer uma criando ~/.local/share/applications/
@@ -19,15 +21,17 @@
     let
       cfg = config.my.webapps;
 
-      userChrome = ''
+      userChrome = pkgs.writeText "userChrome.css" ''
         #TabsToolbar, #nav-bar, #PersonalToolbar, #sidebar-box, #titlebar { visibility: collapse !important; }
       '';
+
+      profileDir = id: "${config.home.homeDirectory}/.var/app/org.mozilla.firefox/webapps/${id}";
 
       launcher =
         id: app:
         pkgs.writeShellScript "webapp-${id}" ''
           exec ${config.my.webappBrowser} \
-            --profile "$HOME/.mozilla/firefox/webapp-${id}" \
+            --profile ${lib.escapeShellArg (profileDir id)} \
             --name webapp-${id} --class webapp-${id} \
             --new-window ${lib.escapeShellArg app.url}
         '';
@@ -36,8 +40,8 @@
       options.my = {
         webappBrowser = lib.mkOption {
           type = lib.types.str;
-          # O Firefox do sistema (programs.firefox, com as políticas e o
-          # pacote de idioma pt-BR), resolvido pelo PATH.
+          # Wrapper do sistema para o Flatpak org.mozilla.firefox (com as
+          # políticas; ver nixos/desktop/firefox.nix), resolvido pelo PATH.
           default = "firefox";
           description = "Comando do Firefox usado pelos web apps.";
         };
@@ -52,7 +56,7 @@
                 url = lib.mkOption { type = lib.types.str; };
                 icon = lib.mkOption {
                   type = lib.types.str;
-                  default = "firefox";
+                  default = "org.mozilla.firefox";
                   description = "Nome de ícone do tema ou caminho de imagem.";
                 };
               };
@@ -122,10 +126,11 @@
           }
         ) cfg;
 
-        home.file = lib.mapAttrs' (
-          id: _:
-          lib.nameValuePair ".mozilla/firefox/webapp-${id}/chrome/userChrome.css" { text = userChrome; }
-        ) cfg;
+        home.activation.webappProfiles = lib.hm.dag.entryAfter [ "writeBoundary" ] (
+          lib.concatMapStrings (id: ''
+            run ${pkgs.coreutils}/bin/install -Dm644 ${userChrome} ${lib.escapeShellArg "${profileDir id}/chrome/userChrome.css"}
+          '') (lib.attrNames cfg)
+        );
 
         # Comando estável para atalhos de teclado: `webapp <id>`.
         home.packages = [

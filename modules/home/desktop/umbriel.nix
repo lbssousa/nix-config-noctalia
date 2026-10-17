@@ -47,7 +47,8 @@
 
         general = {
           mod_key = "Super";
-          autostart = [ ];
+          # O Bitwarden precisa estar aberto para o agente SSH responder.
+          autostart = [ "flatpak run com.bitwarden.desktop" ];
         };
 
         input.keyboard = {
@@ -81,7 +82,7 @@
           "Mod+Shift+F" = once "spawn:flea --gui";
           "Mod+Shift+N" = once "spawn:${cfg.terminal} -e nvim";
           "Mod+Shift+D" = once "spawn:${cfg.terminal} -e lazydocker";
-          "Mod+Shift+Slash" = once "spawn:keepassxc";
+          "Mod+Shift+Slash" = once "spawn:flatpak run com.bitwarden.desktop";
           "Mod+Ctrl+T" = once "spawn:${cfg.terminal} -e btop";
 
           # Web apps (ver home/desktop/webapps.nix)

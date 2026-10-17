@@ -23,7 +23,7 @@ in
       m.tpm2
       m.yubikey
       m.yubikey-notify
-      m.keepassxc-yubikey-lock
+      m.bitwarden
       m.selinux
       m.sshd
       # desktop

@@ -2,15 +2,20 @@
 
 Configuração NixOS (flake) com o compositor **Umbriel**, a shell **Noctalia** e
 o **Noctalia Greeter**, inspirada no [Omarchy](https://omarchy.org): atalhos,
-tema Tokyo Night, web apps, prompt e TUIs do Omarchy, com pacotes Nix nativos
-no lugar de Flatpaks. Sucessor do [nix-config](https://github.com/lbssousa/nix-config).
+tema Tokyo Night, web apps, prompt e TUIs do Omarchy. Os aplicativos gráficos
+de usuário vêm preferencialmente do Flathub (declarados com o
+[nix-flatpak](https://github.com/gmodena/nix-flatpak)). Sucessor do
+[nix-config](https://github.com/lbssousa/nix-config).
 
 - Root efêmero (`/` em tmpfs) com [preservation](https://github.com/nix-community/preservation);
   btrfs sobre LVM sobre LUKS, swap com hibernação.
 - Secure Boot (Limine + sbctl) e desbloqueio do LUKS por TPM2 nos dois hosts.
 - Segredos no repositório privado `nix-secrets` (sops-nix); chaves age no `nix-keys`.
-- Sem agente SSH: o `abutre` acessa o GitHub com a chave FIDO2 residente na
-  YubiKey, com `ControlMaster` de 15 min (um toque por janela de 15 min).
+- **Bitwarden** (Flatpak) é o gerenciador de senhas e o agente SSH de todos os
+  usuários: `SSH_AUTH_SOCK` aponta para o socket do Bitwarden desde o início
+  da sessão, e as chaves SSH (ex.: a do GitHub/`nix-secrets`) ficam no cofre.
+  Ligue uma vez em Configurações → "Ativar agente SSH" (e, se quiser,
+  "Iniciar na bandeja" e o desbloqueio biométrico).
 
 Instalação: [INSTALLATION.md](INSTALLATION.md).
 
@@ -65,6 +70,7 @@ lugar para ajustes locais do próprio usuário, que o Nix nunca apaga:
 | apps padrão (PDF, pastas, navegador) | `~/.config/mimeapps.list` / `xdg-mime default` | defaults via `XDG_CONFIG_DIRS` |
 | web apps | `~/.local/share/applications/webapp-<id>.desktop` | precede o perfil HM |
 | Firefox | `about:config` | políticas com `Status = "default"` |
+| agente SSH | `~/.config/environment.d/*.conf` posterior ou `IdentityAgent` em `~/.ssh/config.d/` | `SSH_AUTH_SOCK` do Bitwarden via `environment.d` |
 
 Overrides **declarativos** por usuário ficam em `modules/users/<nome>.nix`
 (`home = { … }`); os módulos base usam `lib.mkDefault`, então esse arquivo vence.
@@ -85,9 +91,16 @@ o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 - **Noctalia Greeter** com o patch do PR
   [noctalia-greeter#131](https://github.com/noctalia-dev/noctalia-greeter/pull/131)
   (`appearance.show_real_names`): mostra o nome completo no login.
-- **Firefox** é o navegador padrão, com "Adicionar aba à barra de tarefas"
-  (Taskbar Tabs) habilitado. Web apps declarativos (`webapp <id>`): WhatsApp,
-  YouTube, Google Maps/Photos/Messages/Contacts, Teams, Discord, X.
+- **Flatpaks** (Flathub, atualizados diariamente): Firefox, Bitwarden,
+  OnlyOffice, Xournal++, Papers, LocalSend, Zoom, OBS, Kdenlive, Pinta,
+  Inkscape, FontForge, mais Flatseal, Warehouse e Bazaar. Ficam nativos os
+  terminais, Nautilus/flea, discos, zathura/imv/mpv, os editores de código
+  (FHS), o que os plugins da Noctalia usam e as TUIs.
+- **Firefox** (Flatpak `org.mozilla.firefox`, comando `firefox`) é o navegador
+  padrão, com políticas declarativas (extensão `systemconfig`) e "Adicionar aba
+  à barra de tarefas" (Taskbar Tabs) habilitado. Web apps declarativos
+  (`webapp <id>`, perfis em `~/.var/app/org.mozilla.firefox/webapps/`):
+  WhatsApp, YouTube, Google Maps/Photos/Messages/Contacts, Teams, Discord, X.
 - Agentes de IA para todos: Claude Code, OpenCode, Antigravity (IDE e CLI).
 
 ### Atalhos principais (Super = Mod)
@@ -100,7 +113,7 @@ o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 | `Super+Shift+N` | neovim | `Super+K` | cheatsheet de atalhos |
 | `Super+Alt+Return` | tmux | `Super+Ctrl+V` | histórico do clipboard |
 | `Super+Ctrl+Return` | herdr | `Super+Ctrl+E` | emojis |
-| `Super+Shift+/` | KeePassXC | `Super+Ctrl+Space` | papéis de parede |
+| `Super+Shift+/` | Bitwarden | `Super+Ctrl+Space` | papéis de parede |
 | `Super+W` | fechar janela | `Super+Shift+Ctrl+Space` | temas |
 | `Super+T` / `Super+F` | flutuante / tela cheia | `Print` / `Shift+Print` | captura de região / tela |
 | `Super+L` | alternar layout (dwindle/scrolling) | `Alt+Print` | gravação de tela |

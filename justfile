@@ -10,10 +10,9 @@ auto_commit := env_var_or_default("AUTO_COMMIT", "true")
 
 u2f_authfile := "/persist/etc/u2f-mappings"
 
-# No SSH agent: the flake (including the git+ssh nix-secrets input) is
-# evaluated by the calling user, whose ~/.ssh/config reaches github.com with
-# the YubiKey resident key (ControlMaster, 15 min). Only the activation is
-# elevated (nixos-rebuild --sudo).
+# The flake (including the git+ssh nix-secrets input) is evaluated by the
+# calling user, who reaches github.com through the Bitwarden SSH agent
+# (SSH_AUTH_SOCK). Only the activation is elevated (nixos-rebuild --sudo).
 [private]
 _rebuild action host='' *args:
   #!/usr/bin/env bash

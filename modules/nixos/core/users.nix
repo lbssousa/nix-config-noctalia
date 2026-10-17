@@ -19,13 +19,9 @@ in
     {
       programs.fish.enable = true;
 
-      security = {
-        sudo = {
-          enable = true;
-          wheelNeedsPassword = true;
-        };
-        # Administradores: KeePassXC bloqueado ao remover a YubiKey.
-        keepassxc.autoLockOnYubikeyRemove.users = lib.attrNames (lib.filterAttrs (_: u: u.sudo) users);
+      security.sudo = {
+        enable = true;
+        wheelNeedsPassword = true;
       };
 
       users = {
