@@ -46,9 +46,24 @@
       };
 
       config = {
-        # As pastas do usuário (Documentos, Projetos…) ficam com o
-        # xdg-user-dirs-update do sistema, em pt_BR.
+        # Pastas do usuário em pt_BR, criadas na ativação do home-manager (nada
+        # no sistema roda o xdg-user-dirs-update fora de sessões GNOME/KDE).
+        # PROJECTS não existe no padrão do xdg-user-dirs; é usado pelo
+        # xdg-user-dir em abutre.nix e install.sh.
         xdg.enable = true;
+        xdg.userDirs = {
+          enable = true;
+          createDirectories = true;
+          desktop = "${config.home.homeDirectory}/Área de trabalho";
+          documents = "${config.home.homeDirectory}/Documentos";
+          download = "${config.home.homeDirectory}/Downloads";
+          music = "${config.home.homeDirectory}/Música";
+          pictures = "${config.home.homeDirectory}/Imagens";
+          publicShare = "${config.home.homeDirectory}/Público";
+          templates = "${config.home.homeDirectory}/Modelos";
+          videos = "${config.home.homeDirectory}/Vídeos";
+          extraConfig.PROJECTS = "${config.home.homeDirectory}/Projetos";
+        };
         xdg.systemDirs.config = [ "${mimeappsDir}/etc/xdg" ];
       };
     };
