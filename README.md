@@ -112,7 +112,7 @@ de arquivos é Nautilus para todos e flea para o `abutre`.
 
 | Atalho | Ação | Atalho | Ação |
 |---|---|---|---|
-| `Super+Return` | terminal (ghostty) | `Super+Space` | launcher |
+| `Super+Return` | terminal (ghostty) | `Super` (sozinho) | launcher |
 | `Super+Shift+B` | Firefox | `Super+Alt+Space` | central de controle |
 | `Super+Shift+F` | arquivos (Nautilus; flea para o `abutre`) | `Super+Escape` | menu de sessão |
 | `Super+Shift+N` | neovim | `Super+K` | cheatsheet de atalhos |

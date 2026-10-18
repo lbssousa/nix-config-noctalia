@@ -104,7 +104,7 @@
           "Mod+Shift+X" = once "spawn:webapp x";
 
           # Menus da Noctalia
-          "Mod+Space" = once (noctalia "panel-toggle launcher");
+          "Mod" = noctalia "panel-toggle launcher";
           "Mod+Alt+Space" = once (noctalia "panel-toggle control-center");
           "Mod+Escape" = once (noctalia "panel-toggle session");
           "XF86PowerOff" = locked (noctalia "panel-toggle session");
