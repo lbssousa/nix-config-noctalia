@@ -3,6 +3,11 @@
   flake.modules.nixos.locale = {
     time.timeZone = "America/Sao_Paulo";
 
+    # Sem input method (fcitx5), o GTK (Ghostty) tenta o text-input do Wayland
+    # e as teclas mortas (´ ` ~ ^) não compõem — só o ç, que tem tecla própria.
+    # Forçar o contexto "simple" faz o GTK compor as letras acentuadas sozinho.
+    environment.sessionVariables.GTK_IM_MODULE = "simple";
+
     i18n = {
       defaultLocale = "pt_BR.UTF-8";
       extraLocaleSettings = {
