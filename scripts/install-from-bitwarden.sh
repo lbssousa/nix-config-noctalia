@@ -4,7 +4,9 @@
 #
 # Wraps every manual step around install.sh:
 #   1. Provides git, openssh, bitwarden-cli, secretspec and gum (re-runs itself
-#      inside nix-shell when any of them is missing)
+#      inside `nix shell` when any of them is missing, using the nixpkgs pinned
+#      in flake.lock: the live ISO channel ships a secretspec too old for the
+#      flags used here)
 #   2. Logs in to Bitwarden (master password + YubiKey OTP) or unlocks it
 #   3. Checks the "install" profile of secretspec.toml (no prompts)
 #   4. Imports the YubiKey resident SSH keys for nix-secrets
@@ -55,10 +57,12 @@ done
 # 1. Tools
 for _cmd in git ssh bw secretspec gum; do
   command -v "$_cmd" >/dev/null 2>&1 && continue
-  [[ -z "${_INSTALL_FROM_BW_SHELL:-}" ]] || die "Command '$_cmd' still missing inside nix-shell."
-  info "Fetching git, openssh, bitwarden-cli, secretspec and gum via nix-shell..."
-  _INSTALL_FROM_BW_SHELL=1 exec nix-shell -p git openssh bitwarden-cli secretspec gum \
-    --run "$(printf '%q ' bash "${BASH_SOURCE[0]}" "${ORIG_ARGS[@]}")"
+  [[ -z "${_INSTALL_FROM_BW_SHELL:-}" ]] || die "Command '$_cmd' still missing inside nix shell."
+  info "Fetching git, openssh, bitwarden-cli, secretspec and gum from the flake's nixpkgs..."
+  _INSTALL_FROM_BW_SHELL=1 exec nix --extra-experimental-features "nix-command flakes" \
+    shell --inputs-from "$SCRIPT_DIR/.." \
+    nixpkgs#git nixpkgs#openssh nixpkgs#bitwarden-cli nixpkgs#secretspec nixpkgs#gum \
+    --command bash "${BASH_SOURCE[0]}" "${ORIG_ARGS[@]}"
 done
 
 # 2. Bitwarden

@@ -27,7 +27,8 @@ bash /tmp/nix-config-noctalia/scripts/install-from-bitwarden.sh
 
 O `install-from-bitwarden.sh` faz o resto:
 
-1. traz `git`, `openssh`, `bitwarden-cli`, `secretspec` e `gum` (via `nix-shell`);
+1. traz `git`, `openssh`, `bitwarden-cli`, `secretspec` e `gum` (via `nix shell`, do
+   `nixpkgs` travado no `flake.lock`);
 2. entra no Bitwarden: e-mail, senha mestra e o código OTP da YubiKey (toque
    **longo**, slot 2; o slot 1 guarda o desafio-resposta HMAC-SHA1). Outro
    segundo fator: `BW_2FA_METHOD=0` (aplicativo autenticador);
