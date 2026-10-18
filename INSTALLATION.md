@@ -209,6 +209,16 @@ sudo mount /dev/disk/by-partlabel/ESP /mnt/boot
 sudo nixos-enter --root /mnt
 ```
 
+**Depurar a instalação no ambiente live:** o `live-opencode.sh` abre o
+opencode na raiz do clone (a versão do `nixos-unstable`, que vem pronta do
+cache). Com `--upstream`, usa a última release do projeto, compilada do
+código-fonte (demora e consome RAM do store em tmpfs).
+
+```bash
+bash /tmp/nix-config-noctalia/scripts/live-opencode.sh
+bash /tmp/nix-config-noctalia/scripts/live-opencode.sh --upstream
+```
+
 **sudo bloqueado com `pam_u2f`:** sem entrada em `/persist/etc/u2f-mappings`
 para o usuário, o `pam_u2f` só é usado se `security.fido2Auth.enable` estiver
 ligado no host; registre a chave com `just yubikey-register`.
