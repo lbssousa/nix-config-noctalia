@@ -1,14 +1,13 @@
 {
   flake.modules.nixos.yubikey =
-    # System support for YubiKey/SmartCard (pcscd) and, opt-in, FIDO2/U2F auth.
+    # System support for YubiKey/SmartCard (pcscd) and FIDO2/U2F auth.
     #
-    # PC/SC (smartcard access) and fingerprint PAM wiring are always on —
-    # they're independent of FIDO2/U2F. The Secret Service (oo7) lives in
-    # desktop/secret-service.nix. The pam_u2f-based PAM/PolKit
-    # authentication itself (security.pam.u2f + the per-service u2f.enable
-    # flags) is gated behind security.fido2Auth.enable, disabled by default:
-    # enable it per-host once a YubiKey is actually enrolled
-    # (see /persist/etc/u2f-mappings).
+    # PC/SC (smartcard access) is always on, independent of FIDO2/U2F. The
+    # Secret Service (oo7) lives in desktop/secret-service.nix. The pam_u2f
+    # module (security.pam.u2f) follows security.fido2Auth.enable, on by
+    # default: pam_u2f is "sufficient" and fails at once without an enrolled
+    # key plugged in, so the password still works. Which services use it, and
+    # in what order, is in security/pam-policy.nix.
     {
       config,
       lib,
@@ -26,11 +25,14 @@
     in
     {
       options.security.fido2Auth = {
-        enable = lib.mkEnableOption ''
-          FIDO2/U2F-based PAM and PolKit authentication (pam_u2f, YubiKey touch)
-          for sudo, run0, TTY login, the graphical greeter, and polkit/pkexec.
-          Off by default — turn on per-host once a key is enrolled.
-        '';
+        enable =
+          lib.mkEnableOption ''
+            FIDO2/U2F-based PAM and PolKit authentication (pam_u2f, YubiKey touch)
+            for sudo, run0, polkit/pkexec and the lock screen (never for login)
+          ''
+          // {
+            default = true;
+          };
       };
 
       config = lib.mkMerge [
@@ -40,13 +42,8 @@
           services.pcscd.enable = true;
 
           security.pam.services = {
-            # Sudo: fingerprint (sufficient) → password.
-            # fprintd order 10700: before yubikey-notify (10850, only inserted
-            # when security.fido2Auth.enable is true) and pam_u2f (10900).
-            sudo.rules.auth.fprintd.order = lib.mkForce 10700;
-
             # run0 (systemd): authenticate once and remember for 5 minutes (pam_timestamp).
-            # Order: timestamp (400) → fingerprint (500) → password (11700).
+            # Order: timestamp (400) → fingerprint (500) → pam_u2f → password.
             # auth:    reads /run/pam_timestamp/<user>/run0:<tty>; if recent (< 5 min),
             #          returns success without re-authenticating.
             # session: writes the timestamp after a successful authentication,
@@ -54,26 +51,16 @@
             # Note: linux-pam ≥ 1.7 uses /run/pam_timestamp (no longer /run/sudo).
             #       The directory is created via systemd.tmpfiles below.
             run0.rules = {
-              auth = {
-                fprintd.order = lib.mkForce 500;
-                timestamp = {
-                  control = "sufficient";
-                  modulePath = "${pkgs.linux-pam}/lib/security/pam_timestamp.so";
-                  order = 400; # Before pam_fprintd (500)
-                };
+              auth.timestamp = {
+                control = "sufficient";
+                modulePath = "${pkgs.linux-pam}/lib/security/pam_timestamp.so";
+                order = 400; # Before pam_fprintd (500, security/pam-policy.nix)
               };
               session.timestamp = {
                 control = "optional";
                 modulePath = "${pkgs.linux-pam}/lib/security/pam_timestamp.so";
                 order = 500;
               };
-            };
-
-            # polkit/pkexec: fingerprint (sufficient) → password.
-            # fprintd order 10700: before yubikey-notify (10850) and pam_u2f (10900).
-            "polkit-1" = {
-              fprintAuth = true;
-              rules.auth.fprintd.order = lib.mkForce 10700;
             };
           };
 
@@ -102,12 +89,8 @@
             };
           };
 
-          security.pam.services = {
-            sudo.u2f.enable = true;
-            run0.u2f.enable = true;
-            login.u2f.enable = true;
-            "polkit-1".u2f.enable = true;
-          };
+          # Every PAM service gets pam_u2f by default (security.pam.u2f.enable);
+          # security/pam-policy.nix takes it off login and greetd.
 
           # Automatic check on switch/rebuild to avoid a sudo lockout.
           system.activationScripts.checkPamU2FMapping = {

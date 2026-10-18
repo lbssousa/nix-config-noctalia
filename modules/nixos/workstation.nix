@@ -23,6 +23,7 @@ in
       m.tpm2
       m.yubikey
       m.yubikey-notify
+      m.pam-policy
       m.bitwarden
       m.selinux
       m.sshd

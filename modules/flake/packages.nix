@@ -28,6 +28,13 @@ let
       #    ([appearance] show_real_names); remover quando chegar ao nixpkgs;
       #  - prompts PAM seguintes (troca de senha expirada) no placeholder do
       #    campo, sem apagar o aviso do PAM no status; patch local.
+      # Tela de bloqueio da Noctalia no serviço PAM "noctalia-lock" em vez do
+      # "login" (que fica só com a senha) e digital com 3 tentativas no total
+      # (eram 4). Ver security/pam-policy.nix. Patch local, sem PR upstream.
+      noctalia = prev.noctalia.overrideAttrs (old: {
+        patches = (old.patches or [ ]) ++ [ ../packages/patches/noctalia-lock-pam-service.patch ];
+      });
+
       noctalia-greeter = prev.noctalia-greeter.overrideAttrs (old: {
         patches = (old.patches or [ ]) ++ [
           ../packages/patches/noctalia-greeter-show-real-names.patch
@@ -61,6 +68,7 @@ in
         "yubikey-gpg-import"
         "flea"
         "greetd"
+        "noctalia"
         "noctalia-greeter"
       ] (n: pkgs'.${n});
     };

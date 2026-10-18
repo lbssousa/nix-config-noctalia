@@ -8,8 +8,6 @@
         enable = true;
         package = pkgs.fprintd-goodix;
       };
-
-      # Login gráfico: digital (suficiente) ou senha.
-      security.pam.services.greetd.fprintAuth = true;
+      # Onde a digital vale: security/pam-policy.nix.
     };
 }

@@ -219,6 +219,10 @@ bash /tmp/nix-config-noctalia/scripts/live-opencode.sh
 bash /tmp/nix-config-noctalia/scripts/live-opencode.sh --upstream
 ```
 
-**sudo bloqueado com `pam_u2f`:** sem entrada em `/persist/etc/u2f-mappings`
-para o usuário, o `pam_u2f` só é usado se `security.fido2Auth.enable` estiver
-ligado no host; registre a chave com `just yubikey-register`.
+**Digital, YubiKey ou senha?** O login (TTY e tela de login) aceita só a
+senha. `sudo`, `run0` e os pedidos do polkit tentam, nesta ordem, a digital
+(até 3 tentativas de 10 s), a YubiKey (só se uma chave cadastrada estiver
+conectada) e a senha. Na tela de bloqueio, a digital fica ativa o tempo todo;
+Enter com o campo vazio pede o toque na YubiKey. Detalhes em
+`modules/nixos/security/pam-policy.nix`; cadastre a YubiKey com
+`just yubikey-register` (`/persist/etc/u2f-mappings`).

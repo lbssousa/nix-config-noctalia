@@ -20,6 +20,10 @@
 
     let
       notifyScript = pkgs.writeShellScript "yubikey-touch-notify" ''
+        # Only with a YubiKey (USB vendor 1050) plugged in: without one,
+        # pam_u2f fails at once and asks for no touch
+        ${pkgs.gnugrep}/bin/grep -qsx 1050 /sys/bus/usb/devices/*/idVendor || exit 0
+
         # Determine the user who invoked sudo/polkit
         user="''${PAM_RUSER:-}"
 

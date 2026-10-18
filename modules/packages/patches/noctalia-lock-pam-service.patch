@@ -1,0 +1,30 @@
+--- a/src/auth/fingerprint_authenticator.cpp
++++ b/src/auth/fingerprint_authenticator.cpp
+@@ -27,7 +27,8 @@
+   const sdbus::ObjectPath kLoginPath{"/org/freedesktop/login1"};
+   constexpr auto kLoginManagerInterface = "org.freedesktop.login1.Manager";
+ 
+-  constexpr int kMaxRetries = 3;
++  // Retries after the first scan: 3 attempts in all, like pam_fprintd max-tries=3.
++  constexpr int kMaxRetries = 2;
+   constexpr auto kRetryDelay = std::chrono::milliseconds(250);
+ 
+   enum class MatchResult {
+--- a/src/shell/lockscreen/lock_screen.cpp
++++ b/src/shell/lockscreen/lock_screen.cpp
+@@ -1132,10 +1132,11 @@
+   updatePromptOnSurfaces();
+ 
+   const PamAuthenticator authenticator = m_authenticator;
+-  // Authenticate against the "login" stack. If fingerprint is enabled, strip
+-  // pam_fprintd from it: noctalia drives the reader itself over D-Bus and the
+-  // two can't share the sensor. See docs/fingerprint.md.
+-  const std::string pamService = "login";
++  // Authenticate against a stack of its own, so "login" can stay password-only
++  // while the lock screen also accepts a security key. Keep pam_fprintd out of
++  // it: noctalia drives the reader itself over D-Bus and the two can't share
++  // the sensor.
++  const std::string pamService = "noctalia-lock";
+   const std::string pamLanguage(i18n::Service::instance().language());
+   const std::string pamStartFailure = i18n::tr("auth.pam.start-failed");
+   std::thread([this, generation, password = std::move(password), authenticator, pamService, pamLanguage,
