@@ -45,6 +45,56 @@
             };
           };
 
+          # Barra padrão da Noctalia com os widgets dos plugins abaixo, que não
+          # entram na barra só por estarem habilitados. Cada lista substitui a
+          # padrão inteira, por isso os widgets nativos estão repetidos aqui.
+          # Emoji, calculadora e temas ficam de fora: já têm atalho no Umbriel
+          # (Mod+Ctrl+E, launcher, Mod+Shift+Ctrl+Space).
+          bar.default = {
+            start = lib.mkDefault [
+              "launcher"
+              "wallpaper"
+              "workspaces"
+              "noctalia/umbriel-companion:bar"
+            ];
+            center = lib.mkDefault [ "clock" ];
+            end = lib.mkDefault [
+              "jrohland/claudecode:pill"
+              "weinguyen/opencode-companion:widget"
+              "hy4ri/herdr:bar"
+              "noctalia/screen_recorder:recorder"
+              "alexander/screen-toolkit:widget"
+              "mindnbytes/nix-status:status"
+              "andrewdems/printers:printer"
+              "media"
+              "tray"
+              "notifications"
+              "clipboard"
+              "network"
+              "bluetooth"
+              "volume"
+              "brightness"
+              "battery"
+              "control-center"
+              "session"
+            ];
+          };
+
+          # Atalhos padrão da central de controle mais os blocos dos plugins.
+          control_center.shortcuts = lib.mkDefault (
+            map (type: { inherit type; }) [
+              "wifi"
+              "bluetooth"
+              "caffeine"
+              "nightlight"
+              "notification"
+              "power_profile"
+              "noctalia/screen_recorder:toggle"
+              "alexander/screen-toolkit:toggle"
+              "muhammadessam/umbriel-monitor-control:display"
+            ]
+          );
+
           # Habilitado para todos; o usuário abutre o desliga em
           # modules/users/abutre.nix.
           dock = {
