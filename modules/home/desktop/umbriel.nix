@@ -47,8 +47,8 @@
 
         general = {
           mod_key = "Super";
-          # O Bitwarden precisa estar aberto para o agente SSH responder.
-          autostart = [ "bitwarden" ];
+          # O Bitwarden sobe via XDG autostart (~/.config/autostart/bitwarden.desktop,
+          # escrito pelo próprio app com --autostart/tray). Não duplicar aqui.
         };
 
         input = {

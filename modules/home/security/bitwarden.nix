@@ -2,7 +2,7 @@
 #
 # O SSH_AUTH_SOCK vai para o environment.d, lido pelo systemd --user no início
 # da sessão: o Umbriel, a Noctalia e tudo o que eles abrem já o herdam, mesmo
-# antes de o Bitwarden subir (o Umbriel o inicia no autostart). O agente
+# antes de o Bitwarden subir (o XDG autostart o inicia com --autostart). O agente
 # precisa ser ligado uma vez no app (Configurações → "Ativar agente SSH"); as
 # chaves ficam no cofre e cada uso pede autorização no Bitwarden.
 #
