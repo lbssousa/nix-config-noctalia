@@ -16,7 +16,7 @@
 
         settings = {
           shell = {
-            font = lib.mkDefault "JetBrainsMono Nerd Font";
+            font = lib.mkDefault "Adwaita Sans";
             clipboard_enabled = lib.mkDefault true;
             polkit_agent = lib.mkDefault true;
             # A config vem do Nix: o assistente de primeiro uso só atrapalharia.

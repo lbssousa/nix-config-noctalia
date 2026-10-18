@@ -11,9 +11,9 @@
       "ghostty/config".text = ''
         theme = noctalia
 
-        font-family = "JetBrainsMono Nerd Font"
+        font-family = "JetBrainsMono Nerd Font Mono"
         font-style = Regular
-        font-size = 11
+        font-size = 14
 
         window-theme = ghostty
         window-padding-x = 14
@@ -39,8 +39,8 @@
 
       "kitty/kitty.conf".text = ''
         include themes/noctalia.conf
-        font_family JetBrainsMono Nerd Font
-        font_size 11
+        font_family JetBrainsMono Nerd Font Mono
+        font_size 14
         window_padding_width 14
         hide_window_decorations yes
         confirm_os_window_close 0
@@ -52,7 +52,7 @@
         [main]
         include=~/.config/foot/themes/noctalia
         term=xterm-256color
-        font=JetBrainsMono Nerd Font:size=11
+        font=JetBrainsMono Nerd Font Mono:size=14
         pad=14x14
         initial-window-mode=windowed
         workers=0

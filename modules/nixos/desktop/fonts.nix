@@ -9,6 +9,7 @@
           noto-fonts-cjk-sans
           noto-fonts-color-emoji
           liberation_ttf
+          adwaita-fonts
           nerd-fonts.jetbrains-mono
           nerd-fonts.caskaydia-mono
           nerd-fonts.fira-code
@@ -17,7 +18,10 @@
         ];
         fontconfig.defaultFonts = {
           serif = [ "Noto Serif" ];
-          sansSerif = [ "Noto Sans" ];
+          sansSerif = [
+            "Adwaita Sans"
+            "Noto Sans"
+          ];
           monospace = [ "JetBrainsMono Nerd Font" ];
           emoji = [ "Noto Color Emoji" ];
         };
