@@ -151,7 +151,7 @@ fprintd-verify
 ## Manutenção
 
 ```bash
-just switch        # NixOS + home-manager (avaliação como usuário, ativação com sudo)
+just switch        # NixOS + home-manager (avaliação como usuário, ativação com run0)
 just update        # atualiza o flake.lock (e faz commit/push, salvo auto_commit=false)
 just upgrade       # update + switch
 just diff          # pacotes que mudariam
@@ -159,7 +159,7 @@ just gc 14d        # coleta de lixo
 just validate      # nixfmt + statix + deadnix + flake check
 ```
 
-O `just switch` roda o `nixos-rebuild --sudo`: o flake (incluindo o input
+O `just switch` roda o `nixos-rebuild --elevate run0`: o flake (incluindo o input
 `git+ssh` do `nix-secrets`) é avaliado pelo próprio usuário, que alcança o
 GitHub pelo agente SSH do Bitwarden — nada precisa ser repassado ao root.
 

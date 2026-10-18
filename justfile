@@ -12,17 +12,17 @@ u2f_authfile := "/persist/etc/u2f-mappings"
 
 # The flake (including the git+ssh nix-secrets input) is evaluated by the
 # calling user, who reaches github.com through the Bitwarden SSH agent
-# (SSH_AUTH_SOCK). Only the activation is elevated (nixos-rebuild --sudo).
+# (SSH_AUTH_SOCK). Only the activation is elevated (nixos-rebuild --elevate run0).
 [private]
 _rebuild action host='' *args:
   #!/usr/bin/env bash
   set -euo pipefail
   host="{{host}}"
   host="${host:-$(hostname)}"
-  sudo_flag=()
-  case "{{action}}" in switch|boot|test) sudo_flag=(--sudo) ;; esac
+  elevate_flag=()
+  case "{{action}}" in switch|boot|test) elevate_flag=(--elevate run0) ;; esac
   old_system="$(readlink -f /run/current-system)"
-  nixos-rebuild "{{action}}" "${sudo_flag[@]}" --flake "{{flake_root}}#${host}" {{args}}
+  nixos-rebuild "{{action}}" "${elevate_flag[@]}" --flake "{{flake_root}}#${host}" {{args}}
   if [[ "{{action}}" == "switch" ]]; then
     new_system="$(readlink -f /run/current-system)"
     if [[ "$old_system" != "$new_system" ]]; then
@@ -295,8 +295,8 @@ yubikey-check:
   fi
 
   echo ""
-  echo "PAM sudo (auth):"
-  grep "^auth" /etc/pam.d/sudo | sed 's|/nix/store/[^/]*/||g; s/^/  /'
+  echo "PAM run0 (polkit-1, auth):"
+  grep "^auth" /etc/pam.d/polkit-1 | sed 's|/nix/store/[^/]*/||g; s/^/  /'
 
 # Tests interactive authentication (fingerprint → YubiKey → password) via run0.
 [group("yubikey")]
