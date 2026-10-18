@@ -36,7 +36,6 @@ in
       m.secret-service
       m.firefox
       m.apps
-      m.flatpak
       # periféricos e rede
       m.printing
       m.wifi-home

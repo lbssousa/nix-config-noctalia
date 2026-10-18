@@ -82,7 +82,7 @@ Depois da confirmação, o script:
 2. grava o disco em `modules/hosts/<host>/default.nix`;
 3. particiona com o disko (`--flake .#<host>`): ESP + LUKS (`crypted`) → LVM
    (`root_vg`: swap para hibernação + btrfs com `@home @nix @persist @log
-   @containers @flatpak @snapshots`); `/` é tmpfs;
+   @containers @snapshots`); `/` é tmpfs;
 4. cria `modules/users/<usuario>.nix` para usuários novos (a partir de
    `modules/users/_template.nix.in`) — o nome completo vem do `nix-secrets`;
 5. cria as chaves do Secure Boot em `/persist/etc/secureboot` (sbctl);

@@ -25,10 +25,6 @@
 
     preservation.url = "github:nix-community/preservation";
 
-    # Flatpaks declarativos (Flathub): a forma preferida para os aplicativos
-    # gráficos de usuário.
-    nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=v0.7.0";
-
     sops-nix = {
       url = "github:mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";

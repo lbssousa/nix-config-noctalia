@@ -2,16 +2,14 @@
 
 Configuração NixOS (flake) com o compositor **Umbriel**, a shell **Noctalia** e
 o **Noctalia Greeter**, inspirada no [Omarchy](https://omarchy.org): atalhos,
-tema Tokyo Night, web apps, prompt e TUIs do Omarchy. Os aplicativos gráficos
-de usuário vêm preferencialmente do Flathub (declarados com o
-[nix-flatpak](https://github.com/gmodena/nix-flatpak)). Sucessor do
-[nix-config](https://github.com/lbssousa/nix-config).
+tema Tokyo Night, web apps, prompt e TUIs do Omarchy, com pacotes Nix nativos
+no lugar de Flatpaks. Sucessor do [nix-config](https://github.com/lbssousa/nix-config).
 
 - Root efêmero (`/` em tmpfs) com [preservation](https://github.com/nix-community/preservation);
   btrfs sobre LVM sobre LUKS, swap com hibernação.
 - Secure Boot (Limine + sbctl) e desbloqueio do LUKS por TPM2 nos dois hosts.
 - Segredos no repositório privado `nix-secrets` (sops-nix); chaves age no `nix-keys`.
-- **Bitwarden** (Flatpak) é o gerenciador de senhas e o agente SSH de todos os
+- **Bitwarden** é o gerenciador de senhas e o agente SSH de todos os
   usuários: `SSH_AUTH_SOCK` aponta para o socket do Bitwarden desde o início
   da sessão, e as chaves SSH (ex.: a do GitHub/`nix-secrets`) ficam no cofre.
   Cada conexão é reaproveitada por 10 min (`ControlMaster`), então a
@@ -100,16 +98,14 @@ de arquivos é Nautilus para todos e flea para o `abutre`.
   do GDM, toda conta nova nasce sem senha e expirada: ao escolher o usuário,
   o greeter pede direto a nova senha e a confirmação (`nullresetok` no PAM:
   senha vazia só entra enquanto expirada).
-- **Flatpaks** (Flathub, atualizados diariamente): Firefox, Bitwarden,
-  OnlyOffice, Xournal++, Papers, LocalSend, Zoom, OBS, Kdenlive, Pinta,
-  Inkscape, FontForge, mais Flatseal, Warehouse e Bazaar. Ficam nativos os
-  terminais, Nautilus/flea, discos, zathura/imv/mpv, os editores de código
-  (FHS), o que os plugins da Noctalia usam e as TUIs.
-- **Firefox** (Flatpak `org.mozilla.firefox`, comando `firefox`) é o navegador
-  padrão, com políticas declarativas (extensão `systemconfig`) e "Adicionar aba
-  à barra de tarefas" (Taskbar Tabs) habilitado. Web apps declarativos
-  (`webapp <id>`, perfis em `~/.var/app/org.mozilla.firefox/webapps/`):
-  WhatsApp, YouTube, Google Maps/Photos/Messages/Contacts, Teams, Discord, X.
+- **Firefox** é o navegador padrão (`programs.firefox`, com o pacote de idioma
+  pt-BR e políticas declarativas) e tem "Adicionar aba à barra de tarefas"
+  (Taskbar Tabs) habilitado. Web apps declarativos (`webapp <id>`, perfis em
+  `~/.mozilla/firefox/webapp-<id>/`): WhatsApp, YouTube, Google
+  Maps/Photos/Messages/Contacts, Teams, Discord, X.
+- **Apps de usuário nativos:** OnlyOffice, Xournal++, Papers, LocalSend,
+  Zoom, OBS, Kdenlive, Pinta, Inkscape e FontForge, como pacotes Nix
+  (`modules/nixos/desktop/apps.nix`).
 - Agentes de IA para todos: Claude Code, OpenCode, Antigravity (IDE e CLI).
 
 ### Atalhos principais (Super = Mod)

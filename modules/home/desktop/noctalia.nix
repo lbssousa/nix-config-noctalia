@@ -52,10 +52,10 @@
             position = lib.mkDefault "bottom";
             auto_hide = lib.mkDefault true;
             pinned = lib.mkDefault [
-              "org.mozilla.firefox"
+              "firefox"
               "com.mitchellh.ghostty"
               "org.gnome.Nautilus"
-              "org.onlyoffice.desktopeditors"
+              "onlyoffice-desktopeditors"
             ];
           };
 

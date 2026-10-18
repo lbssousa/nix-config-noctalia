@@ -21,7 +21,8 @@
       # pam_oo7 só acompanha, para trocar também a senha do chaveiro.
       security.pam.services.login.rules.password.unix.control = lib.mkForce "required";
 
-      # Portal Secret dos Flatpaks. O oo7-portal só se declara para GNOME
+      # Portal Secret (org.freedesktop.impl.portal.Secret). O oo7-portal só
+      # se declara para GNOME
       # (UseIn=gnome) e o umbriel-portals.conf do pacote prefere umbriel;gtk,
       # que não oferecem Secret. Este arquivo substitui o do pacote, então o
       # "default" dele é repetido aqui.

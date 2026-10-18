@@ -1,33 +1,9 @@
 # Aplicativos gráficos e TUIs padrão — levantados a partir do sistema Omarchy
-# do usuário.
-#
-# Os aplicativos gráficos de usuário vêm do Flathub (services.flatpak.packages,
-# ver flatpak.nix); ficam nativos só o que integra com o sistema ou com o fluxo
-# de terminal: terminais, arquivos/discos, visualizadores de teclado (zathura,
-# imv, mpv), editores de código (FHS, com as toolchains do host), o que os
-# plugins da Noctalia chamam e as TUIs.
+# do usuário, todos como pacotes Nix nativos.
 {
   flake.modules.nixos.apps =
     { pkgs, ... }:
     {
-      services.flatpak.packages = [
-        # Escritório, notas e PDF
-        "org.onlyoffice.desktopeditors"
-        "com.github.xournalpp.xournalpp"
-        "org.gnome.Papers"
-
-        # Rede
-        "org.localsend.localsend_app"
-        "us.zoom.Zoom"
-
-        # Gráficos, áudio e vídeo
-        "com.obsproject.Studio"
-        "org.kde.kdenlive"
-        "com.github.PintaProject.Pinta"
-        "org.inkscape.Inkscape"
-        "org.fontforge.FontForge"
-      ];
-
       # Gerenciador de arquivos padrão do sistema; cada usuário pode trocar
       # pelo home-manager (my.fileManager, home/base/xdg.nix) ou em
       # ~/.config/mimeapps.list.
@@ -44,10 +20,26 @@
         sushi
         flea
         gnome-disk-utility
+        papers
         zathura
         imv
         mpv
         mpvScripts.mpris
+
+        # Escritório e notas
+        onlyoffice-desktopeditors
+        xournalpp
+
+        # Rede e utilitários
+        localsend
+        zoom-us
+
+        # Gráficos, áudio e vídeo
+        obs-studio
+        kdePackages.kdenlive
+        pinta
+        inkscape
+        fontforge-gtk
 
         # Gravação de tela (usada pelo plugin screen_recorder da Noctalia)
         gpu-screen-recorder

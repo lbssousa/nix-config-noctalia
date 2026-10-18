@@ -1,28 +1,17 @@
-# Bitwarden (Flatpak) como gerenciador de senhas padrão e agente SSH de todos
-# os usuários (ver home/security/bitwarden.nix).
+# Bitwarden como gerenciador de senhas padrão e agente SSH de todos os
+# usuários (ver home/security/bitwarden.nix).
+#
+# Desbloqueio biométrico: nada de política polkit externa — o pacote
+# bitwarden-desktop do nixpkgs já instala a ação polkit
+# "com.bitwarden.Bitwarden.unlock" (auth_self) em share/polkit-1/actions, e o
+# módulo security.polkit compõe share/polkit-1 de todos os systemPackages em
+# /run/current-system/sw (environment.pathsToLink), de onde o polkitd a lê.
+# (No Flatpak era preciso a política em /etc porque o polkitd não enxerga
+# dentro do sandbox do app.)
 {
-  flake.modules.nixos.bitwarden = {
-    services.flatpak.packages = [ "com.bitwarden.desktop" ];
-
-    # Ação polkit exigida pelo desbloqueio biométrico (digital/senha do
-    # sistema): sem ela, a opção nem aparece nas configurações do app.
-    environment.etc."polkit-1/actions/com.bitwarden.Bitwarden.policy".text = ''
-      <?xml version="1.0" encoding="UTF-8"?>
-      <!DOCTYPE policyconfig PUBLIC
-       "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
-       "http://www.freedesktop.org/standards/PolicyKit/1.0/policyconfig.dtd">
-
-      <policyconfig>
-          <action id="com.bitwarden.Bitwarden.unlock">
-            <description>Unlock Bitwarden</description>
-            <message>Authenticate to unlock Bitwarden</message>
-            <defaults>
-              <allow_any>no</allow_any>
-              <allow_inactive>no</allow_inactive>
-              <allow_active>auth_self</allow_active>
-            </defaults>
-          </action>
-      </policyconfig>
-    '';
-  };
+  flake.modules.nixos.bitwarden =
+    { pkgs, ... }:
+    {
+      environment.systemPackages = [ pkgs.bitwarden-desktop ];
+    };
 }

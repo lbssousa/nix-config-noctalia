@@ -135,15 +135,6 @@ in
                   ];
                 };
 
-                # Flatpak apps — preserved across boots
-                "@flatpak" = {
-                  mountpoint = "/var/lib/flatpak";
-                  mountOptions = [
-                    "compress=zstd"
-                    "noatime"
-                  ];
-                };
-
                 # Btrfs snapshots — for future backups (snapper, timeshift, etc.)
                 "@snapshots" = {
                   mountpoint = "/.snapshots";

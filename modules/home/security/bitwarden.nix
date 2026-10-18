@@ -1,4 +1,4 @@
-# Agente SSH do Bitwarden (Flatpak) para todos os usuários.
+# Agente SSH do Bitwarden para todos os usuários.
 #
 # O SSH_AUTH_SOCK vai para o environment.d, lido pelo systemd --user no início
 # da sessão: o Umbriel, a Noctalia e tudo o que eles abrem já o herdam, mesmo
@@ -12,7 +12,7 @@
   flake.modules.homeManager.bitwarden =
     { config, lib, ... }:
     let
-      sock = "${config.home.homeDirectory}/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock";
+      sock = "${config.home.homeDirectory}/.bitwarden-ssh-agent.sock";
     in
     {
       xdg.configFile."environment.d/20-bitwarden-ssh-agent.conf".text = ''
