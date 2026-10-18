@@ -15,6 +15,10 @@
         systemd.enable = true;
 
         settings = {
+          # "Escala da Interface": toda a shell (painéis, launcher, central de
+          # controle, notificações).
+          accessibility.ui_scale = lib.mkDefault 1.25;
+
           shell = {
             font = lib.mkDefault "Adwaita Sans";
             clipboard_enabled = lib.mkDefault true;
@@ -51,6 +55,8 @@
           # Emoji, calculadora e temas ficam de fora: já têm atalho no Umbriel
           # (Mod+Ctrl+E, launcher, Mod+Shift+Ctrl+Space).
           bar.default = {
+            # Ícones, texto e espessura da barra ("Escala do Conteúdo").
+            scale = lib.mkDefault 1.35;
             start = lib.mkDefault [
               "launcher"
               "wallpaper"
