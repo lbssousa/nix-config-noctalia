@@ -62,9 +62,15 @@
               "wallpaper"
               "workspaces"
               "noctalia/umbriel-companion:bar"
+              "media"
             ];
-            center = lib.mkDefault [ "clock" ];
+            center = lib.mkDefault [
+              "clock"
+              "notifications"
+            ];
             end = lib.mkDefault [
+              "tray"
+              "clipboard"
               "jrohland/claudecode:pill"
               "weinguyen/opencode-companion:widget"
               "hy4ri/herdr:bar"
@@ -72,18 +78,22 @@
               "alexander/screen-toolkit:widget"
               "mindnbytes/nix-status:status"
               "andrewdems/printers:printer"
-              "media"
-              "tray"
-              "notifications"
-              "clipboard"
-              "network"
               "bluetooth"
+              "network"
               "volume"
-              "brightness"
               "battery"
               "control-center"
               "session"
             ];
+          };
+
+          # Rede e volume na barra só com o ícone, sem o nome da rede nem a
+          # porcentagem; relógio com dia da semana e data (strftime, no idioma
+          # do LC_TIME: "dom 18 out 20:15").
+          widget = {
+            clock.format = lib.mkDefault "{:%a %d %b  %H:%M}";
+            network.show_label = lib.mkDefault false;
+            volume.show_label = lib.mkDefault false;
           };
 
           # Atalhos padrão da central de controle mais os blocos dos plugins.
