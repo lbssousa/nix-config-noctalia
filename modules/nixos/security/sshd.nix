@@ -22,9 +22,5 @@
           }
         ];
       };
-
-      # O agente SSH é o do Bitwarden, por usuário (ver
-      # home/security/bitwarden.nix).
-      programs.ssh.startAgent = false;
     };
 }

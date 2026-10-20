@@ -1,10 +1,11 @@
-# Cliente SSH de todos os usuários, com as chaves no agente SSH do Bitwarden
-# (SSH_AUTH_SOCK definido em home/security/bitwarden.nix). Nenhum outro agente
-# é iniciado e o ssh não adiciona chaves ao agente.
+# Cliente SSH de todos os usuários, com as chaves no ssh-agent do sistema
+# (programs.ssh.startAgent, security/keepassxc.nix), alimentado pelo KeePassXC.
+# O ssh não adiciona chaves ao agente por conta própria.
 #
 # Cada conexão mestra (ControlMaster) é reaproveitada por 10 minutos: a
-# autorização no Bitwarden é pedida uma vez por host nessa janela, em vez de a
-# cada operação (git fetch/push, nixos-rebuild buscando o nix-secrets…).
+# confirmação de uso da chave (noctalia-askpass) é pedida uma vez por host nessa
+# janela, em vez de a cada operação (git fetch/push, nixos-rebuild buscando o
+# nix-secrets…).
 #
 # Override local: ~/.ssh/config.d/*.conf, incluído ANTES dos blocos gerados
 # (no ssh, vale o primeiro valor encontrado para cada opção).

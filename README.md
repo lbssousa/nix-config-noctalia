@@ -9,13 +9,11 @@ no lugar de Flatpaks. Sucessor do [nix-config](https://github.com/lbssousa/nix-c
   btrfs sobre LVM sobre LUKS, swap com hibernação.
 - Secure Boot (Limine + sbctl) e desbloqueio do LUKS por TPM2 nos dois hosts.
 - Segredos no repositório privado `nix-secrets` (sops-nix); chaves age no `nix-keys`.
-- **Bitwarden** é o gerenciador de senhas e o agente SSH de todos os
-  usuários: `SSH_AUTH_SOCK` aponta para o socket do Bitwarden desde o início
-  da sessão, e as chaves SSH (ex.: a do GitHub/`nix-secrets`) ficam no cofre.
-  Cada conexão é reaproveitada por 10 min (`ControlMaster`), então a
-  autorização no Bitwarden é pedida uma vez por host nessa janela.
-  Ligue uma vez em Configurações → "Ativar agente SSH" (e, se quiser,
-  "Iniciar na bandeja" e o desbloqueio biométrico).
+- **KeePassXC** é o gerenciador de senhas padrão e alimenta o `ssh-agent` do
+  sistema: as chaves SSH marcadas nos bancos (ex.: a do GitHub/`nix-secrets`)
+  entram no agente ao destravar e saem ao travar; remover a YubiKey trava os
+  bancos. Desbloqueio rápido pelo polkit (digital), com o backport do PR
+  #8983. O app do Bitwarden continua instalado.
 
 Instalação: [INSTALLATION.md](INSTALLATION.md).
 
@@ -69,7 +67,7 @@ lugar para ajustes locais do próprio usuário, que o Nix nunca apaga:
 | herdr | o próprio `~/.config/herdr/config.toml` (gravável) | `programs.herdr.mutableSettings` |
 | apps padrão (PDF, pastas, navegador) | `~/.config/mimeapps.list` / `xdg-mime default` | defaults via `XDG_CONFIG_DIRS` |
 | brave-origin (containers, PWAs) | o próprio Brave; os containers declarados só voltam a ter ícone e cor | `brave-webapps` (home/desktop/brave.nix) |
-| agente SSH | `~/.config/environment.d/*.conf` posterior ou `IdentityAgent` em `~/.ssh/config.d/` | `SSH_AUTH_SOCK` do Bitwarden via `environment.d` |
+| agente SSH | `~/.config/environment.d/*.conf` posterior ou `IdentityAgent` em `~/.ssh/config.d/` | `SSH_AUTH_SOCK` do `ssh-agent` via `environment.d` |
 
 Overrides **declarativos** por usuário ficam em `modules/users/<nome>.nix`
 (`home = { … }`); os módulos base usam `lib.mkDefault`, então esse arquivo vence.
@@ -97,7 +95,9 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
   o greeter pede direto a nova senha e a confirmação (`nullresetok` no PAM:
   senha vazia só entra enquanto expirada).
 - **brave-origin** é o navegador padrão: extensão do KeePassXC (native
-  messaging declarativo), containers Google/GitHub/Microsoft/Meta e web apps
+  messaging declarativo), containers Google/GitHub/Microsoft/Meta, Traffic Control
+  (os domínios de cada empresa abrem no container dela: `my.brave.containers.<nome>.domains`)
+  e web apps
   como PWAs, cada um no seu container (`webapp <id>`): WhatsApp (Meta), Teams
   (Microsoft), YouTube e Google Maps/Photos/Messages/Contacts (Google),
   Discord e X.

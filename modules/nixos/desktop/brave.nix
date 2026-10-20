@@ -5,8 +5,9 @@
 #    não removê-la); o native messaging fica em home/desktop/brave.nix;
 #  - os web apps (my.brave.webapps) instalados como PWAs, em janela própria.
 #
-# Containers (my.brave.containers) e o container de cada PWA são do perfil de
-# cada usuário: home/desktop/brave.nix.
+# Containers (my.brave.containers), o container de cada PWA e o Traffic Control
+# (regras que abrem os domínios de cada empresa no container dela) são do
+# perfil de cada usuário: home/desktop/brave.nix.
 {
   flake.modules.nixos.brave =
     {
@@ -53,6 +54,14 @@
                   type = lib.types.strMatching "#[0-9A-Fa-f]{6}";
                   description = "Cor de fundo do ícone (#RRGGBB).";
                 };
+                domains = lib.mkOption {
+                  type = lib.types.listOf lib.types.str;
+                  default = [ ];
+                  description = ''
+                    Domínios abertos neste container pelo Traffic Control (uma
+                    regra por container; "exemplo.com" cobre os subdomínios).
+                  '';
+                };
               };
             }
           );
@@ -60,20 +69,110 @@
             Google = {
               icon = "star";
               color = "#4285F4";
+              domains = [
+                "google.com"
+                "google.com.br"
+                "youtube.com"
+                "youtu.be"
+                "youtube-nocookie.com"
+                "gmail.com"
+                "googlemail.com"
+                "goo.gl"
+                "g.co"
+                "g.page"
+                "googleusercontent.com"
+                "googleapis.com"
+                "gstatic.com"
+                "ggpht.com"
+                "ytimg.com"
+                "googlevideo.com"
+                "android.com"
+                "blogger.com"
+                "blogspot.com"
+                "withgoogle.com"
+                "googleblog.com"
+                "google.dev"
+                "web.dev"
+                "googlesource.com"
+                "gemini.google"
+                "notebooklm.google"
+              ];
             };
             GitHub = {
               icon = "work";
               color = "#24292F";
+              domains = [
+                "github.com"
+                "github.dev"
+                "githubusercontent.com"
+                "githubcopilot.com"
+                "githubassets.com"
+                "ghcr.io"
+              ];
             };
             Microsoft = {
               icon = "messaging";
               color = "#F25022";
+              domains = [
+                "microsoft.com"
+                "cloud.microsoft"
+                "microsoft365.com"
+                "office.com"
+                "office.net"
+                "office365.com"
+                "outlook.com"
+                "hotmail.com"
+                "live.com"
+                "live.net"
+                "msn.com"
+                "bing.com"
+                "microsoftonline.com"
+                "sharepoint.com"
+                "onedrive.com"
+                "1drv.ms"
+                "onenote.com"
+                "skype.com"
+                "azure.com"
+                "visualstudio.com"
+                "xbox.com"
+                "linkedin.com"
+                "lnkd.in"
+              ];
             };
             Meta = {
               icon = "social";
               color = "#0866FF";
+              domains = [
+                "facebook.com"
+                "fb.com"
+                "fb.me"
+                "fb.watch"
+                "facebook.net"
+                "fbcdn.net"
+                "messenger.com"
+                "m.me"
+                "instagram.com"
+                "cdninstagram.com"
+                "whatsapp.com"
+                "whatsapp.net"
+                "wa.me"
+                "threads.com"
+                "threads.net"
+                "meta.com"
+                "meta.ai"
+                "oculus.com"
+              ];
             };
           };
+        };
+
+        trafficControl = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = ''
+            Liga o Traffic Control (e, enquanto ele for experimental, a flag
+            brave://flags/#traffic-control) com as regras dos containers.
+          '';
         };
 
         webapps = lib.mkOption {

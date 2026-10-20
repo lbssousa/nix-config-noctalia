@@ -1,5 +1,5 @@
-# Bitwarden como gerenciador de senhas padrão e agente SSH de todos os
-# usuários (ver home/security/bitwarden.nix).
+# App do Bitwarden para todos os usuários. O gerenciador de senhas padrão e o
+# agente SSH são o KeePassXC e o ssh-agent (security/keepassxc.nix).
 #
 # Desbloqueio biométrico: nada de política polkit externa — o pacote
 # bitwarden-desktop do nixpkgs já instala a ação polkit

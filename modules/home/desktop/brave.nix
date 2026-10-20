@@ -27,7 +27,7 @@
       settings = pkgs.writeText "brave-webapps.json" (
         builtins.toJSON {
           inherit browser;
-          inherit (cfg) containers webapps;
+          inherit (cfg) containers webapps trafficControl;
         }
       );
 

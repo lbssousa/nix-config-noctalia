@@ -1,7 +1,8 @@
 """brave-webapps: containers e PWAs do brave-origin de um usuário.
 
   brave-webapps containers        cria/ajusta os containers declarados no
-                                  Preferences do perfil (só com o Brave fechado)
+                                  Preferences do perfil e as regras do Traffic
+                                  Control (só com o Brave fechado)
   brave-webapps sync              acha cada web app declarado entre as PWAs
                                   instaladas e põe --container=<nome> nos
                                   lançadores que o próprio Brave cria
@@ -110,10 +111,66 @@ def containers():
             entry.update(wanted)
             changed = True
     section["list"] = current
+    if CONFIG.get("trafficControl"):
+        ids_by_name = {c["name"].casefold(): c["id"] for c in current if isinstance(c, dict) and "name" in c}
+        changed |= traffic_rules(prefs, ids_by_name)
     if changed:
         write_atomic(path, json.dumps(prefs, separators=(",", ":")), mode=0o600)
-        log("containers atualizados: " + ", ".join(CONFIG["containers"]))
+        log("containers e regras atualizados: " + ", ".join(CONFIG["containers"]))
+    if CONFIG.get("trafficControl"):
+        traffic_flag()
     return 0
+
+
+RULE_PREFIX = "nix-config-"
+
+
+def traffic_rules(prefs, ids_by_name):
+    """Uma regra do Traffic Control por container com domínios.
+
+    As regras declaradas têm id "nix-config-<container>" e são reescritas a cada
+    ativação; as do usuário ficam antes delas (a primeira regra que casa vence)
+    e não são tocadas.
+    """
+    section = prefs.setdefault("brave", {}).setdefault("traffic_control", {})
+    rules = section.get("list")
+    if not isinstance(rules, list):
+        rules = []
+    wanted = []
+    for name, spec in CONFIG["containers"].items():
+        domains = spec.get("domains") or []
+        container_id = ids_by_name.get(name.casefold())
+        if domains and container_id:
+            wanted.append({
+                "id": RULE_PREFIX + name.casefold(),
+                "enabled": True,
+                "condition": {"url_filter": "\n".join(domains)},
+                "target": {"container_id": container_id},
+            })
+    user = [r for r in rules if not (isinstance(r, dict) and str(r.get("id", "")).startswith(RULE_PREFIX))]
+    new = user + wanted
+    if section.get("list") == new and section.get("enabled") is True:
+        return False
+    section["list"] = new
+    section["enabled"] = True
+    return True
+
+
+def traffic_flag():
+    """brave://flags/#traffic-control ligada no Local State, enquanto o
+    Traffic Control for experimental."""
+    path = os.path.join(USER_DATA, "Local State")
+    state = {}
+    if os.path.exists(path):
+        with open(path) as f:
+            state = json.load(f)
+    browser = state.setdefault("browser", {})
+    current = browser.get("enabled_labs_experiments", [])
+    flags = [f for f in current if not f.startswith("traffic-control@")] + ["traffic-control@1"]
+    if current != flags:
+        browser["enabled_labs_experiments"] = flags
+        write_atomic(path, json.dumps(state, separators=(",", ":")), mode=0o600)
+        log("flag traffic-control ligada")
 
 
 # --- PWAs -----------------------------------------------------------------------
