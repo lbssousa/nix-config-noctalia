@@ -27,6 +27,7 @@ in
       m.bitwarden
       m.selinux
       m.sshd
+      m.secret-prompts
       m.first-login
       # desktop
       m.session

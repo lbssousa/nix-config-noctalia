@@ -44,7 +44,8 @@
             enableFishIntegration = true;
             defaultCacheTtl = 1800;
             maxCacheTtl = 7200;
-            pinentry.package = pkgs.pinentry-gnome3;
+            # O mesmo do sistema (nixos/security/secret-prompts.nix).
+            pinentry.package = pkgs.pinentry-noctalia;
           };
         })
       ];

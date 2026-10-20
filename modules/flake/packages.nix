@@ -30,9 +30,34 @@ let
       # Tela de bloqueio da Noctalia no serviço PAM "noctalia-lock" em vez do
       # "login" (que fica só com a senha) e digital com 3 tentativas no total
       # (eram 4). Ver security/pam-policy.nix. Patch local, sem PR upstream.
+      # Pinentry do GnuPG e ssh-askpass desenhados pela shell, no estilo do painel
+      # do polkit: os clientes noctalia-pinentry e noctalia-askpass falam Assuan
+      # com a Noctalia ([shell] pinentry / ssh_askpass). Patch local, gerado do
+      # branch feat/secret-prompts de ~/Projetos/lbssousa/noctalia; sem PR upstream.
       noctalia = prev.noctalia.overrideAttrs (old: {
-        patches = (old.patches or [ ]) ++ [ ../packages/patches/noctalia-lock-pam-service.patch ];
+        patches = (old.patches or [ ]) ++ [
+          ../packages/patches/noctalia-lock-pam-service.patch
+          ../packages/patches/noctalia-secret-prompts.patch
+        ];
       });
+
+      # pinentry-program do gpg-agent; fora da sessão gráfica cai no pinentry-curses.
+      pinentry-noctalia =
+        final.runCommand "pinentry-noctalia"
+          {
+            nativeBuildInputs = [ final.makeWrapper ];
+            meta.mainProgram = "pinentry-noctalia";
+          }
+          ''
+            makeWrapper ${final.noctalia}/bin/noctalia-pinentry $out/bin/pinentry-noctalia \
+              --set-default NOCTALIA_PINENTRY_FALLBACK ${final.pinentry-curses}/bin/pinentry-curses
+          '';
+
+      # SSH_ASKPASS (ssh, ssh-add e git); sem a shell, falha com status 1.
+      noctalia-askpass = final.runCommand "noctalia-askpass" { meta.mainProgram = "noctalia-askpass"; } ''
+        mkdir -p $out/bin
+        ln -s ${final.noctalia}/bin/noctalia-askpass $out/bin/noctalia-askpass
+      '';
 
       noctalia-greeter = prev.noctalia-greeter.overrideAttrs (old: {
         patches = (old.patches or [ ]) ++ [
@@ -68,6 +93,8 @@ in
         "greetd"
         "noctalia"
         "noctalia-greeter"
+        "pinentry-noctalia"
+        "noctalia-askpass"
       ] (n: pkgs'.${n});
     };
 }

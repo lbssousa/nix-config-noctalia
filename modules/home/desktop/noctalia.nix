@@ -23,6 +23,11 @@
             font = lib.mkDefault "Adwaita Sans";
             clipboard_enabled = lib.mkDefault true;
             polkit_agent = lib.mkDefault true;
+            # Pinentry do GnuPG e SSH_ASKPASS no mesmo painel do polkit
+            # (nixos/security/secret-prompts.nix aponta o gpg-agent e o
+            # SSH_ASKPASS para eles, para todos os usuários).
+            pinentry = lib.mkDefault true;
+            ssh_askpass = lib.mkDefault true;
             # A config vem do Nix: o assistente de primeiro uso só atrapalharia.
             setup_wizard_enabled = lib.mkDefault false;
             telemetry_enabled = lib.mkDefault false;

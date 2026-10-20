@@ -79,8 +79,9 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 
 - **Umbriel** em layout dwindle, com o cheatsheet de atalhos embutido (`Super+K`).
 - **Noctalia** com tema Tokyo Night, dock, clipboard, capturas,
-  agente polkit e plugins fixados no `flake.lock` (fonte `path`, sem git em tempo
-  de execução): `screen_recorder`, `umbriel-companion`, `screen-toolkit`,
+  agente polkit, pinentry do GnuPG e `SSH_ASKPASS` no mesmo painel (patch
+  local: `noctalia-pinentry`/`noctalia-askpass`) e plugins fixados no
+  `flake.lock` (fonte `path`, sem git em tempo de execução): `screen_recorder`, `umbriel-companion`, `screen-toolkit`,
   `emoji-picker`, `calculator-plus`, `theme-switcher`, `nix-status`, `nix-search`,
   `umbriel-monitor-control`, `printers`, `claudecode`, `opencode-companion`,
   `herdr`.
