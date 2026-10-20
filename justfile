@@ -320,3 +320,14 @@ yubikey-test:
 [group("verification")]
 test-greetd:
   cd "{{flake_root}}" && nix build -L --no-link ".#legacyPackages.$(nix eval --raw --impure --expr builtins.currentSystem).tests.greetd-expired-password"
+
+# Boots a host's desktop in a throwaway VM (modules/nixos/core/vm.nix). The disk
+# image (<host>.qcow2) stays in `dir` between runs; delete it to start over.
+[group("verification")]
+vm host='bigodon' dir='/tmp/nix-config-noctalia-vm':
+  #!/usr/bin/env bash
+  set -euo pipefail
+  out="$(nix build "{{flake_root}}#nixosConfigurations.{{host}}.config.system.build.vm" --no-link --print-out-paths)"
+  mkdir -p "{{dir}}"
+  cd "{{dir}}"
+  exec "$out/bin/run-{{host}}-vm"
