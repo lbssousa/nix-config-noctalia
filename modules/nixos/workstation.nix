@@ -34,7 +34,7 @@ in
       m.fonts
       m.cursor
       m.secret-service
-      m.firefox
+      m.brave
       m.apps
       # periféricos e rede
       m.printing

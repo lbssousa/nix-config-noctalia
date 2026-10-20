@@ -84,9 +84,9 @@
           "Mod+Return" = once "spawn:${cfg.terminal}";
           "Mod+Alt+Return" = once "spawn:${cfg.terminal} -e tmux new-session -A -s main";
           "Mod+Ctrl+Return" = once "spawn:${cfg.terminal} -e herdr";
-          "Mod+Shift+Return" = once "spawn:firefox";
-          "Mod+Shift+B" = once "spawn:firefox";
-          "Mod+Shift+Alt+B" = once "spawn:firefox --private-window";
+          "Mod+Shift+Return" = once "spawn:brave-origin";
+          "Mod+Shift+B" = once "spawn:brave-origin";
+          "Mod+Shift+Alt+B" = once "spawn:brave-origin --incognito";
           # Gerenciador de arquivos padrão do usuário (my.fileManager).
           "Mod+Shift+F" = once "spawn:${pkgs.gtk3}/bin/gtk-launch ${config.my.fileManager}";
           "Mod+Shift+N" = once "spawn:${cfg.terminal} -e nvim";
@@ -94,7 +94,7 @@
           "Mod+Shift+Slash" = once "spawn:bitwarden";
           "Mod+Ctrl+T" = once "spawn:${cfg.terminal} -e btop";
 
-          # Web apps (ver home/desktop/webapps.nix)
+          # Web apps: PWAs do brave-origin nos seus containers (home/desktop/brave.nix)
           "Mod+Shift+Y" = once "spawn:webapp youtube";
           "Mod+Shift+Alt+G" = once "spawn:webapp whatsapp";
           "Mod+Shift+Ctrl+G" = once "spawn:webapp google-messages";

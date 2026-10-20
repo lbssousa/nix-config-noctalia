@@ -68,8 +68,7 @@ lugar para ajustes locais do próprio usuário, que o Nix nunca apaga:
 | starship | `~/.config/starship.toml.local` | mescla na ativação (`my.mutableConfigs`; `config-diff starship.toml`) |
 | herdr | o próprio `~/.config/herdr/config.toml` (gravável) | `programs.herdr.mutableSettings` |
 | apps padrão (PDF, pastas, navegador) | `~/.config/mimeapps.list` / `xdg-mime default` | defaults via `XDG_CONFIG_DIRS` |
-| web apps | `~/.local/share/applications/webapp-<id>.desktop` | precede o perfil HM |
-| Firefox | `about:config` | políticas com `Status = "default"` |
+| brave-origin (containers, PWAs) | o próprio Brave; os containers declarados só voltam a ter ícone e cor | `brave-webapps` (home/desktop/brave.nix) |
 | agente SSH | `~/.config/environment.d/*.conf` posterior ou `IdentityAgent` em `~/.ssh/config.d/` | `SSH_AUTH_SOCK` do Bitwarden via `environment.d` |
 
 Overrides **declarativos** por usuário ficam em `modules/users/<nome>.nix`
@@ -97,11 +96,11 @@ de arquivos é Nautilus para todos e flea para o `abutre`.
   do GDM, toda conta nova nasce sem senha e expirada: ao escolher o usuário,
   o greeter pede direto a nova senha e a confirmação (`nullresetok` no PAM:
   senha vazia só entra enquanto expirada).
-- **Firefox** é o navegador padrão (`programs.firefox`, com o pacote de idioma
-  pt-BR e políticas declarativas) e tem "Adicionar aba à barra de tarefas"
-  (Taskbar Tabs) habilitado. Web apps declarativos (`webapp <id>`, perfis em
-  `~/.mozilla/firefox/webapp-<id>/`): WhatsApp, YouTube, Google
-  Maps/Photos/Messages/Contacts, Teams, Discord, X.
+- **brave-origin** é o navegador padrão: extensão do KeePassXC (native
+  messaging declarativo), containers Google/GitHub/Microsoft/Meta e web apps
+  como PWAs, cada um no seu container (`webapp <id>`): WhatsApp (Meta), Teams
+  (Microsoft), YouTube e Google Maps/Photos/Messages/Contacts (Google),
+  Discord e X.
 - **Apps de usuário nativos:** OnlyOffice, Xournal++, Papers, LocalSend,
   Zoom, OBS, Kdenlive, Pinta, Inkscape e FontForge, como pacotes Nix
   (`modules/nixos/desktop/apps.nix`).
@@ -112,7 +111,7 @@ de arquivos é Nautilus para todos e flea para o `abutre`.
 | Atalho | Ação | Atalho | Ação |
 |---|---|---|---|
 | `Super+Return` | terminal (ghostty) | `Super` (sozinho) | launcher |
-| `Super+Shift+B` | Firefox | `Super+Alt+Space` | central de controle |
+| `Super+Shift+B` | brave-origin | `Super+Alt+Space` | central de controle |
 | `Super+Shift+F` | arquivos (Nautilus; flea para o `abutre`) | `Super+Escape` | menu de sessão |
 | `Super+Shift+N` | neovim | `Super+K` | cheatsheet de atalhos |
 | `Super+Alt+Return` | tmux | `Super+Ctrl+V` | histórico do clipboard |
