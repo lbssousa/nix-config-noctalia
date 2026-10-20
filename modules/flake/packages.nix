@@ -13,6 +13,18 @@ let
       fprintd-goodix = call ../packages/_fprintd-goodix/package.nix;
       yubikey-gpg-import = call ../packages/_yubikey-gpg-import/package.nix;
 
+      # Quick Unlock do KeePassXC pelo polkit (digital, FIDO2 ou senha, conforme
+      # a pilha PAM "polkit-1"): backport do PR keepassxreboot/keepassxc#8983
+      # (só no develop, que virará a 2.8) para a 2.7.x do nixpkgs. Os arquivos
+      # novos do PR (backend Polkit, ação org.keepassxc.KeePassXC.unlockDatabase)
+      # entram como estão; a integração segue a da 2.7, que identifica o banco
+      # pelo caminho do arquivo (quickUnlockUuid) em vez do UUID público.
+      # Remover quando o nixpkgs empacotar a 2.8.
+      keepassxc = prev.keepassxc.overrideAttrs (old: {
+        patches = (old.patches or [ ]) ++ [ ../packages/patches/keepassxc-polkit-quick-unlock.patch ];
+        buildInputs = (old.buildInputs or [ ]) ++ [ final.keyutils ];
+      });
+
       # Senha expirada (pam_acct_mgmt: NEW_AUTHTOK_REQD) no login gráfico.
       # O greetd 0.10.3 só falhava; o patch chama pam_chauthtok na mesma
       # conversa, e os prompts (senha atual, nova, confirmação) chegam ao
@@ -90,6 +102,7 @@ in
         "libfprint-goodix"
         "fprintd-goodix"
         "yubikey-gpg-import"
+        "keepassxc"
         "greetd"
         "noctalia"
         "noctalia-greeter"
