@@ -45,21 +45,23 @@
         # no sistema roda o xdg-user-dirs-update fora de sessões GNOME/KDE).
         # PROJECTS não existe no padrão do xdg-user-dirs; é usado pelo
         # xdg-user-dir em abutre.nix e install.sh.
-        xdg.enable = true;
-        xdg.userDirs = {
+        xdg = {
           enable = true;
-          createDirectories = true;
-          desktop = "${config.home.homeDirectory}/Área de trabalho";
-          documents = "${config.home.homeDirectory}/Documentos";
-          download = "${config.home.homeDirectory}/Downloads";
-          music = "${config.home.homeDirectory}/Música";
-          pictures = "${config.home.homeDirectory}/Imagens";
-          publicShare = "${config.home.homeDirectory}/Público";
-          templates = "${config.home.homeDirectory}/Modelos";
-          videos = "${config.home.homeDirectory}/Vídeos";
-          extraConfig.PROJECTS = "${config.home.homeDirectory}/Projetos";
+          userDirs = {
+            enable = true;
+            createDirectories = true;
+            desktop = "${config.home.homeDirectory}/Área de trabalho";
+            documents = "${config.home.homeDirectory}/Documentos";
+            download = "${config.home.homeDirectory}/Downloads";
+            music = "${config.home.homeDirectory}/Música";
+            pictures = "${config.home.homeDirectory}/Imagens";
+            publicShare = "${config.home.homeDirectory}/Público";
+            templates = "${config.home.homeDirectory}/Modelos";
+            videos = "${config.home.homeDirectory}/Vídeos";
+            extraConfig.PROJECTS = "${config.home.homeDirectory}/Projetos";
+          };
+          systemDirs.config = [ "${mimeappsDir}/etc/xdg" ];
         };
-        xdg.systemDirs.config = [ "${mimeappsDir}/etc/xdg" ];
       };
     };
 }
