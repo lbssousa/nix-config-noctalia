@@ -28,9 +28,6 @@
         };
 
         programs = {
-          # Dock da Noctalia: habilitado para todos, desabilitado para o abutre.
-          noctalia.settings.dock.enabled = false;
-
           git = {
             signing = {
               key = "BAC0B1B569777A733E37447FB10712C404063D38";

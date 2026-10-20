@@ -74,14 +74,13 @@ lugar para ajustes locais do próprio usuário, que o Nix nunca apaga:
 
 Overrides **declarativos** por usuário ficam em `modules/users/<nome>.nix`
 (`home = { … }`); os módulos base usam `lib.mkDefault`, então esse arquivo vence.
-Exemplos: o dock da Noctalia é ligado para todos e desligado para o `abutre`;
-o leitor de PDF é Papers para todos e Zathura para o `abutre`; o gerenciador
+Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`; o gerenciador
 de arquivos é Nautilus para todos e flea para o `abutre`.
 
 ## Desktop
 
 - **Umbriel** em layout dwindle, com o cheatsheet de atalhos embutido (`Super+K`).
-- **Noctalia** com tema Tokyo Night, dock (exceto `abutre`), clipboard, capturas,
+- **Noctalia** com tema Tokyo Night, dock, clipboard, capturas,
   agente polkit e plugins fixados no `flake.lock` (fonte `path`, sem git em tempo
   de execução): `screen_recorder`, `umbriel-companion`, `screen-toolkit`,
   `emoji-picker`, `calculator-plus`, `theme-switcher`, `nix-status`, `nix-search`,
