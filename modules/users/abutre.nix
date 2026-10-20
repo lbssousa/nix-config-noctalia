@@ -23,8 +23,6 @@
           nixvim.enable = true;
           # Zathura como leitor de PDF padrão (Papers para os demais).
           pdfViewer = "org.pwmt.zathura.desktop";
-          # flea como gerenciador de arquivos padrão (Nautilus para os demais).
-          fileManager = "com.thisisgm.flea.desktop";
         };
 
         programs = {

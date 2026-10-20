@@ -35,7 +35,7 @@ modules/
 ├── home/       features home-manager (base, desktop, security, lib)
 ├── hosts/      barbudus/, bigodon/ (features de hardware + disco), _disko-btrfs.nix
 ├── users/      um arquivo por usuário (my.users.<nome>), _template.nix.in
-└── packages/   pacotes próprios (_flea, _fprintd-goodix, …) e patches
+└── packages/   pacotes próprios (_fprintd-goodix, …) e patches
 ```
 
 | Host | Hardware | Features próprias |
@@ -73,8 +73,7 @@ lugar para ajustes locais do próprio usuário, que o Nix nunca apaga:
 
 Overrides **declarativos** por usuário ficam em `modules/users/<nome>.nix`
 (`home = { … }`); os módulos base usam `lib.mkDefault`, então esse arquivo vence.
-Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`; o gerenciador
-de arquivos é Nautilus para todos e flea para o `abutre`.
+Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 
 ## Desktop
 
@@ -112,7 +111,7 @@ de arquivos é Nautilus para todos e flea para o `abutre`.
 |---|---|---|---|
 | `Super+Return` | terminal (ghostty) | `Super` (sozinho) | launcher |
 | `Super+Shift+B` | brave-origin | `Super+Alt+Space` | central de controle |
-| `Super+Shift+F` | arquivos (Nautilus; flea para o `abutre`) | `Super+Escape` | menu de sessão |
+| `Super+Shift+F` | arquivos (Nautilus) | `Super+Escape` | menu de sessão |
 | `Super+Shift+N` | neovim | `Super+K` | cheatsheet de atalhos |
 | `Super+Alt+Return` | tmux | `Super+Ctrl+V` | histórico do clipboard |
 | `Super+Ctrl+Return` | herdr | `Super+Ctrl+E` | emojis |
@@ -138,9 +137,8 @@ O CI (`.github/workflows/validate.yml`) precisa do secret
 ## Créditos
 
 - [Omarchy](https://github.com/basecamp/omarchy) (MIT): prompt do starship,
-  atalhos, padrões dos terminais e `shell/{Commons,Ui}` usados pelo flea.
+  atalhos e padrões dos terminais.
 - [Noctalia](https://noctalia.dev), [Umbriel](https://github.com/noctalia-dev/umbriel)
   e os autores dos plugins.
-- [flea](https://github.com/thisisgm/flea), empacotado em `modules/packages/_flea`.
 - Padrão dendritic: [mightyiam/dendritic](https://github.com/mightyiam/dendritic),
   [vimjoyer/nixconf](https://github.com/vimjoyer/nixconf).

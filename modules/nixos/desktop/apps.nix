@@ -4,21 +4,13 @@
   flake.modules.nixos.apps =
     { pkgs, ... }:
     {
-      # Gerenciador de arquivos padrão do sistema; cada usuário pode trocar
-      # pelo home-manager (my.fileManager, home/base/xdg.nix) ou em
-      # ~/.config/mimeapps.list.
-      xdg.mime.defaultApplications."inode/directory" = "org.gnome.Nautilus.desktop";
-
       environment.systemPackages = with pkgs; [
         # Terminais
         ghostty
         kitty
         foot
 
-        # Arquivos, discos e mídia
-        nautilus
-        sushi
-        flea
+        # Arquivos (Nautilus: desktop/file-manager.nix), discos e mídia
         gnome-disk-utility
         papers
         zathura

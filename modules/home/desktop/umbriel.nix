@@ -87,8 +87,7 @@
           "Mod+Shift+Return" = once "spawn:brave-origin";
           "Mod+Shift+B" = once "spawn:brave-origin";
           "Mod+Shift+Alt+B" = once "spawn:brave-origin --incognito";
-          # Gerenciador de arquivos padrão do usuário (my.fileManager).
-          "Mod+Shift+F" = once "spawn:${pkgs.gtk3}/bin/gtk-launch ${config.my.fileManager}";
+          "Mod+Shift+F" = once "spawn:nautilus --new-window";
           "Mod+Shift+N" = once "spawn:${cfg.terminal} -e nvim";
           "Mod+Shift+D" = once "spawn:${cfg.terminal} -e lazydocker";
           "Mod+Shift+Slash" = once "spawn:bitwarden";
@@ -190,10 +189,6 @@
           }
           {
             match.app_id = "^dev.noctalia.UmbrielSharePicker$";
-            default_floating = true;
-          }
-          {
-            match.app_id = "^com.thisisgm.flea.picker$";
             default_floating = true;
           }
           {

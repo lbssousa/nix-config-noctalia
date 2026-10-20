@@ -36,6 +36,7 @@ in
       m.secret-service
       m.brave
       m.apps
+      m.file-manager
       # periféricos e rede
       m.printing
       m.wifi-home

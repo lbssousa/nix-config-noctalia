@@ -12,7 +12,6 @@ let
       libfprint-goodix = call ../packages/_libfprint-goodix/package.nix;
       fprintd-goodix = call ../packages/_fprintd-goodix/package.nix;
       yubikey-gpg-import = call ../packages/_yubikey-gpg-import/package.nix;
-      flea = call ../packages/_flea/package.nix;
 
       # Senha expirada (pam_acct_mgmt: NEW_AUTHTOK_REQD) no login gráfico.
       # O greetd 0.10.3 só falhava; o patch chama pam_chauthtok na mesma
@@ -66,7 +65,6 @@ in
         "libfprint-goodix"
         "fprintd-goodix"
         "yubikey-gpg-import"
-        "flea"
         "greetd"
         "noctalia"
         "noctalia-greeter"

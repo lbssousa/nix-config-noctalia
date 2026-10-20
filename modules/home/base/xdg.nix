@@ -21,7 +21,7 @@
         "application/x-ext-pdf"
       ];
       defaults = {
-        "inode/directory" = config.my.fileManager;
+        "inode/directory" = "org.gnome.Nautilus.desktop";
       }
       // lib.genAttrs pdfTypes (_: config.my.pdfViewer);
 
@@ -37,11 +37,6 @@
           type = lib.types.str;
           default = "org.gnome.Papers.desktop";
           description = "Entrada .desktop padrão para PDFs.";
-        };
-        fileManager = lib.mkOption {
-          type = lib.types.str;
-          default = "org.gnome.Nautilus.desktop";
-          description = "Entrada .desktop padrão para pastas.";
         };
       };
 
