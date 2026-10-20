@@ -21,6 +21,7 @@
           ssh-to-age
           secretspec
           bitwarden-cli
+          keepassxc
           jq
         ];
       };

@@ -7,8 +7,9 @@ o Secure Boot e o TPM2, feitos depois do primeiro boot.
 ## Pré-requisitos
 
 - ISO gráfica ou mínima do NixOS (unstable) num pendrive.
-- Acesso ao cofre do Bitwarden, com as chaves migradas (ver
-  [Chaves no Bitwarden](#chaves-no-bitwarden)), **ou** a YubiKey (chave SSH
+- As chaves age num cofre — o banco KeePass (`.kdbx`, num pendrive) ou o
+  Bitwarden — migradas antes (ver [Chaves no cofre](#chaves-no-cofre)), **ou**
+  a YubiKey (chave SSH
   residente para o GitHub e chave GPG para o git-crypt do `nix-keys`).
 - Firmware em modo UEFI, com Secure Boot **desligado** e, de preferência, já
   em **Setup Mode** (chaves de fábrica apagadas) — ver [Secure Boot](#secure-boot).
@@ -16,31 +17,44 @@ o Secure Boot e o TPM2, feitos depois do primeiro boot.
 
 ## Instalação automatizada
 
-### Com o Bitwarden (recomendado)
+### Com o cofre: KeePass ou Bitwarden (recomendado)
 
-No ambiente live, como o usuário comum (**sem** sudo):
+Para o KeePass, copie antes o `.kdbx` (ex.: `~/Dropbox/KeePass/LaercioSousa.kdbx`)
+para um pendrive e monte-o no ambiente live. Depois, como o usuário comum
+(**sem** sudo):
 
 ```bash
 nix-shell -p git --run "git clone https://github.com/lbssousa/nix-config-noctalia /tmp/nix-config-noctalia"
-bash /tmp/nix-config-noctalia/scripts/install-from-bitwarden.sh
+bash /tmp/nix-config-noctalia/scripts/install-from-vault.sh
 ```
 
-O `install-from-bitwarden.sh` faz o resto:
+O `install-from-vault.sh` faz o resto:
 
-1. traz `git`, `openssh`, `bitwarden-cli`, `secretspec` e `gum` (via `nix shell`, do
-   `nixpkgs` travado no `flake.lock`);
-2. entra no Bitwarden: e-mail, senha mestra e o código OTP da YubiKey (toque
-   **longo**, slot 2; o slot 1 guarda o desafio-resposta HMAC-SHA1). Outro
-   segundo fator: `BW_2FA_METHOD=0` (aplicativo autenticador);
-3. confere o perfil `install` do `secretspec.toml` no cofre;
+1. traz `git`, `openssh` e `gum`, pergunta o **provedor** (`kdbx` ou
+   `bitwarden`) e traz as ferramentas dele — `keepassxc-cli`, ou
+   `bitwarden-cli` e `secretspec` — via `nix shell`, do `nixpkgs` travado no
+   `flake.lock`;
+2. destrava o cofre:
+   - **kdbx:** caminho do `.kdbx`, slot do desafio-resposta da YubiKey
+     (padrão `1`; vazio se o banco não usa YubiKey) e a senha mestra. Cada
+     leitura abre o banco de novo: toque a YubiKey quando ela piscar. Se o
+     usuário do live não alcançar a YubiKey, o script repete o comando como
+     root;
+   - **bitwarden:** e-mail, senha mestra e o código OTP da YubiKey (toque
+     **longo**, slot 2; o slot 1 guarda o desafio-resposta HMAC-SHA1). Outro
+     segundo fator: `BW_2FA_METHOD=0` (aplicativo autenticador);
+3. confere se a `AGE_KEY_SYSTEM` está no cofre;
 4. importa as chaves SSH residentes da YubiKey para o `nix-secrets`
    (`import-ssh-yubikey.sh`; pule com `--no-yubikey-ssh` se outra chave do
    `ssh-agent` já alcança o GitHub);
-5. roda `install.sh --age-keys-from-bitwarden` (que se eleva sozinho);
-6. tranca o `bw` ao sair, mesmo em caso de erro.
+5. roda `install.sh --age-keys-from-vault` (que se eleva sozinho);
+6. tranca o cofre ao sair, mesmo em caso de erro.
 
-Opções do `install.sh` (`--host`, `--disk`, `--user`, ...) são repassadas; o
-e-mail pode vir de `--email` ou `BW_EMAIL`.
+Sem perguntas: `--provider kdbx|bitwarden`, `--kdbx <arquivo>`,
+`--yubikey <slot[:serial]>` e `--email` (ou `BW_EMAIL`). As demais opções do
+`install.sh` (`--host`, `--disk`, `--user`, ...) são repassadas. O antigo
+`install-from-bitwarden.sh` continua funcionando (é o `install-from-vault.sh
+--provider bitwarden`).
 
 Das chaves do perfil `install`, `AGE_KEY_SYSTEM` vai para
 `/persist/etc/sops/age/keys.txt` e cada `AGE_KEY_<LOGIN>` para
@@ -113,7 +127,7 @@ sudo bash scripts/install.sh --host bigodon --disk /dev/nvme0n1 \
   início e a conta continua sem senha. Senha vazia só é aceita enquanto a
   conta está expirada (`modules/nixos/security/first-login.nix`).
 - A chave age pessoal do `abutre` já foi gravada pelo passo 7b na instalação
-  pelo Bitwarden. Na instalação pelo `nix-keys`, clone-o e desbloqueie-o em
+  pelo cofre. Na instalação pelo `nix-keys`, clone-o e desbloqueie-o em
   `~/Projetos/lbssousa/nix-keys` e rode `just switch`: a ativação copia a
   chave.
 
@@ -168,27 +182,41 @@ No sistema instalado, abra o Bitwarden, ative o agente SSH e guarde no cofre
 uma chave SSH registrada no GitHub com acesso ao `nix-secrets` (o agente do
 Bitwarden não suporta chaves `-sk`/FIDO2) antes do primeiro `just switch`.
 
-## Chaves no Bitwarden
+## Chaves no cofre
 
-O perfil `install` do `secretspec.toml` declara o que a instalação precisa. No
-cofre, as chaves age são **notas seguras** (o arquivo `keys.txt` inteiro no
-corpo da nota) com títulos `secretspec/nix-config-noctalia/install/<CHAVE>`.
+O perfil `install` do `secretspec.toml` declara o que a instalação precisa. O
+nome do projeto ali (`lbssousa-nixos`) não é o de um repositório: é o mesmo
+em todas as configurações NixOS (nix-config-noctalia, nix-config-omarchy, ...),
+que leem as mesmas entradas:
+
+- **KeePass (kdbx):** grupo `secretspec/lbssousa-nixos/install`, uma
+  entrada por chave (título `<CHAVE>`), com a linha `AGE-SECRET-KEY-…` no
+  campo **Senha** e o `keys.txt` inteiro nas **Notas**. É o esquema do
+  provedor kdbx do SecretSpec, mas a leitura usa o `keepassxc-cli`, porque
+  aquele provedor não faz o desafio-resposta da YubiKey.
+- **Bitwarden:** **notas seguras** (o arquivo `keys.txt` inteiro no corpo da
+  nota) com títulos `secretspec/lbssousa-nixos/install/<CHAVE>`.
+
+Entradas gravadas antes com o nome antigo (`secretspec/nix-config-noctalia/…`)
+não são mais lidas: grave-as de novo com o `store-age-keys` (abaixo) e apague
+o grupo/as notas antigas no KeePassXC/Bitwarden.
 
 Migração, uma vez, com o `nix-keys` desbloqueado ao lado deste repositório:
 
 ```bash
-nix develop -c just bw-store-age-keys   # ou: --nix-keys-dir <dir>
+nix develop -c just store-age-keys   # ou: --provider kdbx --kdbx <arquivo> --nix-keys-dir <dir>
 ```
 
-O script entra no Bitwarden como o `install-from-bitwarden.sh`, grava cada
-`AGE_KEY_*` declarada a partir do `nix-keys` (`sops/age/keys.txt` para o
-sistema, `sops/age/<login>/keys.txt` para os usuários), roda o
-`secretspec check` e mostra a chave pública de cada uma — confira com os
-recipients do `.sops.yaml` do `nix-secrets`.
+O script pergunta o provedor e destrava o cofre como o `install-from-vault.sh`,
+grava cada `AGE_KEY_*` declarada a partir do `nix-keys` (`sops/age/keys.txt`
+para o sistema, `sops/age/<login>/keys.txt` para os usuários), lê cada uma de
+volta e mostra a chave pública — confira com os recipients do `.sops.yaml`
+do `nix-secrets`. Rodar de novo atualiza as entradas. Com o KeePassXC aberto
+no mesmo banco, tranque-o antes (ele recarrega o arquivo ao destravar).
 
 Para outro usuário com segredos no home-manager, declare `AGE_KEY_<LOGIN>` no
 perfil `install` e rode a migração de novo. Mantenha o `nix-keys` como
-cópia fria até a primeira instalação pelo Bitwarden dar certo.
+cópia fria até a primeira instalação pelo cofre dar certo.
 
 ## Problemas comuns
 
