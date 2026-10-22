@@ -124,7 +124,7 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 | `Super+Shift+N` | neovim | `Super+K` | cheatsheet de atalhos |
 | `Super+Alt+Return` | tmux | `Super+Ctrl+V` | histórico do clipboard |
 | `Super+Ctrl+Return` | herdr | `Super+Ctrl+E` | emojis |
-| `Super+Shift+/` | Bitwarden | `Super+Ctrl+Space` | papéis de parede |
+| `Super+Ctrl+/` | KeePassXC | `Super+Ctrl+Space` | papéis de parede |
 | `Super+W` | fechar janela | `Super+Shift+Ctrl+Space` | temas |
 | `Super+T` / `Super+F` | flutuante / tela cheia | `Print` / `Shift+Print` | captura de região / tela |
 | `Super+L` | alternar layout (dwindle/scrolling) | `Alt+Print` | gravação de tela |

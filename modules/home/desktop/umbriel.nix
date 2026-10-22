@@ -90,7 +90,7 @@
           "Mod+Shift+F" = once "spawn:strata";
           "Mod+Shift+N" = once "spawn:${cfg.terminal} -e nvim";
           "Mod+Shift+D" = once "spawn:${cfg.terminal} -e lazydocker";
-          "Mod+Shift+Slash" = once "spawn:bitwarden";
+          "Mod+Ctrl+Slash" = once "spawn:keepassxc";
           "Mod+Ctrl+T" = once "spawn:${cfg.terminal} -e btop";
 
           # Web apps: Taskbar Tabs do Firefox nos seus containers (home/desktop/firefox.nix)
