@@ -61,6 +61,15 @@
                     sem container; a partir do login seguinte, no container.
                   '';
                 };
+                icon = lib.mkOption {
+                  type = lib.types.nullOr lib.types.str;
+                  default = null;
+                  description = ''
+                    URL do ícone, para os sites que só o mostram com login
+                    (null: o maior que o site declara no manifest ou nos
+                    <link rel="icon">).
+                  '';
+                };
                 scopes = lib.mkOption {
                   type = lib.types.listOf lib.types.str;
                   description = ''
@@ -101,6 +110,7 @@
               name = "Google Photos";
               url = "https://photos.google.com/";
               container = "Google";
+              icon = "https://www.gstatic.com/images/branding/product/1x/photos_512dp.png";
               scopes = [ "photos.google.com" ];
             };
             google-messages = {
@@ -113,6 +123,7 @@
               name = "Google Contacts";
               url = "https://contacts.google.com/";
               container = "Google";
+              icon = "https://www.gstatic.com/images/branding/product/1x/contacts_2022_512dp.png";
               scopes = [ "contacts.google.com" ];
             };
             teams = {

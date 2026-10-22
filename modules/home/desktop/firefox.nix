@@ -38,6 +38,7 @@
 
       firefox-webapps = pkgs.writers.writePython3Bin "firefox-webapps" {
         flakeIgnore = [ "E501" ];
+        libraries = [ pkgs.python3Packages.pillow ];
         makeWrapperArgs = [
           "--set"
           "FIREFOX_WEBAPPS_CONFIG"
