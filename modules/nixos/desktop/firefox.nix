@@ -13,7 +13,7 @@
 #    cria o seu ("Facebook", "Google", "Microsoft") e abre nele os domínios
 #    da empresa. O da Microsoft inclui o GitHub, a menos que se marque
 #    "Ignore GitHub" nas opções dele;
-#  - diálogo de arquivos pelo portal (o Nautilus; nixos/desktop/file-manager.nix).
+#  - diálogo de arquivos pelo portal (o Strata; nixos/desktop/file-manager.nix).
 #
 # Web apps (my.firefox.webapps) são do perfil de cada usuário:
 # home/desktop/firefox.nix.

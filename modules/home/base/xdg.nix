@@ -21,7 +21,7 @@
         "application/x-ext-pdf"
       ];
       defaults = {
-        "inode/directory" = "org.gnome.Nautilus.desktop";
+        "inode/directory" = "io.github.lgse.Strata.desktop";
       }
       // lib.genAttrs pdfTypes (_: config.my.pdfViewer);
 

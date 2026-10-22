@@ -139,7 +139,7 @@
             pinned = lib.mkDefault [
               "firefox"
               "com.mitchellh.ghostty"
-              "org.gnome.Nautilus"
+              "io.github.lgse.Strata"
               "onlyoffice-desktopeditors"
             ];
           };

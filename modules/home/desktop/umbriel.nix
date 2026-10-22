@@ -87,7 +87,7 @@
           "Mod+Shift+Return" = once "spawn:firefox";
           "Mod+Shift+B" = once "spawn:firefox";
           "Mod+Shift+Alt+B" = once "spawn:firefox --private-window";
-          "Mod+Shift+F" = once "spawn:nautilus --new-window";
+          "Mod+Shift+F" = once "spawn:strata";
           "Mod+Shift+N" = once "spawn:${cfg.terminal} -e nvim";
           "Mod+Shift+D" = once "spawn:${cfg.terminal} -e lazydocker";
           "Mod+Shift+Slash" = once "spawn:bitwarden";
