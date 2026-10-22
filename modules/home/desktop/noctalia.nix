@@ -95,6 +95,16 @@
             auto_locate = lib.mkDefault true;
           };
 
+          # 5 minutos sem atividade: bloqueia a tela e suspende. A cafeína
+          # (ou qualquer inibidor de ociosidade, como um vídeo tocando) impede.
+          # Definir um comportamento aqui tira os padrões da Noctalia (bloqueio
+          # e monitor desligado, ambos desativados).
+          idle.behavior.suspend = {
+            enabled = lib.mkDefault true;
+            timeout = lib.mkDefault 300;
+            action = lib.mkDefault "lock_and_suspend";
+          };
+
           # Diretórios de wallpapers (com pastas separadas para modo claro e escuro).
           wallpaper = {
             directory = lib.mkDefault "${config.xdg.userDirs.pictures}/Wallpapers";
