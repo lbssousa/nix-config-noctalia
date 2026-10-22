@@ -6,6 +6,17 @@
 # travado), um bloco `Match exec` no ~/.ssh/config abre o pedido de
 # desbloqueio do KeePassXC e segura a conexão até as chaves chegarem.
 #
+# Com autostart, um drop-in na unidade gerada pelo systemd
+# (app-org.keepassxc.KeePassXC@autostart.service) segura o início até o
+# Noctalia registrar a bandeja (StatusNotifierHost) e o xdg-desktop-portal
+# responder: o KeePassXC (Qt) só consulta os dois ao iniciar, e o autostart
+# do graphical-session.target chega antes deles, deixando-o sem ícone na
+# bandeja e sem o tema escuro. Mesma correção do omarchy-setup.
+#
+# O Bitwarden desktop saiu (nixos/workstation.nix); a ativação apaga as
+# entradas de autostart que o app escreveu, inclusive a cópia .bkp do
+# home-manager, que o systemd também executava.
+#
 # Override local: ~/.config/keepassxc/keepassxc.ini é do home-manager; ajustes
 # feitos na interface que não estejam aqui continuam valendo até o próximo
 # switch.
@@ -58,6 +69,37 @@
           echo "ssh: KeePassXC ainda travado após ''${timeout}s; seguindo sem as chaves dele" >&2
         '';
       };
+
+      # ExecStartPre= do autostart: espera a bandeja e o portal (até o
+      # timeout) e depois libera o início de qualquer jeito.
+      autostartWait = pkgs.writeShellApplication {
+        name = "keepassxc-autostart-wait";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.systemd
+        ];
+        text = ''
+          timeout=''${KEEPASSXC_AUTOSTART_TIMEOUT:-60}
+
+          for ((i = 0; i < timeout; i++)); do
+            tray=$(busctl --user get-property \
+              org.kde.StatusNotifierWatcher /StatusNotifierWatcher \
+              org.kde.StatusNotifierWatcher IsStatusNotifierHostRegistered 2>/dev/null || true)
+
+            if [[ $tray == *" true"* ]] &&
+              busctl --user --timeout=2 call \
+                org.freedesktop.portal.Desktop /org/freedesktop/portal/desktop \
+                org.freedesktop.portal.Settings ReadOne ss \
+                org.freedesktop.appearance color-scheme &>/dev/null; then
+              exit 0
+            fi
+
+            sleep 1
+          done
+
+          echo "Bandeja ou portal ausentes após ''${timeout}s; iniciando o KeePassXC assim mesmo" >&2
+        '';
+      };
     in
     {
       programs.keepassxc = {
@@ -89,6 +131,20 @@
       };
 
       xdg.autostart.enable = lib.mkDefault true;
+
+      xdg.configFile."systemd/user/app-org.keepassxc.KeePassXC@autostart.service.d/50-wait-for-desktop.conf" =
+        lib.mkIf config.programs.keepassxc.autostart {
+          text = ''
+            [Service]
+            ExecStartPre=${lib.getExe autostartWait}
+            TimeoutStartSec=90
+          '';
+        };
+
+      home.activation.removeBitwardenAutostart = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        run rm -f "${config.xdg.configHome}/autostart/bitwarden.desktop" \
+          "${config.xdg.configHome}/autostart/bitwarden.desktop.bkp"
+      '';
 
       # O ssh-agent do sistema (programs.ssh.startAgent, security/keepassxc.nix)
       # escuta em $XDG_RUNTIME_DIR/ssh-agent. O NixOS só exporta o
