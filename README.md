@@ -66,7 +66,7 @@ lugar para ajustes locais do próprio usuário, que o Nix nunca apaga:
 | starship | `~/.config/starship.toml.local` | mescla na ativação (`my.mutableConfigs`; `config-diff starship.toml`) |
 | herdr | o próprio `~/.config/herdr/config.toml` (gravável) | `programs.herdr.mutableSettings` |
 | apps padrão (PDF, pastas, navegador) | `~/.config/mimeapps.list` / `xdg-mime default` | defaults via `XDG_CONFIG_DIRS` |
-| brave-origin (containers, PWAs) | o próprio Brave; os containers declarados só voltam a ter ícone e cor | `brave-webapps` (home/desktop/brave.nix) |
+| Firefox (web apps) | o próprio Firefox; os web apps declarados voltam a ter URL e container | `firefox-webapps` (home/desktop/firefox.nix) |
 | agente SSH | `~/.config/environment.d/*.conf` posterior ou `IdentityAgent` em `~/.ssh/config.d/` | `SSH_AUTH_SOCK` do `ssh-agent` via `environment.d` |
 
 Overrides **declarativos** por usuário ficam em `modules/users/<nome>.nix`
@@ -94,13 +94,14 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
   do GDM, toda conta nova nasce sem senha e expirada: ao escolher o usuário,
   o greeter pede direto a nova senha e a confirmação (`nullresetok` no PAM:
   senha vazia só entra enquanto expirada).
-- **brave-origin** é o navegador padrão: extensão do KeePassXC (native
-  messaging declarativo), containers Google/GitHub/Microsoft/Meta, Traffic Control
-  (os domínios de cada empresa abrem no container dela: `my.brave.containers.<nome>.domains`)
-  e web apps
-  como PWAs, cada um no seu container (`webapp <id>`): WhatsApp (Meta), Teams
-  (Microsoft), YouTube e Google Maps/Photos/Messages/Contacts (Google),
-  Discord e X.
+- **Firefox** é o navegador padrão: extensões do KeePassXC (native
+  messaging declarativo), Multi-Account Containers e Facebook, Google e
+  Microsoft Container (os domínios de cada empresa abrem no container dela;
+  o GitHub fica no da Microsoft; as demais extensões vêm da sincronização
+  com a conta Mozilla) e web apps como Taskbar Tabs (ligadas por preferência
+  do sistema), cada um no container da sua empresa (`webapp <id>`):
+  WhatsApp (Facebook), Teams (Microsoft), YouTube e Google
+  Maps/Photos/Messages/Contacts (Google), Discord e X.
 - **Apps de usuário nativos:** OnlyOffice, Xournal++, Papers, LocalSend,
   Zoom, OBS, Kdenlive, Pinta, Inkscape e FontForge, como pacotes Nix
   (`modules/nixos/desktop/apps.nix`).
@@ -111,7 +112,7 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 | Atalho | Ação | Atalho | Ação |
 |---|---|---|---|
 | `Super+Return` | terminal (ghostty) | `Super` (sozinho) | launcher |
-| `Super+Shift+B` | brave-origin | `Super+Alt+Space` | central de controle |
+| `Super+Shift+B` | Firefox | `Super+Alt+Space` | central de controle |
 | `Super+Shift+F` | arquivos (Nautilus) | `Super+Escape` | menu de sessão |
 | `Super+Shift+N` | neovim | `Super+K` | cheatsheet de atalhos |
 | `Super+Alt+Return` | tmux | `Super+Ctrl+V` | histórico do clipboard |

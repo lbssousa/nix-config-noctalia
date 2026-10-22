@@ -84,16 +84,16 @@
           "Mod+Return" = once "spawn:${cfg.terminal}";
           "Mod+Alt+Return" = once "spawn:${cfg.terminal} -e tmux new-session -A -s main";
           "Mod+Ctrl+Return" = once "spawn:${cfg.terminal} -e herdr";
-          "Mod+Shift+Return" = once "spawn:brave-origin";
-          "Mod+Shift+B" = once "spawn:brave-origin";
-          "Mod+Shift+Alt+B" = once "spawn:brave-origin --incognito";
+          "Mod+Shift+Return" = once "spawn:firefox";
+          "Mod+Shift+B" = once "spawn:firefox";
+          "Mod+Shift+Alt+B" = once "spawn:firefox --private-window";
           "Mod+Shift+F" = once "spawn:nautilus --new-window";
           "Mod+Shift+N" = once "spawn:${cfg.terminal} -e nvim";
           "Mod+Shift+D" = once "spawn:${cfg.terminal} -e lazydocker";
           "Mod+Shift+Slash" = once "spawn:bitwarden";
           "Mod+Ctrl+T" = once "spawn:${cfg.terminal} -e btop";
 
-          # Web apps: PWAs do brave-origin nos seus containers (home/desktop/brave.nix)
+          # Web apps: Taskbar Tabs do Firefox nos seus containers (home/desktop/firefox.nix)
           "Mod+Shift+Y" = once "spawn:webapp youtube";
           "Mod+Shift+Alt+G" = once "spawn:webapp whatsapp";
           "Mod+Shift+Ctrl+G" = once "spawn:webapp google-messages";

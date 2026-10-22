@@ -5,7 +5,8 @@
 # O diálogo é o portal FileChooser: o Nautilus implementa
 # org.freedesktop.impl.portal.FileChooser, e o xdg-desktop-portal-gnome o
 # repassa a ele. Os apps GTK só usam o portal quando pedido (GTK_USE_PORTAL no
-# GTK3, GDK_DEBUG=portals no GTK4); Chromium/Brave e Electron já o usam.
+# GTK3, GDK_DEBUG=portals no GTK4); o Firefox (nixos/desktop/firefox.nix),
+# o Chromium e o Electron já o usam.
 #
 # Override local: ~/.config/mimeapps.list (xdg-mime default) para pastas.
 {

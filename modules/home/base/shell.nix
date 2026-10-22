@@ -38,7 +38,7 @@
         sessionVariables = {
           EDITOR = lib.mkDefault "nvim";
           VISUAL = lib.mkDefault "nvim";
-          BROWSER = lib.mkDefault "brave-origin";
+          BROWSER = lib.mkDefault "firefox";
         };
       };
 

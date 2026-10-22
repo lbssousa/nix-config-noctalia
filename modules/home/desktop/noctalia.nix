@@ -122,7 +122,7 @@
             position = lib.mkDefault "bottom";
             auto_hide = lib.mkDefault true;
             pinned = lib.mkDefault [
-              "brave-origin"
+              "firefox"
               "com.mitchellh.ghostty"
               "org.gnome.Nautilus"
               "onlyoffice-desktopeditors"
