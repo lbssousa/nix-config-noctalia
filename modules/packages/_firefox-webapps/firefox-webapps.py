@@ -45,8 +45,16 @@ def log(msg):
 
 
 def firefox_running():
-    """O Firefox mantém o symlink `lock` no perfil enquanto o usa."""
-    return os.path.lexists(os.path.join(PROFILE, "lock"))
+    """O symlink `lock` do perfil aponta para "<ip>:+<pid>" do Firefox que o usa.
+
+    O Firefox não o apaga ao sair: só existir não basta, o pid tem de estar vivo.
+    """
+    try:
+        target = os.readlink(os.path.join(PROFILE, "lock"))
+    except OSError:
+        return False
+    pid = target.rpartition("+")[2]
+    return pid.isdigit() and os.path.exists(f"/proc/{pid}")
 
 
 def write_atomic(path, data, mode=0o644):
@@ -175,10 +183,28 @@ def container_ids():
             for i in data["identities"] if i.get("public") and "name" in i}
 
 
+def stale_containers(ids):
+    """Web apps cujo container no registro não é o declarado.
+
+    O Firefox abre a janela do web app no userContextId do registro (o
+    -container do lançador só vale para recriar um web app que sumiu). No
+    primeiro boot os containers ainda não existem e o registro fica com 0;
+    a extensão do container então tira a página da janela do web app.
+    """
+    tabs = {t["id"]: t for t in read_json(REGISTRY, {}).get("taskbarTabs", [])}
+    return [app_id for app_id, app in CONFIG["webapps"].items()
+            if tabs.get(app_uuid(app_id), {}).get("userContextId") != ids.get(app["container"], 0)]
+
+
 def apply():
     ids = container_ids()
     if firefox_running():
-        log("Firefox aberto; o registro fica para o próximo boot/login.")
+        stale = stale_containers(ids)
+        if stale:
+            log(f"Firefox aberto; fora do container declarado: {' '.join(stale)}. "
+                "Feche o Firefox e rode `firefox-webapps apply`.")
+        else:
+            log("Firefox aberto; o registro fica para o próximo boot/login.")
     else:
         registry(ids)
     launchers(ids)

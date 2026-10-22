@@ -28,7 +28,9 @@
 
       settings = pkgs.writeText "firefox-webapps.json" (
         builtins.toJSON {
-          firefox = lib.getExe osConfig.programs.firefox.package;
+          # O do sistema, e não um caminho no /nix/store: os lançadores
+          # sobrevivem a atualizações e ao GC sem precisar ser reescritos.
+          firefox = "/run/current-system/sw/bin/firefox";
           profileDir = "${config.home.homeDirectory}/${config.programs.firefox.configPath}/${profile}";
           inherit (cfg) webapps;
         }
