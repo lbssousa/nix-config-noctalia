@@ -1,16 +1,18 @@
 {
   flake.modules.nixos.yubikey-notify =
-    # Desktop notification when PAM asks for a YubiKey touch.
+    # Desktop notification when sudo asks for a YubiKey touch.
     #
     # Only meaningful when security.fido2Auth.enable is true (see yubikey.nix) —
     # pam_u2f is what actually waits for the touch this notifies about.
     #
-    # Inserts a pam_exec.so before pam_u2f (order 10900) in the sudo and
-    # polkit-1 stacks. The script figures out the user via PAM_RUSER (or
-    # loginuid as a fallback), checks whether there's a graphical session at
-    # /run/user/<uid>/bus, and sends an urgent notification via
-    # org.freedesktop.Notifications (gnome-shell). The call runs in the
-    # background so it doesn't block sudo while waiting for U2F authentication.
+    # Inserts a pam_exec.so before pam_u2f (order 10900) in the sudo stack only:
+    # for polkit-1 the Noctalia polkit panel already shows the touch cue (patch
+    # noctalia-polkit-auth-cues, modules/flake/packages.nix). The script figures
+    # out the user via PAM_RUSER (or loginuid as a fallback), checks whether
+    # there's a graphical session at /run/user/<uid>/bus, and sends an urgent
+    # notification via org.freedesktop.Notifications (the Noctalia shell). The
+    # call runs in the background so it doesn't block sudo while waiting for
+    # U2F authentication.
     {
       config,
       lib,
@@ -24,11 +26,11 @@
         # pam_u2f fails at once and asks for no touch
         ${pkgs.gnugrep}/bin/grep -qsx 1050 /sys/bus/usb/devices/*/idVendor || exit 0
 
-        # Determine the user who invoked sudo/polkit
+        # Determine the user who invoked sudo
         user="''${PAM_RUSER:-}"
 
-        # Fallback: loginuid of the PAM process (useful in polkit, where
-        # PAM_RUSER may be empty or "root")
+        # Fallback: loginuid of the PAM process (PAM_RUSER may be empty or
+        # "root")
         if [ -z "$user" ] || [ "$user" = "root" ]; then
           loginuid=$(cat /proc/self/loginuid 2>/dev/null || true)
           if [ -n "$loginuid" ] && [ "$loginuid" != "4294967295" ]; then
@@ -73,16 +75,6 @@
             "${notifyScript}"
           ];
           order = 10850; # Immediately before pam_u2f (order 10900)
-        };
-
-        security.pam.services."polkit-1".rules.auth.yubikeyNotify = {
-          control = "optional";
-          modulePath = "${pkgs.linux-pam}/lib/security/pam_exec.so";
-          args = [
-            "seteuid"
-            "${notifyScript}"
-          ];
-          order = 10850;
         };
       };
     };

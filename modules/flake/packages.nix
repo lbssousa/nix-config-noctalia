@@ -50,6 +50,10 @@ let
       # do polkit: os clientes noctalia-pinentry e noctalia-askpass falam Assuan
       # com a Noctalia ([shell] pinentry / ssh_askpass). Patch local, gerado do
       # branch feat/secret-prompts de ~/Projetos/lbssousa/noctalia; sem PR upstream.
+      # Destaque no painel do polkit enquanto o PAM espera a digital ou o toque
+      # na YubiKey: ícone grande (impressão digital ou chave) com título e
+      # descrição traduzidos, no lugar da mensagem crua do pam_fprintd/pam_u2f.
+      # Aplicado sobre o anterior; patch local, sem PR upstream.
       #
       # O compositor Umbriel rejeita pedidos de subscribe do IPC com erro se houver
       # eventos desconhecidos, desconectando imediatamente o cliente. A Noctalia
@@ -69,6 +73,7 @@ let
             patches = (old.patches or [ ]) ++ [
               ../packages/patches/noctalia-lock-pam-service.patch
               ../packages/patches/noctalia-secret-prompts.patch
+              ../packages/patches/noctalia-polkit-auth-cues.patch
               ../packages/patches/noctalia-umbriel-subscribe-without-outputs.patch
             ];
           });
