@@ -17,7 +17,7 @@
         settings = {
           # "Escala da Interface": toda a shell (painéis, launcher, central de
           # controle, notificações).
-          accessibility.ui_scale = lib.mkDefault 1.0;
+          accessibility.ui_scale = lib.mkDefault 1.25;
 
           shell = {
             font = lib.mkDefault "Adwaita Sans";
@@ -61,7 +61,7 @@
           # (Mod+Ctrl+E, launcher, Mod+Shift+Ctrl+Space).
           bar.default = {
             # Ícones, texto e espessura da barra ("Escala do Conteúdo").
-            scale = lib.mkDefault 1.0;
+            scale = lib.mkDefault 1.25;
             start = lib.mkDefault [
               "launcher"
               "wallpaper"
