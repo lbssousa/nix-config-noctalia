@@ -8,8 +8,75 @@
 { inputs, ... }:
 {
   flake.modules.homeManager.noctalia =
-    { lib, ... }:
     {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    let
+      # Script hook para definir o wallpaper do Bluefin de acordo com o mês do ano
+      # (01-bluefin em janeiro até 12-bluefin em dezembro) e sincronizar pares
+      # diurno/noturno (day/night) quando o tema ou o período solar alternar.
+      wallpaperPairSync = pkgs.writeShellScript "noctalia-wallpaper-pair-sync" ''
+        set -euo pipefail
+
+        # 1. Determina o modo atual (light ou dark)
+        mode="''${NOCTALIA_THEME_MODE:-}"
+        if [ -z "$mode" ]; then
+          mode=$(${pkgs.noctalia}/bin/noctalia msg theme-mode-get 2>/dev/null || true)
+          mode="''${mode//$'\n'/}"
+        fi
+
+        case "$mode" in
+          light) period="day" ;;
+          dark) period="night" ;;
+          *) period="night" ;;
+        esac
+
+        # 2. Mês atual em dois dígitos (01 a 12)
+        month=$(date +%m)
+
+        # 3. Caminho alvo do wallpaper bluefin correspondente ao mês e período
+        wallpapers_dir="${config.xdg.userDirs.pictures}/Wallpapers/bluefin"
+        target_wp="$wallpapers_dir/$period/$month-bluefin.jpg"
+
+        if [ -f "$target_wp" ]; then
+          curr=$(${pkgs.noctalia}/bin/noctalia msg wallpaper-get 2>/dev/null || true)
+          curr="''${curr//$'\n'/}"
+          if [ "$curr" != "$target_wp" ]; then
+            ${pkgs.noctalia}/bin/noctalia msg wallpaper-set "$target_wp"
+          fi
+        fi
+      '';
+    in
+    {
+      # Serviço e timer para garantir a transição de wallpaper na virada do mês
+      systemd.user.services.noctalia-monthly-wallpaper = {
+        Unit = {
+          Description = "Sincronização do wallpaper mensal do Bluefin";
+          PartOf = [ "graphical-session.target" ];
+        };
+        Service = {
+          Type = "oneshot";
+          ExecStart = "${wallpaperPairSync}";
+        };
+      };
+
+      systemd.user.timers.noctalia-monthly-wallpaper = {
+        Unit = {
+          Description = "Temporizador diário para troca mensal do wallpaper do Bluefin";
+          PartOf = [ "graphical-session.target" ];
+        };
+        Timer = {
+          OnCalendar = "daily";
+          Persistent = true;
+        };
+        Install = {
+          WantedBy = [ "timers.target" ];
+        };
+      };
+
       programs.noctalia = {
         enable = true;
         systemd.enable = true;
@@ -18,6 +85,29 @@
           # "Escala da Interface": toda a shell (painéis, launcher, central de
           # controle, notificações).
           accessibility.ui_scale = lib.mkDefault 1.15;
+
+          # Luz noturna com ativação automática baseada em geolocalização.
+          nightlight = {
+            enabled = lib.mkDefault true;
+          };
+
+          location = {
+            auto_locate = lib.mkDefault true;
+          };
+
+          # Diretórios de wallpapers (com pastas separadas para modo claro e escuro).
+          wallpaper = {
+            directory = lib.mkDefault "${config.xdg.userDirs.pictures}/Wallpapers";
+            directory_light = lib.mkDefault "${config.xdg.userDirs.pictures}/Wallpapers/bluefin/day";
+            directory_dark = lib.mkDefault "${config.xdg.userDirs.pictures}/Wallpapers/bluefin/night";
+            default.path = lib.mkDefault "${config.xdg.userDirs.pictures}/Wallpapers/bluefin/night/01-bluefin.jpg";
+          };
+
+          # Hooks para sincronização do wallpaper em pares diurno/noturno.
+          hooks = {
+            theme_mode_changed = "${wallpaperPairSync}";
+            started = "${wallpaperPairSync}";
+          };
 
           shell = {
             font = lib.mkDefault "Adwaita Sans";
@@ -37,7 +127,7 @@
           theme = {
             source = lib.mkDefault "builtin";
             builtin = lib.mkDefault "Tokyo-Night";
-            mode = lib.mkDefault "dark";
+            mode = lib.mkDefault "auto";
             # Cores das outras aplicações acompanham a paleta da shell.
             templates = {
               enable_builtin_templates = lib.mkDefault true;
@@ -69,10 +159,12 @@
               "noctalia/umbriel-companion:bar"
               "media"
             ];
-            # À esquerda do relógio: gravação de tela, luz noturna, notificações
-            # e cafeína. O relógio é ancorado no centro da barra (anchor = true),
-            # e o status do NixOS fica imediatamente à sua direita.
+            # À esquerda do relógio: captura de tela (screen-toolkit), gravação
+            # de tela, luz noturna, notificações e cafeína. O relógio é ancorado
+            # no centro da barra (anchor = true), e o status do NixOS fica
+            # imediatamente à sua direita.
             center = lib.mkDefault [
+              "alexander/screen-toolkit:widget"
               "noctalia/screen_recorder:recorder"
               "nightlight"
               "notifications"
@@ -84,7 +176,6 @@
               "tray"
               "clipboard"
               "group:ai"
-              "alexander/screen-toolkit:widget"
               "andrewdems/printers:printer"
               "bluetooth"
               "network"
