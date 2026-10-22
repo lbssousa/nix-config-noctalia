@@ -156,9 +156,9 @@
             # Ícones, texto e espessura da barra ("Escala do Conteúdo").
             scale = lib.mkDefault 1.15;
             background_opacity = lib.mkDefault 0.75;
-            # Flutuante: afastada da borda de cima e das laterais da tela.
-            margin_edge = lib.mkDefault 8;
-            margin_ends = lib.mkDefault 8;
+            # Flutuante: 4 px da borda de cima e 40 px de cada lateral da tela.
+            margin_edge = lib.mkDefault 4;
+            margin_ends = lib.mkDefault 40;
             start = lib.mkDefault [
               "launcher"
               "wallpaper"
