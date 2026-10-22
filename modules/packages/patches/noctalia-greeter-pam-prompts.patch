@@ -1,7 +1,7 @@
-diff --git i/src/accounts/accounts_icon.cpp w/src/accounts/accounts_icon.cpp
+diff --git a/src/accounts/accounts_icon.cpp b/src/accounts/accounts_icon.cpp
 index 3e22b8c..c76abd9 100644
---- i/src/accounts/accounts_icon.cpp
-+++ w/src/accounts/accounts_icon.cpp
+--- a/src/accounts/accounts_icon.cpp
++++ b/src/accounts/accounts_icon.cpp
 @@ -65,6 +65,37 @@ namespace accounts {
        return value;
      }
@@ -53,21 +53,21 @@ index 3e22b8c..c76abd9 100644
 -      if (error != nullptr) {
 -        g_error_free(error);
 -      }
+-      g_object_unref(connection);
+-      return std::nullopt;
+-    }
+-
+-    const char* userPath = nullptr;
+-    g_variant_get(result, "(&o)", &userPath);
+-    const std::string userObjectPath = userPath != nullptr ? userPath : "";
+-    g_variant_unref(result);
+-    if (userObjectPath.empty()) {
 +    const std::optional<std::string> userObjectPath = userObjectPathForUid(connection, uid);
 +    if (!userObjectPath.has_value()) {
        g_object_unref(connection);
        return std::nullopt;
      }
  
--    const char* userPath = nullptr;
--    g_variant_get(result, "(&o)", &userPath);
--    const std::string userObjectPath = userPath != nullptr ? userPath : "";
--    g_variant_unref(result);
--    if (userObjectPath.empty()) {
--      g_object_unref(connection);
--      return std::nullopt;
--    }
--
 -    const std::optional<std::uint64_t> reportedUid = dbusUserUint64Property(connection, userObjectPath.c_str(), "Uid");
 -    if (!reportedUid.has_value() || static_cast<uid_t>(*reportedUid) != uid) {
 -      g_object_unref(connection);
@@ -110,10 +110,10 @@ index 3e22b8c..c76abd9 100644
 +  }
 +
  } // namespace accounts
-diff --git i/src/accounts/accounts_icon.h w/src/accounts/accounts_icon.h
+diff --git a/src/accounts/accounts_icon.h b/src/accounts/accounts_icon.h
 index d568fae..11647ef 100644
---- i/src/accounts/accounts_icon.h
-+++ w/src/accounts/accounts_icon.h
+--- a/src/accounts/accounts_icon.h
++++ b/src/accounts/accounts_icon.h
 @@ -21,4 +21,9 @@ namespace accounts {
    // Returns a readable IconFile path for uid from org.freedesktop.Accounts.
    [[nodiscard]] std::optional<std::string> iconFileForUid(uid_t uid);
@@ -124,11 +124,11 @@ index d568fae..11647ef 100644
 +  [[nodiscard]] bool passwordSetAtLogin(uid_t uid);
 +
  } // namespace accounts
-diff --git i/src/greeter/greeter_surface.cpp w/src/greeter/greeter_surface.cpp
-index ecf42ca..d4a699a 100644
---- i/src/greeter/greeter_surface.cpp
-+++ w/src/greeter/greeter_surface.cpp
-@@ -43,6 +43,7 @@
+diff --git a/src/greeter/greeter_surface.cpp b/src/greeter/greeter_surface.cpp
+index c9eebbb..c13c4e2 100644
+--- a/src/greeter/greeter_surface.cpp
++++ b/src/greeter/greeter_surface.cpp
+@@ -45,6 +45,7 @@
  #include <nlohmann/json.hpp>
  #include <pwd.h>
  #include <sstream>
@@ -136,10 +136,10 @@ index ecf42ca..d4a699a 100644
  #include <sys/types.h>
  #include <unordered_set>
  #include <wayland-client.h>
-@@ -73,6 +74,47 @@ namespace {
-   }
+@@ -76,6 +77,47 @@ namespace {
  
    constexpr std::size_t kUserDropdownMaxVisibleRows = 8;
+   constexpr std::size_t kSelectorMenuMaxVisibleRows = 8;
 +  constexpr std::string_view kPasswordPlaceholder = "Type password";
 +  constexpr std::string_view kSetAtLoginHint = "Primeiro acesso: tecle Enter para definir sua senha.";
 +  constexpr std::string_view kSetAtLoginStatus = "Primeiro acesso: defina sua senha.";
@@ -184,7 +184,7 @@ index ecf42ca..d4a699a 100644
    const float kUserMenuPadding = Style::spaceSm();
    const float kUserMenuRowGap = Style::spaceXs();
    const float kUserMenuRowIconGap = Style::spaceSm();
-@@ -318,7 +360,7 @@ void GreeterSurface::initialize(RenderContext* context) {
+@@ -339,7 +381,7 @@ void GreeterSurface::initialize(RenderContext* context) {
    m_root.addChild(std::move(panel));
  
    auto pwField = std::make_unique<Input>();
@@ -193,7 +193,7 @@ index ecf42ca..d4a699a 100644
    pwField->setPasswordMode(true);
    pwField->setControlHeight(Style::controlHeight());
    pwField->setOnChange([this](const std::string& value) { m_password = value; });
-@@ -621,6 +663,9 @@ void GreeterSurface::initialize(RenderContext* context) {
+@@ -643,6 +685,9 @@ void GreeterSurface::initialize(RenderContext* context) {
    applyScheme(m_selectedScheme);
    refreshSelectionLabels();
    applyInitialUserSelection();
@@ -203,7 +203,7 @@ index ecf42ca..d4a699a 100644
  
    if (const auto& diagnostics = greeter::config::configDiagnostics(); !diagnostics.empty()) {
      const auto& diagnostic = diagnostics.front();
-@@ -1037,6 +1082,22 @@ void GreeterSurface::enterPasswordStep(std::size_t userIndex) {
+@@ -1089,6 +1134,22 @@ void GreeterSurface::enterPasswordStep(std::size_t userIndex) {
    refreshSelectionLabels();
    notifyStateChanged();
    commitImmediateFrame(true);
@@ -226,7 +226,7 @@ index ecf42ca..d4a699a 100644
  }
  
  void GreeterSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
-@@ -1397,7 +1458,7 @@ void GreeterSurface::tryAuthenticate() {
+@@ -1450,7 +1511,7 @@ void GreeterSurface::tryAuthenticate() {
      commitImmediateFrame(false);
      return;
    }
@@ -235,7 +235,7 @@ index ecf42ca..d4a699a 100644
      updateStatus("Enter a password", true);
      commitImmediateFrame(false);
      return;
-@@ -1407,9 +1468,17 @@ void GreeterSurface::tryAuthenticate() {
+@@ -1460,9 +1521,17 @@ void GreeterSurface::tryAuthenticate() {
      if (m_onAuthBeginRequested && !m_onAuthBeginRequested(this)) {
        return;
      }
@@ -256,7 +256,7 @@ index ecf42ca..d4a699a 100644
      m_authenticating = true;
      kLog.info("greetd: create_session for '{}'", m_username);
      if (!m_greetdClient->requestCreateSession(m_username)) {
-@@ -1501,9 +1570,17 @@ void GreeterSurface::handleAuthMessage(const GreetdAuthMessage& message) {
+@@ -1554,9 +1623,17 @@ void GreeterSurface::handleAuthMessage(const GreetdAuthMessage& message) {
  
    if (message.type == GreetdAuthMessageType::Info || message.type == GreetdAuthMessageType::Error) {
      const bool isError = message.type == GreetdAuthMessageType::Error;
@@ -275,7 +275,7 @@ index ecf42ca..d4a699a 100644
      if (isError) {
        clearPasswordInput();
      }
-@@ -1531,9 +1608,9 @@ void GreeterSurface::handleAuthMessage(const GreetdAuthMessage& message) {
+@@ -1584,9 +1661,9 @@ void GreeterSurface::handleAuthMessage(const GreetdAuthMessage& message) {
    }
  
    m_secretPromptWaiting = true;
@@ -288,7 +288,7 @@ index ecf42ca..d4a699a 100644
    syncAuthInteractivity();
    commitImmediateFrame(false);
  }
-@@ -1548,6 +1625,7 @@ void GreeterSurface::postAuthResponse(const std::string& data) {
+@@ -1601,6 +1678,7 @@ void GreeterSurface::postAuthResponse(const std::string& data) {
    }
    clearPasswordInput();
    m_secretPromptWaiting = false;
@@ -296,7 +296,7 @@ index ecf42ca..d4a699a 100644
    m_pendingReplies.push_back(AuthRequest::PostAuthData);
    syncAuthInteractivity();
    commitImmediateFrame(false);
-@@ -1588,6 +1666,8 @@ void GreeterSurface::setGreetdUnavailable(const std::string_view reason) {
+@@ -1641,6 +1719,8 @@ void GreeterSurface::setGreetdUnavailable(const std::string_view reason) {
  
  void GreeterSurface::beginSessionStart() {
    kLog.info("authentication successful");
@@ -305,7 +305,7 @@ index ecf42ca..d4a699a 100644
  
    savePreferences();
  
-@@ -1647,6 +1727,8 @@ void GreeterSurface::beginSessionStart() {
+@@ -1702,6 +1782,8 @@ void GreeterSurface::beginSessionStart() {
  }
  
  bool GreeterSurface::resetAuthSession() {
@@ -314,7 +314,7 @@ index ecf42ca..d4a699a 100644
    if (m_greetdClient != nullptr && m_authSessionStarted) {
      if (!m_greetdClient->requestCancelSession()) {
        m_authSessionStarted = false;
-@@ -1680,8 +1762,11 @@ void GreeterSurface::onAuthError(const GreetdError& error) {
+@@ -1735,8 +1817,11 @@ void GreeterSurface::onAuthError(const GreetdError& error) {
    m_hasPendingResponse = false;
    m_pendingResponse.clear();
    m_pendingReplies.clear();
@@ -327,7 +327,7 @@ index ecf42ca..d4a699a 100644
    kLog.warn("authentication failed: {}", error.description);
    if (!resetAuthSession()) {
      return;
-@@ -1713,6 +1798,29 @@ void GreeterSurface::updateStatus(const std::string& text, bool isError) {
+@@ -1768,6 +1853,29 @@ void GreeterSurface::updateStatus(const std::string& text, bool isError) {
    requestLayout();
  }
  
@@ -357,11 +357,11 @@ index ecf42ca..d4a699a 100644
  void GreeterSurface::loadUsers() {
    m_users.clear();
    m_userUids.clear();
-diff --git i/src/greeter/greeter_surface.h w/src/greeter/greeter_surface.h
-index a41aea7..bce6974 100644
---- i/src/greeter/greeter_surface.h
-+++ w/src/greeter/greeter_surface.h
-@@ -104,6 +104,9 @@ private:
+diff --git a/src/greeter/greeter_surface.h b/src/greeter/greeter_surface.h
+index 82f4314..a634580 100644
+--- a/src/greeter/greeter_surface.h
++++ b/src/greeter/greeter_surface.h
+@@ -109,6 +109,9 @@ private:
    [[nodiscard]] bool resetAuthSession();
    void clearPasswordInput();
    void updateStatus(const std::string& text, bool isError);
@@ -371,7 +371,7 @@ index a41aea7..bce6974 100644
    void toggleUserMenu();
    void openUserMenu();
    void toggleSessionMenu();
-@@ -246,6 +249,9 @@ private:
+@@ -263,6 +266,9 @@ private:
    bool m_authSessionStarted = false;
    bool m_secretPromptWaiting = false; // greetd wants secret input from the user
    bool m_hasPendingResponse = false;  // user-supplied input armed for next prompt
