@@ -1,11 +1,10 @@
 # Cliente SSH de todos os usuários, com as chaves no ssh-agent do sistema
 # (programs.ssh.startAgent, security/keepassxc.nix), alimentado pelo KeePassXC.
-# O ssh não adiciona chaves ao agente por conta própria.
+# O ssh não adiciona chaves ao agente por conta própria; com o banco travado,
+# o pedido de desbloqueio do KeePassXC aparece sozinho (home/security/keepassxc.nix).
 #
-# Cada conexão mestra (ControlMaster) é reaproveitada por 10 minutos: a
-# confirmação de uso da chave (noctalia-askpass) é pedida uma vez por host nessa
-# janela, em vez de a cada operação (git fetch/push, nixos-rebuild buscando o
-# nix-secrets…).
+# Sem ControlMaster no sistema instalado: ele fica só na config SSH da
+# instalação (scripts/import-ssh-yubikey.sh, usada pelo install.sh).
 #
 # Override local: ~/.ssh/config.d/*.conf, incluído ANTES dos blocos gerados
 # (no ssh, vale o primeiro valor encontrado para cada opção).
@@ -21,13 +20,9 @@
         AddKeysToAgent = "no";
         ServerAliveInterval = 60;
         ServerAliveCountMax = 3;
-        ControlMaster = "auto";
-        ControlPersist = "10m";
-        ControlPath = "~/.ssh/cm/%C";
       };
     };
 
     home.file.".ssh/config.d/.keep".text = "";
-    systemd.user.tmpfiles.rules = [ "d %h/.ssh/cm 0700 - - -" ];
   };
 }
