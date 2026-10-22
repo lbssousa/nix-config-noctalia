@@ -34,6 +34,15 @@
           "/var/lib/systemd"
           "/var/lib/cups"
           "/var/lib/AccountsService"
+          # sync.toml do greeter: último usuário, última sessão e tema escolhido
+          # na tela de login. O greeter.toml é um symlink que o tmpfiles recria
+          # a cada boot.
+          {
+            directory = "/var/lib/noctalia-greeter";
+            user = "greeter";
+            group = "greeter";
+            mode = "0750";
+          }
           "/var/db/sudo"
         ];
         files = [

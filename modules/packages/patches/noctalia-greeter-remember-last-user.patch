@@ -1,0 +1,232 @@
+diff --git c/docs/user/configuration.md w/docs/user/configuration.md
+index ce09c6c..4da2807 100644
+--- c/docs/user/configuration.md
++++ w/docs/user/configuration.md
+@@ -36,11 +36,12 @@ wallpapers are supported for both default and per-output paths.
+ 
+ ## Keys the greeter remembers
+ 
+-When you change the selected session or color scheme on the login screen, the greeter writes:
++When you change the selected session or color scheme on the login screen, or log in, the greeter writes:
+ 
+ | Key in `sync.toml` | Purpose |
+ |--------------------|---------|
+ | `[session].last` | Last Wayland session selected, using its desktop-entry `Name=` |
++| `[user].last` | Last user that logged in successfully; selected on startup when still in the user list |
+ | `[appearance].scheme` | Last color scheme selected, unless `greeter.toml` pins one |
+ 
+ Appearance Sync sets the scheme to **Synced** while preserving the last session and existing session commands.
+@@ -159,7 +160,7 @@ default = "alice"
+ 
+ You can instead pass `--user alice` after the session wrapper's `--`. Use the exact login name from `/etc/passwd`. **Esc** or the back button returns to the user list.
+ 
+-Resolution order is command-line `--user`, then `[user].default`, then the user picker.
++Resolution order is command-line `--user`, then `[user].default`, then the last user that logged in (`[user].last` in `sync.toml`), then the user picker.
+ 
+ ## Clock
+ 
+diff --git c/src/greeter/greeter_config_io.cpp w/src/greeter/greeter_config_io.cpp
+index 6908f30..5bb96d6 100644
+--- c/src/greeter/greeter_config_io.cpp
++++ w/src/greeter/greeter_config_io.cpp
+@@ -60,7 +60,7 @@ namespace {
+     return key == "default" || key == "last" || key == "power" || key == "actions";
+   }
+ 
+-  [[nodiscard]] bool isKnownUserKey(std::string_view key) { return key == "default"; }
++  [[nodiscard]] bool isKnownUserKey(std::string_view key) { return key == "default" || key == "last"; }
+ 
+   [[nodiscard]] bool isKnownAppearanceKey(std::string_view key) {
+     return key == "scheme"
+@@ -221,7 +221,11 @@ namespace {
+             warnUnknownSectionKey(path, keyView, entryView);
+             continue;
+           }
+-          config.userDefault = stringValue(entryNode);
++          if (entryView == "default") {
++            config.userDefault = stringValue(entryNode);
++          } else if (entryView == "last") {
++            config.userLast = stringValue(entryNode);
++          }
+         } else if (keyView == "appearance") {
+           if (!isKnownAppearanceKey(entryView)) {
+             warnUnknownSectionKey(path, keyView, entryView);
+@@ -758,6 +762,14 @@ namespace {
+       root.insert("session", std::move(session));
+     }
+ 
++    toml::table user;
++    insertString(user, "last", sync.userLast, [](toml::table& table, std::string_view key, const std::string& value) {
++      table.insert_or_assign(std::string(key), value);
++    });
++    if (!user.empty()) {
++      root.insert("user", std::move(user));
++    }
++
+     toml::table appearance = buildAppearanceTomlTable(sync.appearance);
+     insertString(
+         appearance, "scheme", sync.appearanceScheme,
+@@ -829,6 +841,7 @@ namespace {
+     const greeter::config::GreeterConfigFile full = parseConfig(root, path);
+     greeter::config::GreeterSyncFile sync;
+     sync.sessionLast = full.sessionLast;
++    sync.userLast = full.userLast;
+     sync.appearanceScheme = full.appearanceScheme;
+     sync.outputLayout = full.outputLayout;
+     sync.outputTransforms = full.outputTransforms;
+@@ -996,9 +1009,10 @@ namespace greeter::config {
+     std::error_code ec;
+     std::filesystem::create_directories(path.parent_path(), ec);
+ 
+-    // Declarative file only — the last-used session lives in sync.toml.
++    // Declarative file only — the last-used session and user live in sync.toml.
+     GreeterConfigFile declarative = config;
+     declarative.sessionLast.reset();
++    declarative.userLast.reset();
+ 
+     const toml::table table = buildTomlTable(declarative);
+ 
+diff --git c/src/greeter/greeter_config_store.h w/src/greeter/greeter_config_store.h
+index c2658d9..a8fd601 100644
+--- c/src/greeter/greeter_config_store.h
++++ w/src/greeter/greeter_config_store.h
+@@ -41,6 +41,8 @@ namespace greeter::config {
+     std::optional<std::string> sessionLast;
+ 
+     std::optional<std::string> userDefault;
++    // Runtime key: only read from sync.toml; stripped on greeter.toml write.
++    std::optional<std::string> userLast;
+ 
+     // Declarative scheme (overrides sync.toml last scheme when set).
+     std::optional<std::string> appearanceScheme;
+@@ -89,6 +91,8 @@ namespace greeter::config {
+   // Sync + UI mutable file (sync.toml). Never managed by Nix. Loses to greeter.toml.
+   struct GreeterSyncFile {
+     std::optional<std::string> sessionLast;
++    // Last user that logged in successfully.
++    std::optional<std::string> userLast;
+     std::optional<std::string> appearanceScheme;
+     std::optional<std::string> outputLayout;
+     std::optional<std::string> outputTransforms;
+diff --git c/src/greeter/greeter_preferences.cpp w/src/greeter/greeter_preferences.cpp
+index 0385105..b903fb5 100644
+--- c/src/greeter/greeter_preferences.cpp
++++ w/src/greeter/greeter_preferences.cpp
+@@ -415,6 +415,7 @@ namespace greeter {
+     GreeterPreferences prefs;
+     prefs.defaultSession = file.sessionDefault;
+     prefs.defaultUser = file.userDefault;
++    prefs.lastUser = sync.userLast;
+     prefs.session = sync.sessionLast;
+     // greeter.toml is declarative and wins; sync.toml only carries the last UI pick.
+     prefs.scheme = file.appearanceScheme.has_value() ? file.appearanceScheme : sync.appearanceScheme;
+@@ -542,6 +543,11 @@ namespace greeter {
+       sync.sessionLast.reset();
+     }
+ 
++    // Only a successful login sets it; session/scheme changes keep the saved user.
++    if (prefs.lastUser.has_value() && !prefs.lastUser->empty()) {
++      sync.userLast = *prefs.lastUser;
++    }
++
+     if (prefs.scheme.has_value() && !prefs.scheme->empty()) {
+       sync.appearanceScheme = *prefs.scheme;
+     } else {
+diff --git c/src/greeter/greeter_preferences.h w/src/greeter/greeter_preferences.h
+index 86dd100..350c39b 100644
+--- c/src/greeter/greeter_preferences.h
++++ w/src/greeter/greeter_preferences.h
+@@ -24,6 +24,8 @@ namespace greeter {
+   struct GreeterPreferences {
+     std::optional<std::string> defaultSession;
+     std::optional<std::string> defaultUser;
++    // Last user that logged in (sync.toml [user] last); below --user and [user].default.
++    std::optional<std::string> lastUser;
+     std::optional<std::string> session;
+     std::optional<std::string> scheme;
+     std::optional<std::string> output;
+diff --git c/src/greeter/greeter_surface.cpp w/src/greeter/greeter_surface.cpp
+index c13c4e2..24da887 100644
+--- c/src/greeter/greeter_surface.cpp
++++ w/src/greeter/greeter_surface.cpp
+@@ -727,7 +727,8 @@ void GreeterSurface::initialize(RenderContext* context) {
+ }
+ 
+ void GreeterSurface::applyInitialUserSelection() {
+-  const auto initialUser = greeter::resolveInitialUserName(greeter::loadGreeterPreferences());
++  const greeter::GreeterPreferences prefs = greeter::loadGreeterPreferences();
++  const auto initialUser = greeter::resolveInitialUserName(prefs);
+   if (initialUser.has_value()) {
+     for (std::size_t i = 0; i < m_users.size(); ++i) {
+       if (m_users[i] == *initialUser) {
+@@ -759,6 +760,23 @@ void GreeterSurface::applyInitialUserSelection() {
+     return;
+   }
+ 
++  // Last user that logged in; unlike [user].default, skipped when the account
++  // is no longer in the picker.
++  if (prefs.lastUser.has_value() && !prefs.lastUser->empty()) {
++    for (std::size_t i = 0; i < m_users.size(); ++i) {
++      if (m_users[i] == *prefs.lastUser) {
++        m_selectedUser = i;
++        setUsername(m_users[i]);
++        m_passwordVisible = true;
++        m_password.clear();
++        if (m_passwordField != nullptr) {
++          m_passwordField->setValue("");
++        }
++        return;
++      }
++    }
++  }
++
+   if (m_users.size() == 1) {
+     m_selectedUser = 0;
+     setUsername(m_users.front());
+@@ -1722,7 +1740,7 @@ void GreeterSurface::beginSessionStart() {
+   m_setAtLoginFlow = false;
+   restorePasswordPrompt();
+ 
+-  savePreferences();
++  savePreferences(true);
+ 
+   if (m_greetdClient == nullptr) {
+     kLog.error("no greetd client to start session");
+@@ -2272,8 +2290,11 @@ void GreeterSurface::loadPreferences() {
+   m_clockDateFormat = prefs.clockDateFormat;
+ }
+ 
+-void GreeterSurface::savePreferences() const {
++void GreeterSurface::savePreferences(bool rememberUser) const {
+   greeter::GreeterPreferences prefs;
++  if (rememberUser && !m_username.empty()) {
++    prefs.lastUser = m_username;
++  }
+   if (m_selectedSession < m_sessions.size()) {
+     prefs.session = m_sessions[m_selectedSession].name;
+   }
+diff --git c/src/greeter/greeter_surface.h w/src/greeter/greeter_surface.h
+index a634580..5e4bb21 100644
+--- c/src/greeter/greeter_surface.h
++++ w/src/greeter/greeter_surface.h
+@@ -177,7 +177,7 @@ private:
+   void reconcileKeyboardFocus();
+   [[nodiscard]] bool ownsInputArea(const InputArea* area) const;
+   [[nodiscard]] bool showsUserDropdown() const noexcept;
+-  void savePreferences() const;
++  void savePreferences(bool rememberUser = false) const;
+   void buildSchemeNames();
+   void applyScheme(std::size_t schemeIndex);
+   void applyConfiguredWallpaper();
+diff --git c/src/tools/secure_appearance_sync.cpp w/src/tools/secure_appearance_sync.cpp
+index e0c8309..a42c75d 100644
+--- c/src/tools/secure_appearance_sync.cpp
++++ w/src/tools/secure_appearance_sync.cpp
+@@ -983,6 +983,7 @@ namespace greeter::secure_sync {
+         }
+       }
+       if (sync.sessionLast.has_value()
++          || sync.userLast.has_value()
+           || sync.sessionPowerSuspend.has_value()
+           || sync.sessionPowerReboot.has_value()
+           || sync.sessionPowerShutdown.has_value()

@@ -34,12 +34,15 @@ let
         patches = (old.patches or [ ]) ++ [ ../packages/patches/greetd-change-expired-authtok.patch ];
       });
 
-      # Noctalia Greeter, dois patches (nesta ordem, ambos em greeter_surface.cpp):
+      # Noctalia Greeter, três patches (nesta ordem):
       #  - nome completo na tela de login: PR aberto
       #    https://github.com/noctalia-dev/noctalia-greeter/pull/131
       #    ([appearance] show_real_names); remover quando chegar ao nixpkgs;
       #  - prompts PAM seguintes (troca de senha expirada) no placeholder do
-      #    campo, sem apagar o aviso do PAM no status; patch local.
+      #    campo, sem apagar o aviso do PAM no status; patch local;
+      #  - último usuário que fez login em [user] last do sync.toml (ao lado
+      #    de [session] last), pré-selecionado no boot seguinte; --user e
+      #    [user].default continuam valendo mais. Patch local, sem PR upstream.
       # Tela de bloqueio da Noctalia no serviço PAM "noctalia-lock" em vez do
       # "login" (que fica só com a senha) e digital com 3 tentativas no total
       # (eram 4). Ver security/pam-policy.nix. Patch local, sem PR upstream.
@@ -124,6 +127,7 @@ let
         patches = (old.patches or [ ]) ++ [
           ../packages/patches/noctalia-greeter-show-real-names.patch
           ../packages/patches/noctalia-greeter-pam-prompts.patch
+          ../packages/patches/noctalia-greeter-remember-last-user.patch
         ];
       });
     };
