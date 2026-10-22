@@ -191,6 +191,13 @@
             match.app_id = "^dev.noctalia.UmbrielSharePicker$";
             default_floating = true;
           }
+          # Web apps do Firefox (Taskbar Tabs, classe firefox.webapp-<id>)
+          # maximizados como o "fullscreen, 1" do Hyprland: ocupam a área do
+          # layout, com a barra e os gaps, e continuam no tiling.
+          {
+            match.app_id = "^firefox\\.webapp-";
+            default_maximize = true;
+          }
           {
             match.title = "^(Picture-in-Picture|Picture in picture)$";
             default_floating = true;
