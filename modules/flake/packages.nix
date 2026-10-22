@@ -47,10 +47,16 @@ let
       # do polkit: os clientes noctalia-pinentry e noctalia-askpass falam Assuan
       # com a Noctalia ([shell] pinentry / ssh_askpass). Patch local, gerado do
       # branch feat/secret-prompts de ~/Projetos/lbssousa/noctalia; sem PR upstream.
+      #
+      # O compositor Umbriel rejeita pedidos de subscribe do IPC com erro se houver
+      # eventos desconhecidos, desconectando imediatamente o cliente. A Noctalia
+      # pedia "outputs" (que não existe no Umbriel), impedindo a inscrição nos
+      # eventos de "windows" e quebrando a ocultação inteligente da dock.
       noctalia = prev.noctalia.overrideAttrs (old: {
         patches = (old.patches or [ ]) ++ [
           ../packages/patches/noctalia-lock-pam-service.patch
           ../packages/patches/noctalia-secret-prompts.patch
+          ../packages/patches/noctalia-umbriel-subscribe-without-outputs.patch
         ];
       });
 
