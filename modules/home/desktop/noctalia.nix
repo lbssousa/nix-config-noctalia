@@ -1,4 +1,4 @@
-# Noctalia: shell no estilo Omarchy (tema Tokyo Night, barra no topo, dock
+# Noctalia: shell no estilo Omarchy (tema Nord, barra no topo, dock
 # habilitado por padrão) com um conjunto de plugins pré-instalados.
 #
 # Camadas de configuração (todas mescladas pela própria Noctalia):
@@ -104,9 +104,10 @@
           };
 
           # Hooks para sincronização do wallpaper em pares diurno/noturno.
+          # Listas, para outros módulos somarem os seus (ex.: tema do Strata).
           hooks = {
-            theme_mode_changed = "${wallpaperPairSync}";
-            started = "${wallpaperPairSync}";
+            theme_mode_changed = [ "${wallpaperPairSync}" ];
+            started = [ "${wallpaperPairSync}" ];
           };
 
           shell = {
@@ -126,7 +127,7 @@
 
           theme = {
             source = lib.mkDefault "builtin";
-            builtin = lib.mkDefault "Tokyo-Night";
+            builtin = lib.mkDefault "Nord";
             mode = lib.mkDefault "auto";
             # Cores das outras aplicações acompanham a paleta da shell.
             templates = {
@@ -152,6 +153,7 @@
           bar.default = {
             # Ícones, texto e espessura da barra ("Escala do Conteúdo").
             scale = lib.mkDefault 1.15;
+            background_opacity = lib.mkDefault 0.75;
             start = lib.mkDefault [
               "launcher"
               "wallpaper"
