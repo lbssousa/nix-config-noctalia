@@ -170,16 +170,14 @@
               "media"
             ];
             # À esquerda do relógio: captura de tela (screen-toolkit), gravação
-            # de tela, luz noturna, notificações e cafeína. O relógio é ancorado
-            # no centro da barra (anchor = true), e o status do NixOS fica
-            # imediatamente à sua direita.
+            # de tela e cafeína. À direita, notificações e o status do NixOS.
+            # O relógio é ancorado no centro da barra (anchor = true).
             center = lib.mkDefault [
               "alexander/screen-toolkit:widget"
               "noctalia/screen_recorder:recorder"
-              "nightlight"
-              "notifications"
               "caffeine"
               "clock"
+              "notifications"
               "mindnbytes/nix-status:status"
             ];
             end = lib.mkDefault [
