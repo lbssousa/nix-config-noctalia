@@ -1,5 +1,7 @@
 # Terminais com os padrões do Omarchy. As cores vêm dos templates de tema da
-# Noctalia (themes/noctalia*), que acompanham a paleta ativa.
+# Noctalia (themes/noctalia*), sempre na variante escura da paleta ativa: os
+# templates de alacritty, foot, ghostty, kitty, starship e wezterm são remapeados
+# de `.default` para `.dark` no pacote Noctalia (flake/packages.nix).
 #
 # Os arquivos gerados aqui já contêm as linhas que os scripts de "apply" dos
 # templates acrescentariam, então esses scripts não tentam reescrevê-los

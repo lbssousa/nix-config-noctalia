@@ -52,13 +52,55 @@ let
       # eventos desconhecidos, desconectando imediatamente o cliente. A Noctalia
       # pedia "outputs" (que não existe no Umbriel), impedindo a inscrição nos
       # eventos de "windows" e quebrando a ocultação inteligente da dock.
-      noctalia = prev.noctalia.overrideAttrs (old: {
-        patches = (old.patches or [ ]) ++ [
-          ../packages/patches/noctalia-lock-pam-service.patch
-          ../packages/patches/noctalia-secret-prompts.patch
-          ../packages/patches/noctalia-umbriel-subscribe-without-outputs.patch
-        ];
-      });
+      # Os templates dos aplicativos de terminal (emuladores e starship) são
+      # remapeados de `.default` para `.dark`: assim eles usam sempre a variante
+      # escura da paleta ativa, mesmo com [theme].mode = "auto". Os demais
+      # templates (GTK, Qt, Umbriel) continuam seguindo o modo global.
+      #
+      # Reempacotar os assets (em vez de usar overrideAttrs/postInstall) evita
+      # recompilar a Noctalia: basta copiar a saída já construída, ajustar os
+      # templates e apontar NOCTALIA_ASSETS_DIR para a cópia.
+      noctalia =
+        let
+          base = prev.noctalia.overrideAttrs (old: {
+            patches = (old.patches or [ ]) ++ [
+              ../packages/patches/noctalia-lock-pam-service.patch
+              ../packages/patches/noctalia-secret-prompts.patch
+              ../packages/patches/noctalia-umbriel-subscribe-without-outputs.patch
+            ];
+          });
+        in
+        final.runCommand "noctalia-${base.version}"
+          {
+            nativeBuildInputs = [ final.makeWrapper ];
+            meta = base.meta // {
+              mainProgram = "noctalia";
+            };
+            passthru = base.passthru or { };
+          }
+          ''
+            mkdir -p $out
+            cp -a ${base}/share $out/share
+            chmod -R u+w $out/share
+
+            for template in \
+              alacritty/alacritty.toml \
+              foot/foot \
+              ghostty/ghostty \
+              kitty/kitty.conf \
+              starship/starship.toml \
+              wezterm/wezterm.toml
+            do
+              substituteInPlace "$out/share/noctalia/assets/templates/$template" \
+                --replace-fail ".default." ".dark."
+            done
+
+            mkdir -p $out/bin
+            for program in noctalia noctalia-pinentry noctalia-askpass; do
+              makeWrapper ${base}/bin/$program $out/bin/$program \
+                --set-default NOCTALIA_ASSETS_DIR "$out/share/noctalia/assets"
+            done
+          '';
 
       # pinentry-program do gpg-agent; fora da sessão gráfica cai no pinentry-curses.
       pinentry-noctalia =

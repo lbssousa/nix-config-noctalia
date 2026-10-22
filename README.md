@@ -85,7 +85,8 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
   Codex e do Antigravity), `opencode-companion` e `herdr` (os três de IA
   juntos num grupo de cápsula na barra).
 - **Templates de tema** da Noctalia recolorem ghostty, kitty, foot, GTK, Qt,
-  btop e Umbriel conforme a paleta ativa.
+  btop e Umbriel conforme a paleta ativa. Os aplicativos de terminal (alacritty,
+  foot, ghostty, kitty, starship e wezterm) usam sempre a variante escura.
 - **Noctalia Greeter** com o patch do PR
   [noctalia-greeter#131](https://github.com/noctalia-dev/noctalia-greeter/pull/131)
   (`appearance.show_real_names`): mostra o nome completo no login.

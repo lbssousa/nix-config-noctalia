@@ -131,7 +131,10 @@
             # Superfícies da própria shell sempre escuras; o modo acima (auto)
             # continua valendo para os templates das outras aplicações.
             shell_mode = lib.mkDefault "dark";
-            # Cores das outras aplicações acompanham a paleta da shell.
+            # Cores das outras aplicações acompanham a paleta da shell. Os
+            # aplicativos de terminal (emuladores e starship) são a exceção:
+            # usam sempre a variante escura, conforme o remapeamento dos
+            # templates em flake/packages.nix.
             templates = {
               enable_builtin_templates = lib.mkDefault true;
               builtin_ids = lib.mkDefault [
