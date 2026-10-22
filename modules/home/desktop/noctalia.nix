@@ -69,23 +69,22 @@
               "noctalia/umbriel-companion:bar"
               "media"
             ];
-            # À esquerda do relógio, os indicadores na ordem do painel do Omarchy:
-            # gravação de tela, lembrete (timer), luz noturna, notificações e
-            # cafeína.
+            # À esquerda do relógio: gravação de tela, luz noturna, notificações
+            # e cafeína. O relógio é ancorado no centro da barra (anchor = true),
+            # e o status do NixOS fica imediatamente à sua direita.
             center = lib.mkDefault [
               "noctalia/screen_recorder:recorder"
-              "noctalia/timer:bar"
               "nightlight"
               "notifications"
               "caffeine"
               "clock"
+              "mindnbytes/nix-status:status"
             ];
             end = lib.mkDefault [
               "tray"
               "clipboard"
               "group:ai"
               "alexander/screen-toolkit:widget"
-              "mindnbytes/nix-status:status"
               "andrewdems/printers:printer"
               "bluetooth"
               "network"
@@ -111,7 +110,12 @@
           # porcentagem; relógio com dia da semana e data (strftime, no idioma
           # do LC_TIME: "dom 18 out 20:15").
           widget = {
-            clock.format = lib.mkDefault "{:%a %d %b  %H:%M}";
+            clock = {
+              format = lib.mkDefault "{:%a %d %b  %H:%M}";
+              # Ancorado no centro da barra para que o relógio fique na linha média
+              # exata do monitor, sem ser deslocado pelos widgets ao seu redor.
+              anchor = lib.mkDefault true;
+            };
             network.show_label = lib.mkDefault false;
             volume.show_label = lib.mkDefault false;
           };
