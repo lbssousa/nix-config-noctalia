@@ -8,10 +8,29 @@
 # /run/current-system/sw (environment.pathsToLink), de onde o polkitd a lê.
 # (No Flatpak era preciso a política em /etc porque o polkitd não enxerga
 # dentro do sandbox do app.)
+#
+# Sem autostart para nenhum usuário: o app escreve
+# ~/.config/autostart/bitwarden.desktop ao ligar "Iniciar com o sistema"; o
+# home-manager o substitui por uma entrada oculta (Hidden=true), que também
+# impede o app de reativá-lo.
 {
   flake.modules.nixos.bitwarden =
     { pkgs, ... }:
     {
       environment.systemPackages = [ pkgs.bitwarden-desktop ];
+
+      home-manager.sharedModules = [
+        {
+          xdg.configFile."autostart/bitwarden.desktop" = {
+            force = true;
+            text = ''
+              [Desktop Entry]
+              Type=Application
+              Name=Bitwarden
+              Hidden=true
+            '';
+          };
+        }
+      ];
     };
 }
