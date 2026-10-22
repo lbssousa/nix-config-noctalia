@@ -104,10 +104,9 @@
           };
 
           # Hooks para sincronização do wallpaper em pares diurno/noturno.
-          # Listas, para outros módulos somarem os seus (ex.: tema do Strata).
           hooks = {
-            theme_mode_changed = [ "${wallpaperPairSync}" ];
-            started = [ "${wallpaperPairSync}" ];
+            theme_mode_changed = "${wallpaperPairSync}";
+            started = "${wallpaperPairSync}";
           };
 
           shell = {
@@ -129,6 +128,9 @@
             source = lib.mkDefault "builtin";
             builtin = lib.mkDefault "Nord";
             mode = lib.mkDefault "auto";
+            # Superfícies da própria shell sempre escuras; o modo acima (auto)
+            # continua valendo para os templates das outras aplicações.
+            shell_mode = lib.mkDefault "dark";
             # Cores das outras aplicações acompanham a paleta da shell.
             templates = {
               enable_builtin_templates = lib.mkDefault true;
@@ -154,6 +156,9 @@
             # Ícones, texto e espessura da barra ("Escala do Conteúdo").
             scale = lib.mkDefault 1.15;
             background_opacity = lib.mkDefault 0.75;
+            # Flutuante: afastada da borda de cima e das laterais da tela.
+            margin_edge = lib.mkDefault 8;
+            margin_ends = lib.mkDefault 8;
             start = lib.mkDefault [
               "launcher"
               "wallpaper"
@@ -240,6 +245,8 @@
             # Sem zona exclusiva: escondida, a dock não deixa a faixa vazia
             # embaixo das janelas lado a lado. Revelada, fica por cima delas.
             reserve_space = lib.mkDefault false;
+            # Flutuante: afastada da borda de baixo da tela.
+            margin_edge = lib.mkDefault 8;
             pinned = lib.mkDefault [
               "firefox"
               "com.mitchellh.ghostty"
