@@ -111,7 +111,7 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 - **Apps de usuário nativos:** OnlyOffice, Xournal++, Papers, LocalSend,
   Zoom, OBS, Kdenlive, Pinta, Inkscape e FontForge, como pacotes Nix
   (`modules/nixos/desktop/apps.nix`).
-- Agentes de IA para todos: Claude Code, OpenCode, Antigravity (IDE e CLI).
+- Agentes de IA para todos: Claude Code, OpenCode e Antigravity CLI (Antigravity IDE no perfil de abutre).
 
 ### Atalhos principais (Super = Mod)
 

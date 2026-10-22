@@ -69,6 +69,7 @@
             rustup
             pandoc
             github-copilot-cli
+            antigravity-ide
             dropbox
           ];
           sessionPath = [ "${config.home.homeDirectory}/.cargo/bin" ];
