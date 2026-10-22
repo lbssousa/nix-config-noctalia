@@ -13,7 +13,7 @@ no lugar de Flatpaks. Sucessor do [nix-config](https://github.com/lbssousa/nix-c
   sistema: as chaves SSH marcadas nos bancos (ex.: a do GitHub/`nix-secrets`)
   entram no agente ao destravar e saem ao travar; remover a YubiKey trava os
   bancos. Desbloqueio rápido pelo polkit (digital), com o backport do PR
-  #8983. O app do Bitwarden continua instalado.
+  #8983.
 
 Instalação: [INSTALLATION.md](INSTALLATION.md).
 
