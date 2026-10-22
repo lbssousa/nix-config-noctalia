@@ -159,9 +159,9 @@
             # Ícones, texto e espessura da barra ("Escala do Conteúdo").
             scale = lib.mkDefault 1.15;
             background_opacity = lib.mkDefault 0.75;
-            # Flutuante: 4 px da borda de cima e 40 px de cada lateral da tela.
+            # Flutuante: 4 px da borda de cima e 120 px de cada lateral da tela.
             margin_edge = lib.mkDefault 4;
-            margin_ends = lib.mkDefault 40;
+            margin_ends = lib.mkDefault 120;
             start = lib.mkDefault [
               "launcher"
               "wallpaper"
@@ -169,20 +169,17 @@
               "noctalia/umbriel-companion:bar"
               "media"
             ];
-            # À esquerda do relógio: captura de tela (screen-toolkit), gravação
-            # de tela e cafeína. À direita, notificações e o status do NixOS.
+            # À esquerda do relógio: captura de tela (screen-toolkit) e gravação
+            # de tela. À direita, o status do NixOS.
             # O relógio é ancorado no centro da barra (anchor = true).
             center = lib.mkDefault [
               "alexander/screen-toolkit:widget"
               "noctalia/screen_recorder:recorder"
-              "caffeine"
               "clock"
-              "notifications"
               "mindnbytes/nix-status:status"
             ];
             end = lib.mkDefault [
               "tray"
-              "clipboard"
               "group:ai"
               "andrewdems/printers:printer"
               "bluetooth"
@@ -190,9 +187,12 @@
               "volume"
               "battery"
               "control-center"
+              "group:utils"
               "session"
             ];
-            # Plugins de IA numa cápsula só ("group:ai" na lista acima).
+            # Plugins de IA numa cápsula só ("group:ai" na lista acima); área de
+            # transferência, cafeína e notificações noutra, à esquerda do menu
+            # de energia ("group:utils").
             capsule_group = lib.mkDefault [
               {
                 id = "ai";
@@ -200,6 +200,14 @@
                   "ayagmar/headroom:usage"
                   "weinguyen/opencode-companion:widget"
                   "hy4ri/herdr:bar"
+                ];
+              }
+              {
+                id = "utils";
+                members = [
+                  "clipboard"
+                  "caffeine"
+                  "notifications"
                 ];
               }
             ];
