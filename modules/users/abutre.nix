@@ -26,6 +26,8 @@
         };
 
         programs = {
+          # KeePassXC com a sessão (desligado para os demais usuários, por ora).
+          keepassxc.autostart = true;
           git = {
             signing = {
               key = "BAC0B1B569777A733E37447FB10712C404063D38";

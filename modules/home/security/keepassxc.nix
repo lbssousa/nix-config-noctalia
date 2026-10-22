@@ -62,7 +62,8 @@
     {
       programs.keepassxc = {
         enable = lib.mkDefault true;
-        autostart = lib.mkDefault true;
+        # Por ora, só o abutre (users/abutre.nix) o inicia com a sessão.
+        autostart = lib.mkDefault false;
         settings = {
           Browser = {
             Enabled = true;
