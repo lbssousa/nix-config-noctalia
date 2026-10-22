@@ -135,7 +135,14 @@
           dock = {
             enabled = lib.mkDefault true;
             position = lib.mkDefault "bottom";
-            auto_hide = lib.mkDefault true;
+            # Ocultação inteligente: visível com o workspace vazio, escondida
+            # quando ele tem janelas (reaparece na borda). auto_hide é o modo
+            # que só esconde quando o ponteiro sai da dock.
+            auto_hide = lib.mkDefault false;
+            smart_auto_hide = lib.mkDefault true;
+            # Sem zona exclusiva: escondida, a dock não deixa a faixa vazia
+            # embaixo das janelas lado a lado. Revelada, fica por cima delas.
+            reserve_space = lib.mkDefault false;
             pinned = lib.mkDefault [
               "firefox"
               "com.mitchellh.ghostty"
