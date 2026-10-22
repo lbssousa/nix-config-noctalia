@@ -69,17 +69,21 @@
               "noctalia/umbriel-companion:bar"
               "media"
             ];
+            # À esquerda do relógio, os indicadores na ordem do painel do Omarchy:
+            # gravação de tela, lembrete (timer), luz noturna, notificações e
+            # cafeína.
             center = lib.mkDefault [
-              "clock"
+              "noctalia/screen_recorder:recorder"
+              "noctalia/timer:bar"
+              "nightlight"
               "notifications"
+              "caffeine"
+              "clock"
             ];
             end = lib.mkDefault [
               "tray"
               "clipboard"
-              "jrohland/claudecode:pill"
-              "weinguyen/opencode-companion:widget"
-              "hy4ri/herdr:bar"
-              "noctalia/screen_recorder:recorder"
+              "group:ai"
               "alexander/screen-toolkit:widget"
               "mindnbytes/nix-status:status"
               "andrewdems/printers:printer"
@@ -89,6 +93,17 @@
               "battery"
               "control-center"
               "session"
+            ];
+            # Plugins de IA numa cápsula só ("group:ai" na lista acima).
+            capsule_group = lib.mkDefault [
+              {
+                id = "ai";
+                members = [
+                  "ayagmar/headroom:usage"
+                  "weinguyen/opencode-companion:widget"
+                  "hy4ri/herdr:bar"
+                ];
+              }
             ];
           };
 
@@ -149,6 +164,7 @@
             enabled = lib.mkDefault [
               # Oficiais
               "noctalia/screen_recorder"
+              "noctalia/timer"
               "noctalia/umbriel-companion"
               # Captura, cor, OCR e emoji (menu de captura do Omarchy)
               "alexander/screen-toolkit"
@@ -162,7 +178,8 @@
               "muhammadessam/umbriel-monitor-control"
               "andrewdems/printers"
               # Agentes de IA e terminal
-              "jrohland/claudecode"
+              # Limites dos planos do Claude Code, do Codex e do Antigravity
+              "ayagmar/headroom"
               "weinguyen/opencode-companion"
               "hy4ri/herdr"
             ];

@@ -8,6 +8,9 @@
         opencode
         antigravity-ide
         antigravity-cli
+        # secret-tool: o plugin Headroom da Noctalia lê a sessão do
+        # Antigravity no chaveiro (home/desktop/noctalia.nix).
+        libsecret
       ];
     };
 }

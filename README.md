@@ -79,10 +79,11 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 - **Noctalia** com tema Tokyo Night, dock, clipboard, capturas,
   agente polkit, pinentry do GnuPG e `SSH_ASKPASS` no mesmo painel (patch
   local: `noctalia-pinentry`/`noctalia-askpass`) e plugins fixados no
-  `flake.lock` (fonte `path`, sem git em tempo de execução): `screen_recorder`, `umbriel-companion`, `screen-toolkit`,
+  `flake.lock` (fonte `path`, sem git em tempo de execução): `screen_recorder`, `timer`, `umbriel-companion`, `screen-toolkit`,
   `emoji-picker`, `calculator-plus`, `theme-switcher`, `nix-status`, `nix-search`,
-  `umbriel-monitor-control`, `printers`, `claudecode`, `opencode-companion`,
-  `herdr`.
+  `umbriel-monitor-control`, `printers`, `headroom` (limites do Claude Code, do
+  Codex e do Antigravity), `opencode-companion` e `herdr` (os três de IA
+  juntos num grupo de cápsula na barra).
 - **Templates de tema** da Noctalia recolorem ghostty, kitty, foot, GTK, Qt,
   btop e Umbriel conforme a paleta ativa.
 - **Noctalia Greeter** com o patch do PR
