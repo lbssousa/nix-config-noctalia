@@ -5,14 +5,16 @@
 #    desligadas, e browser.taskbarTabs.enabled não é aceita na chave
 #    Preferences das políticas; vai pelo autoconfig, só como padrão;
 #  - abas de container ligadas (privacy.userContext.enabled);
-#  - extensões do KeePassXC, Multi-Account Containers e Facebook, Google e
-#    Microsoft Container instaladas por padrão (o usuário pode desativá-las,
-#    não removê-las); as demais vêm da sincronização com a conta Mozilla de
-#    cada usuário. O native messaging do KeePassXC vem do módulo HM do
-#    KeePassXC. Os containers não são declarados: cada "<empresa> Container"
-#    cria o seu ("Facebook", "Google", "Microsoft") e abre nele os domínios
-#    da empresa. O da Microsoft inclui o GitHub, a menos que se marque
-#    "Ignore GitHub" nas opções dele;
+#  - extensões do KeePassXC, Multi-Account Containers e os "<empresa>
+#    Container" (Facebook, Google, Microsoft, Twitter, Discord, Amazon e
+#    TikTok) instaladas por padrão (o usuário pode desativá-las, não
+#    removê-las); as demais vêm da sincronização com a conta Mozilla de cada
+#    usuário. O native messaging do KeePassXC vem do módulo HM do KeePassXC.
+#    Os containers não são declarados: cada "<empresa> Container" cria o seu,
+#    com o nome da empresa, e abre nele os domínios dela. O da Microsoft
+#    inclui o GitHub, a menos que se marque "Ignore GitHub" nas opções dele;
+#    o do Twitter inclui o x.com. O YouTube Container fica de fora: o do
+#    Google já leva o YouTube;
 #  - diálogo de arquivos pelo portal (o Strata; nixos/desktop/file-manager.nix).
 #
 # Web apps (my.firefox.webapps) são do perfil de cada usuário:
@@ -28,6 +30,10 @@
         "@contain-facebook" = "facebook-container";
         "@contain-google" = "google-container";
         "@better-contain-microsoft" = "better-microsoft-container";
+        "@contain-twitter" = "twitter-container";
+        "@contain-discord" = "discord-container";
+        "@contain-amazon" = "amazon-container";
+        "@tiktok-container" = "tiktok-container";
       };
     in
     {
@@ -122,11 +128,13 @@
             discord = {
               name = "Discord";
               url = "https://discord.com/app";
+              container = "Discord";
               scopes = [ "discord.com" ];
             };
             x = {
               name = "X";
               url = "https://x.com/";
+              container = "Twitter";
               scopes = [
                 "x.com"
                 "twitter.com"

@@ -96,13 +96,14 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
   o greeter pede direto a nova senha e a confirmação (`nullresetok` no PAM:
   senha vazia só entra enquanto expirada).
 - **Firefox** é o navegador padrão: extensões do KeePassXC (native
-  messaging declarativo), Multi-Account Containers e Facebook, Google e
-  Microsoft Container (os domínios de cada empresa abrem no container dela;
-  o GitHub fica no da Microsoft; as demais extensões vêm da sincronização
-  com a conta Mozilla) e web apps como Taskbar Tabs (ligadas por preferência
-  do sistema), cada um no container da sua empresa (`webapp <id>`):
-  WhatsApp (Facebook), Teams (Microsoft), YouTube e Google
-  Maps/Photos/Messages/Contacts (Google), Discord e X.
+  messaging declarativo), Multi-Account Containers e os "Container" de
+  Facebook, Google, Microsoft, Twitter, Discord, Amazon e TikTok (os domínios
+  de cada empresa abrem no container dela; o GitHub fica no da Microsoft; as
+  demais extensões vêm da sincronização com a conta Mozilla) e web apps como
+  Taskbar Tabs (ligadas por preferência do sistema), cada um no container da
+  sua empresa (`webapp <id>`): WhatsApp (Facebook), Teams (Microsoft),
+  YouTube e Google Maps/Photos/Messages/Contacts (Google), Discord e X
+  (Twitter).
 - **Strata** é o gerenciador de arquivos: pastas, "Mostrar na pasta"
   (`org.freedesktop.FileManager1`) e o diálogo de abrir/salvar (portal
   FileChooser). Compilado do código-fonte (`modules/packages/_strata`), com
