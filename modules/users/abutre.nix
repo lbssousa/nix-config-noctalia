@@ -23,6 +23,8 @@
           nixvim.enable = true;
           # Zathura como leitor de PDF padrão (Papers para os demais).
           pdfViewer = "org.pwmt.zathura.desktop";
+          # Strata como gerenciador de arquivos (Nautilus para os demais).
+          fileManager = "strata";
         };
 
         programs = {

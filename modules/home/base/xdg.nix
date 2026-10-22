@@ -20,8 +20,18 @@
         "application/x-xzpdf"
         "application/x-ext-pdf"
       ];
+      fileManagers = {
+        nautilus = {
+          appId = "org.gnome.Nautilus";
+          command = "nautilus --new-window";
+        };
+        strata = {
+          appId = "io.github.lgse.Strata";
+          command = "strata";
+        };
+      };
       defaults = {
-        "inode/directory" = "io.github.lgse.Strata.desktop";
+        "inode/directory" = "${config.my.fileManagerApp.appId}.desktop";
       }
       // lib.genAttrs pdfTypes (_: config.my.pdfViewer);
 
@@ -37,6 +47,18 @@
           type = lib.types.str;
           default = "org.gnome.Papers.desktop";
           description = "Entrada .desktop padrão para PDFs.";
+        };
+        fileManager = lib.mkOption {
+          type = lib.types.enum (lib.attrNames fileManagers);
+          default = "nautilus";
+          description = "Gerenciador de arquivos padrão (pastas, FileManager1 e diálogo do portal).";
+        };
+        fileManagerApp = lib.mkOption {
+          type = lib.types.attrsOf lib.types.str;
+          readOnly = true;
+          internal = true;
+          default = fileManagers.${config.my.fileManager};
+          description = "appId e comando do gerenciador escolhido em my.fileManager.";
         };
       };
 

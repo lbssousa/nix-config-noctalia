@@ -259,7 +259,7 @@
             pinned = lib.mkDefault [
               "firefox"
               "com.mitchellh.ghostty"
-              "io.github.lgse.Strata"
+              config.my.fileManagerApp.appId
               "onlyoffice-desktopeditors"
             ];
           };

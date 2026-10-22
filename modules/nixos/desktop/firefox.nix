@@ -15,7 +15,7 @@
 #    inclui o GitHub, a menos que se marque "Ignore GitHub" nas opções dele;
 #    o do Twitter inclui o x.com. O YouTube Container fica de fora: o do
 #    Google já leva o YouTube;
-#  - diálogo de arquivos pelo portal (o Strata; nixos/desktop/file-manager.nix).
+#  - diálogo de arquivos pelo portal (Nautilus ou Strata; nixos/desktop/file-manager.nix).
 #
 # Web apps (my.firefox.webapps) são do perfil de cada usuário:
 # home/desktop/firefox.nix.
