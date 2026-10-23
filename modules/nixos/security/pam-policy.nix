@@ -2,7 +2,7 @@
 #
 #   login (TTY e greetd, que inclui o login)  só a senha
 #   sudo, run0, polkit-1                      digital → FIDO2 → senha
-#   tela de bloqueio                          digital ∥ FIDO2 ∥ senha
+#   tela de bloqueio                          digital → FIDO2 → senha
 #
 # Digital: pam_fprintd com até 3 tentativas de 10 s cada; um timeout encerra a
 # etapa e passa à seguinte. FIDO2 (security.fido2Auth): o pam_u2f só pede o
@@ -10,13 +10,16 @@
 # falha na hora e segue para a senha. Os dois são "sufficient": nenhum deles
 # tranca a conta, a senha sempre fica no fim.
 #
-# Na tela de bloqueio da Noctalia (patches em modules/flake/packages.nix) os
-# três correm em paralelo, sem Enter para a digital nem para a chave:
-#   - digital: a própria Noctalia fala com o fprintd pelo D-Bus (3 tentativas),
-#     por isso não há pam_fprintd em nenhuma das duas pilhas abaixo;
-#   - FIDO2: "noctalia-lock-u2f", só o pam_u2f, rodado em segundo plano
-#     enquanto a tela está bloqueada e de novo quando surge um /dev/hidraw*;
-#   - senha: "noctalia-lock" (sem o patch seria o "login").
+# Na tela de bloqueio da Noctalia (patches em modules/flake/packages.nix) é um
+# método por vez, sem Enter para a digital nem para a chave, e com um botão
+# "Usar senha" para pular direto ao fim:
+#   - digital: a própria Noctalia fala com o fprintd pelo D-Bus (3 leituras ou
+#     30 s sem leitura), por isso não há pam_fprintd nas duas pilhas abaixo;
+#   - FIDO2: "noctalia-lock-u2f", só o pam_u2f; sem chave cadastrada conectada
+#     ou com o toque expirado, segue para a senha;
+#   - senha: "noctalia-lock" (sem o patch seria o "login"). Com o campo vazio,
+#     plugar uma chave cadastrada (novo /dev/hidraw*) volta à FIDO2.
+# A sequência recomeça pela digital a cada bloqueio e a cada resume.
 {
   flake.modules.nixos.pam-policy =
     { config, lib, ... }:

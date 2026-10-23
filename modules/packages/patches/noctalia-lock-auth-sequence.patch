@@ -1,0 +1,1141 @@
+diff --git a/assets/translations/en.json b/assets/translations/en.json
+index 0727187..9ca147f 100644
+--- a/assets/translations/en.json
++++ b/assets/translations/en.json
+@@ -875,8 +875,8 @@
+     "password-cleared": "Password cleared",
+     "password-placeholder": "Password",
+     "ready": "Type your password and press Enter.",
+-    "security-key-touch": "Touch your security key",
+     "unlocked": "Unlocked",
++    "use-password": "Use password",
+     "waiting": "Waiting for lock confirmation…"
+   },
+   "notifications": {
+@@ -2499,7 +2499,7 @@
+         },
+         "security-key": {
+           "label": "Security Key Unlock",
+-          "description": "Unlock with a touch on a FIDO2 security key (pam_u2f), alongside password entry"
++          "description": "Unlock with a touch on a FIDO2 security key (pam_u2f), after the fingerprint and before the password"
+         },
+         "tint-intensity": {
+           "description": "Surface-color tint over the lock screen background",
+diff --git a/assets/translations/pt-BR.json b/assets/translations/pt-BR.json
+index 62dd208..07efb8b 100644
+--- a/assets/translations/pt-BR.json
++++ b/assets/translations/pt-BR.json
+@@ -874,8 +874,8 @@
+     "password-cleared": "Senha apagada",
+     "password-placeholder": "Senha",
+     "ready": "Digite sua senha e pressione Enter.",
+-    "security-key-touch": "Toque na sua chave de segurança",
+     "unlocked": "Desbloqueado",
++    "use-password": "Usar senha",
+     "waiting": "Aguardando confirmação de bloqueio…"
+   },
+   "notifications": {
+@@ -2470,7 +2470,7 @@
+         },
+         "security-key": {
+           "label": "Desbloquear com Chave de Segurança",
+-          "description": "Desbloquear com um toque em uma chave de segurança FIDO2 (pam_u2f), junto com a senha digitada"
++          "description": "Desbloquear com um toque em uma chave de segurança FIDO2 (pam_u2f), depois da digital e antes da senha"
+         },
+         "tint-intensity": {
+           "description": "Base de cor da superfície sobre o fundo da tela de bloqueio",
+diff --git a/docs/user/configuration/shell.mdx b/docs/user/configuration/shell.mdx
+index 39a60d7..1b9d119 100644
+--- a/docs/user/configuration/shell.mdx
++++ b/docs/user/configuration/shell.mdx
+@@ -501,8 +501,8 @@ monitors              = []        # connectors that show the lock screen; empty
+ | `enabled` | bool | `true` | Master switch for session lock, logind integration, and lock actions. |
+ | `lock_before_suspend` | bool | `true` | When `true`, hold a logind sleep-delay inhibitor and lock on `PrepareForSleep` before suspend/hibernate (including lid-close sleep). Set `false` to allow external suspend without locking; explicit **Lock and Suspend** actions still lock first. |
+ | `grace_period_seconds` | int | `0` | Passwordless unlock window right after locking. Strictly opt-in: with the default `0`, every unlock requires authentication. When set to a value in `1`–`60`, any keypress or mouse movement of more than 5 px unlocks without a password for that many seconds after the lock starts, including idle-triggered locks; time spent suspended counts toward expiry. The window is always revoked when the session sleeps: locks engaged by `PrepareForSleep` or **Lock and Suspend** never offer passwordless unlock, and a resume clears whatever was left. |
+-| `fingerprint` | bool | `true` | When `true`, fingerprint (PAM) authentication is offered on the lock screen alongside the password field. Set `false` to require password entry only. |
+-| `security_key` | bool | `true` | When `true`, the lock screen waits for a touch on a FIDO2 security key alongside the password field and the fingerprint reader, with no Enter needed. It runs the `noctalia-lock-u2f` PAM service (typically `auth sufficient pam_u2f.so` and nothing else) whenever a hidraw device appears; without that service, or without an enrolled key plugged in, it stays idle. |
++| `fingerprint` | bool | `true` | When `true`, the lock screen asks for a fingerprint first, with a large cue in place of the password field and a **Use password** button. After 3 unmatched scans, 30 s without a scan, or with no usable reader, it moves on to the security key (or the password). Set `false` to skip this step. |
++| `security_key` | bool | `true` | When `true`, the lock screen asks for a touch on a FIDO2 security key after the fingerprint step, with the same cue and button. It runs the `noctalia-lock-u2f` PAM service (typically `auth sufficient pam_u2f.so` and nothing else); with no enrolled key plugged in, or once the touch times out, it moves on to the password. While the password step waits with an empty field, plugging in an enrolled key brings the touch prompt back. |
+ | `allow_empty_password` | bool | `false` | When `true`, Enter can submit an empty password (needed for some security-key PAM stacks). When `false`, empty submits are ignored to avoid accidental `pam_faillock` lockouts from wake keys. |
+ | `blurred_desktop` | bool | `false` | Capture each output before lock and use it as the lock screen background. |
+ | `transition` | array | all effects | Pool of lock/unlock effects: `fade`, `wipe`, `disc`, `stripes`, `zoom`, and `honeycomb`. One is selected from the configured pool; an empty array disables transitions. |
+diff --git a/src/auth/fingerprint_authenticator.cpp b/src/auth/fingerprint_authenticator.cpp
+index 4c8db14..adeb530 100644
+--- a/src/auth/fingerprint_authenticator.cpp
++++ b/src/auth/fingerprint_authenticator.cpp
+@@ -30,6 +30,10 @@ namespace {
+   // Retries after the first scan: 3 attempts in all, like pam_fprintd max-tries=3.
+   constexpr int kMaxRetries = 2;
+   constexpr auto kRetryDelay = std::chrono::milliseconds(250);
++  // After a resume, how long a PermissionDenied is blamed on the session not being active yet.
++  constexpr auto kResumeWindow = std::chrono::seconds(5);
++  constexpr auto kResumeRetryDelay = std::chrono::seconds(1);
++  constexpr int kMaxResumeRetries = 3;
+ 
+   enum class MatchResult {
+     Invalid,
+@@ -63,6 +67,10 @@ namespace {
+     // recreating+reclaiming. Other VerifyStart failures are permanent for this lock attempt.
+     return error.getName() == sdbus::Error::Name{"net.reactivated.Fprint.Error.ClaimDevice"};
+   }
++
++  bool isPermissionDenied(const sdbus::Error& error) {
++    return error.getName() == sdbus::Error::Name{"net.reactivated.Fprint.Error.PermissionDenied"};
++  }
+ } // namespace
+ 
+ FingerprintAuthenticator::FingerprintAuthenticator(SystemBus& bus) : m_bus(bus) {
+@@ -79,8 +87,12 @@ FingerprintAuthenticator::FingerprintAuthenticator(SystemBus& bus) : m_bus(bus)
+         // refuses to run while m_sleeping, so only the re-arm state needs clearing.
+         m_retryTimer.stop();
+         m_verifying = false;
+-      } else if (m_active && !m_abort) {
+-        startVerify(false);
++      } else {
++        m_resumedAt = std::chrono::steady_clock::now();
++        m_resumeRetries = 0;
++        if (m_active && !m_abort) {
++          startVerify(false);
++        }
+       }
+     });
+   } catch (const sdbus::Error& e) {
+@@ -97,6 +109,10 @@ void FingerprintAuthenticator::setAuthenticatedCallback(AuthenticatedCallback ca
+ 
+ void FingerprintAuthenticator::setStatusCallback(StatusCallback callback) { m_onStatus = std::move(callback); }
+ 
++void FingerprintAuthenticator::setUnavailableCallback(UnavailableCallback callback) {
++  m_onUnavailable = std::move(callback);
++}
++
+ void FingerprintAuthenticator::start() {
+   if (m_active) {
+     return;
+@@ -183,6 +199,10 @@ void FingerprintAuthenticator::claimDevice() {
+         if (e.has_value()) {
+           kLog.info("could not claim fingerprint device: {}", e->what());
+           m_verifying = false;
++          if (retryAfterResume(*e, [this]() { claimDevice(); })) {
++            return;
++          }
++          emitUnavailable();
+           return;
+         }
+         kLog.info("claimed fingerprint device");
+@@ -201,6 +221,7 @@ void FingerprintAuthenticator::startVerify(bool isRetry) {
+   if (m_device == nullptr) {
+     if (!createDeviceProxy()) {
+       m_verifying = false;
++      emitUnavailable();
+       return;
+     }
+ 
+@@ -230,7 +251,11 @@ void FingerprintAuthenticator::startVerify(bool isRetry) {
+             });
+             return;
+           }
++          if (retryAfterResume(*e, [this]() { startVerify(false); })) {
++            return;
++          }
+           emitStatus({}, false); // issue loading: drop the status message
++          emitUnavailable();
+           return;
+         }
+         kLog.debug("fingerprint verification started");
+@@ -300,6 +325,7 @@ void FingerprintAuthenticator::handleVerifyStatus(const std::string& result, boo
+     ownsRestart = true;
+     if (m_retries >= kMaxRetries) {
+       emitStatus(i18n::tr("auth.fingerprint.too-many-attempts"), true);
++      emitUnavailable();
+     } else {
+       emitStatus(i18n::tr("auth.fingerprint.no-match"), true);
+       // rearm after a short delay
+@@ -326,12 +352,14 @@ void FingerprintAuthenticator::handleVerifyStatus(const std::string& result, boo
+     stopVerify();
+     m_abort = true;
+     emitStatus(i18n::tr("auth.fingerprint.disconnected"), true);
++    emitUnavailable();
+     break;
+   case MatchResult::UnknownError:
+     stopVerify();
+     ownsRestart = true;
+     if (m_retries >= kMaxRetries) {
+       emitStatus(i18n::tr("auth.fingerprint.too-many-attempts"), true);
++      emitUnavailable();
+     } else {
+       emitStatus(i18n::tr("auth.fingerprint.error"), true);
+       m_retryTimer.start(kRetryDelay, [this]() { startVerify(true); });
+@@ -357,3 +385,28 @@ void FingerprintAuthenticator::emitStatus(const std::string& message, bool isErr
+     m_onStatus(message, isError);
+   }
+ }
++
++void FingerprintAuthenticator::emitUnavailable() {
++  if (m_active && m_onUnavailable) {
++    m_onUnavailable();
++  }
++}
++
++bool FingerprintAuthenticator::retryAfterResume(const sdbus::Error& error, std::function<void()> retry) {
++  if (!isPermissionDenied(error)
++      || m_resumeRetries >= kMaxResumeRetries
++      || std::chrono::steady_clock::now() - m_resumedAt > kResumeWindow
++      || !m_active
++      || m_sleeping
++      || m_abort) {
++    return false;
++  }
++  ++m_resumeRetries;
++  kLog.info("fingerprint device not authorized yet after resume; retrying");
++  m_retryTimer.start(kResumeRetryDelay, [this, retry = std::move(retry)]() {
++    if (m_active && !m_sleeping && !m_abort) {
++      retry();
++    }
++  });
++  return true;
++}
+diff --git a/src/auth/fingerprint_authenticator.h b/src/auth/fingerprint_authenticator.h
+index a17eb58..60bc409 100644
+--- a/src/auth/fingerprint_authenticator.h
++++ b/src/auth/fingerprint_authenticator.h
+@@ -2,6 +2,7 @@
+ 
+ #include "core/timer_manager.h"
+ 
++#include <chrono>
+ #include <functional>
+ #include <memory>
+ #include <string>
+@@ -9,6 +10,7 @@
+ class SystemBus;
+ 
+ namespace sdbus {
++  class Error;
+   class IProxy;
+ }
+ 
+@@ -16,6 +18,8 @@ class FingerprintAuthenticator {
+ public:
+   using AuthenticatedCallback = std::function<void()>;
+   using StatusCallback = std::function<void(const std::string& message, bool isError)>;
++  // No reader, a reader that cannot be used, or attempts exhausted: nothing more to wait for.
++  using UnavailableCallback = std::function<void()>;
+ 
+   explicit FingerprintAuthenticator(SystemBus& bus);
+   ~FingerprintAuthenticator();
+@@ -25,6 +29,7 @@ public:
+ 
+   void setAuthenticatedCallback(AuthenticatedCallback callback);
+   void setStatusCallback(StatusCallback callback);
++  void setUnavailableCallback(UnavailableCallback callback);
+ 
+   void start();
+   void stop();
+@@ -37,6 +42,9 @@ private:
+   void releaseDevice();
+   void handleVerifyStatus(const std::string& result, bool done);
+   void emitStatus(const std::string& message, bool isError);
++  void emitUnavailable();
++  // polkit refuses the reader until logind marks the session active again after a resume.
++  [[nodiscard]] bool retryAfterResume(const sdbus::Error& error, std::function<void()> retry);
+ 
+   SystemBus& m_bus;
+   std::unique_ptr<sdbus::IProxy> m_loginManager;
+@@ -44,6 +52,7 @@ private:
+ 
+   AuthenticatedCallback m_onAuthenticated;
+   StatusCallback m_onStatus;
++  UnavailableCallback m_onUnavailable;
+ 
+   Timer m_retryTimer;
+ 
+@@ -54,4 +63,6 @@ private:
+   bool m_abort = false;
+   bool m_reclaimAttempted = false;
+   int m_retries = 0;
++  std::chrono::steady_clock::time_point m_resumedAt{};
++  int m_resumeRetries = 0;
+ };
+diff --git a/src/auth/security_key_authenticator.cpp b/src/auth/security_key_authenticator.cpp
+index 98de14f..eb8ff0d 100644
+--- a/src/auth/security_key_authenticator.cpp
++++ b/src/auth/security_key_authenticator.cpp
+@@ -19,13 +19,8 @@ namespace {
+   constexpr Logger kLog("security-key");
+ 
+   constexpr std::string_view kPamService = "noctalia-lock-u2f";
+-  // After a touch timeout (or a failed touch) the key is still there: ask again.
+-  constexpr auto kRetryDelay = std::chrono::milliseconds(1000);
+   // A new hidraw node gets its uaccess ACL a moment after it appears.
+   constexpr auto kHotplugSettleDelay = std::chrono::milliseconds(500);
+-  // The helper could not even start: don't spin.
+-  constexpr auto kSpawnFailureDelay = std::chrono::milliseconds(5000);
+-
+   [[nodiscard]] int pollRetrying(pollfd* fds, nfds_t count, int timeoutMs) {
+     int rc = -1;
+     do {
+@@ -74,12 +69,11 @@ void SecurityKeyAuthenticator::setAuthenticatedCallback(AuthenticatedCallback ca
+   m_onAuthenticated = std::move(callback);
+ }
+ 
+-void SecurityKeyAuthenticator::setStatusCallback(StatusCallback callback) { m_onStatus = std::move(callback); }
++void SecurityKeyAuthenticator::setCueCallback(CueCallback callback) { m_onCue = std::move(callback); }
+ 
+-void SecurityKeyAuthenticator::start() {
+-  if (m_running) {
+-    return;
+-  }
++void SecurityKeyAuthenticator::setGaveUpCallback(GaveUpCallback callback) { m_onGaveUp = std::move(callback); }
++
++void SecurityKeyAuthenticator::start(bool watchHotplug) {
+   stop();
+   m_cancelFd = ::eventfd(0, EFD_CLOEXEC);
+   if (m_cancelFd < 0) {
+@@ -87,10 +81,10 @@ void SecurityKeyAuthenticator::start() {
+     return;
+   }
+   m_token = std::make_shared<int>(0);
+-  m_running = true;
+   std::string language(i18n::Service::instance().language());
+-  m_worker = std::thread([this, language = std::move(language), token = std::weak_ptr<void>(m_token)]() mutable {
+-    run(std::move(language), std::move(token));
++  m_worker = std::thread([this, cancelFd = m_cancelFd, language = std::move(language),
++                          token = std::weak_ptr<void>(m_token), watchHotplug]() {
++    runAttempts(cancelFd, language, token, watchHotplug);
+   });
+ }
+ 
+@@ -118,26 +112,37 @@ void SecurityKeyAuthenticator::post(std::weak_ptr<void> token, std::function<voi
+   });
+ }
+ 
+-void SecurityKeyAuthenticator::run(std::string language, std::weak_ptr<void> token) {
+-  runAttempts(m_cancelFd, language, token);
+-  m_running = false;
+-}
+-
+ void SecurityKeyAuthenticator::runAttempts(
+-    int cancelFd, const std::string& language, const std::weak_ptr<void>& token
++    int cancelFd, const std::string& language, const std::weak_ptr<void>& token, bool watchHotplug
+ ) {
+   // Watch /dev before the first attempt, so a key plugged in right after a
+   // failed one isn't missed.
+   Inotify devWatch;
+   const bool hotplug = devWatch.watch("/dev", IN_CREATE | IN_ATTRIB).has_value();
++  if (watchHotplug && !hotplug) {
++    kLog.warn("cannot watch /dev; security key hotplug ignored");
++    return;
++  }
++
++  const auto gaveUp = [this, &token](bool cued) {
++    post(token, [cued](SecurityKeyAuthenticator& self) {
++      if (self.m_onGaveUp) {
++        self.m_onGaveUp(cued);
++      }
++    });
++  };
+ 
+   while (true) {
++    if (watchHotplug && waitForHidraw(cancelFd, devWatch)) {
++      return;
++    }
+     devWatch.drain();
+ 
+     PamAuthenticator::Helper helper;
+     if (!PamAuthenticator::spawnHelper(helper, "", kPamService, language, true)) {
+       kLog.warn("could not start the PAM helper");
+-      if (waitCancelled(cancelFd, kSpawnFailureDelay)) {
++      gaveUp(false);
++      if (!watchHotplug) {
+         return;
+       }
+       continue;
+@@ -161,8 +166,8 @@ void SecurityKeyAuthenticator::runAttempts(
+         if (n > 0 && !cued) {
+           cued = true;
+           post(token, [](SecurityKeyAuthenticator& self) {
+-            if (self.m_onStatus) {
+-              self.m_onStatus(i18n::tr("lockscreen.security-key-touch"), false);
++            if (self.m_onCue) {
++              self.m_onCue();
+             }
+           });
+         } else if (n <= 0) {
+@@ -193,28 +198,10 @@ void SecurityKeyAuthenticator::runAttempts(
+       return;
+     }
+ 
+-    if (cued) {
+-      // Touch timed out, or the key went away (unplugged, suspend).
+-      kLog.debug("security key attempt failed: {}", result.message);
+-      post(token, [](SecurityKeyAuthenticator& self) {
+-        if (self.m_onStatus) {
+-          self.m_onStatus({}, false);
+-        }
+-      });
+-      if (waitCancelled(cancelFd, kRetryDelay)) {
+-        return;
+-      }
+-      continue;
+-    }
+-
+-    // No enrolled key plugged in: wait until one may be.
+-    if (!hotplug) {
+-      if (waitCancelled(cancelFd, kSpawnFailureDelay)) {
+-        return;
+-      }
+-      continue;
+-    }
+-    if (waitForHidraw(cancelFd, devWatch)) {
++    // Touch timed out, the key went away (unplugged, suspend), or none enrolled is plugged in.
++    kLog.debug("security key attempt failed (cued={}): {}", cued, result.message);
++    gaveUp(cued);
++    if (!watchHotplug) {
+       return;
+     }
+   }
+diff --git a/src/auth/security_key_authenticator.h b/src/auth/security_key_authenticator.h
+index ec1f17f..a81c1bd 100644
+--- a/src/auth/security_key_authenticator.h
++++ b/src/auth/security_key_authenticator.h
+@@ -1,19 +1,21 @@
+ #pragma once
+ 
+-#include <atomic>
+ #include <functional>
+ #include <memory>
+-#include <string>
+ #include <thread>
+ 
+ // Waits for a touch on a FIDO2 security key: runs the PAM helper on the
+-// "noctalia-lock-u2f" service (pam_u2f) in the background, alongside the
+-// password field and the fingerprint reader, and again whenever a hidraw
+-// device shows up.
++// "noctalia-lock-u2f" service (pam_u2f) in the background. One attempt, unless
++// started to watch for hotplug: then it waits for a hidraw device to show up
++// before each attempt, until stopped.
+ class SecurityKeyAuthenticator {
+ public:
+   using AuthenticatedCallback = std::function<void()>;
+-  using StatusCallback = std::function<void(const std::string& message, bool isError)>;
++  // pam_u2f found an enrolled key and waits for a touch.
++  using CueCallback = std::function<void()>;
++  // The attempt ended without an unlock; `cued` tells whether a touch was asked for
++  // (it timed out or the key went away) or no enrolled key was plugged in.
++  using GaveUpCallback = std::function<void(bool cued)>;
+ 
+   SecurityKeyAuthenticator() = default;
+   ~SecurityKeyAuthenticator();
+@@ -22,22 +24,22 @@ public:
+   SecurityKeyAuthenticator& operator=(const SecurityKeyAuthenticator&) = delete;
+ 
+   void setAuthenticatedCallback(AuthenticatedCallback callback);
+-  void setStatusCallback(StatusCallback callback);
++  void setCueCallback(CueCallback callback);
++  void setGaveUpCallback(GaveUpCallback callback);
+ 
+-  void start();
++  // Restarts the worker. With `watchHotplug`, every attempt waits for a hidraw device first.
++  void start(bool watchHotplug);
+   void stop();
+ 
+ private:
+-  void run(std::string language, std::weak_ptr<void> token);
+-  void runAttempts(int cancelFd, const std::string& language, const std::weak_ptr<void>& token);
++  void runAttempts(int cancelFd, const std::string& language, const std::weak_ptr<void>& token, bool watchHotplug);
+   void post(std::weak_ptr<void> token, std::function<void(SecurityKeyAuthenticator&)> fn);
+ 
+   AuthenticatedCallback m_onAuthenticated;
+-  StatusCallback m_onStatus;
++  CueCallback m_onCue;
++  GaveUpCallback m_onGaveUp;
+ 
+   std::thread m_worker;
+-  // False once the worker has returned on its own (after a successful touch).
+-  std::atomic<bool> m_running = false;
+   // Wakes the worker up to stop it.
+   int m_cancelFd = -1;
+   // Replaced on every start(); results from an older run are dropped.
+diff --git a/src/shell/lockscreen/lock_screen.cpp b/src/shell/lockscreen/lock_screen.cpp
+index 24ac22d..aaa74e5 100644
+--- a/src/shell/lockscreen/lock_screen.cpp
++++ b/src/shell/lockscreen/lock_screen.cpp
+@@ -34,6 +34,11 @@ namespace {
+ 
+   constexpr Logger kLog("lockscreen");
+ 
++  using auth_text::AuthCue;
++
++  // No fingerprint read for this long: move on to the security key (pam_fprintd: 3 x 10 s).
++  constexpr auto kFingerprintStageTimeout = std::chrono::seconds(30);
++
+   // CLOCK_BOOTTIME counts suspend time but is monotonic, so realtime adjustments
+   // can never push an expired grace deadline back into the future.
+   std::int64_t bootTimeMillis() {
+@@ -117,6 +122,7 @@ bool LockScreen::initialize(
+     m_fingerprint->setStatusCallback([this](const std::string& message, bool isError) {
+       handleFingerprintStatus(message, isError);
+     });
++    m_fingerprint->setUnavailableCallback([this]() { advanceAuthStage(AuthCue::Fingerprint); });
+   }
+   m_securityKey = std::make_unique<SecurityKeyAuthenticator>();
+   m_securityKey->setAuthenticatedCallback([this]() {
+@@ -125,9 +131,16 @@ bool LockScreen::initialize(
+     updatePromptOnSurfaces();
+     unlock();
+   });
+-  // Same rules as the fingerprint status: never over a password being typed.
+-  m_securityKey->setStatusCallback([this](const std::string& message, bool isError) {
+-    handleFingerprintStatus(message, isError);
++  // A key plugged in while the password stage waits (nothing typed yet) takes over.
++  m_securityKey->setCueCallback([this]() {
++    if (m_locked && !m_unlocking && m_authStage == AuthCue::None && m_password.empty() && !m_authenticating) {
++      enterAuthStage(AuthCue::SecurityKey, true);
++    }
++  });
++  m_securityKey->setGaveUpCallback([this](bool /*cued*/) {
++    if (m_authStage == AuthCue::SecurityKey) {
++      advanceAuthStage(AuthCue::SecurityKey);
++    }
+   });
+   return true;
+ }
+@@ -272,6 +285,8 @@ void LockScreen::unlock() {
+   invalidatePendingAuthentication();
+   stopFingerprint();
+   stopSecurityKey();
++  m_fingerprintStageTimer.stop();
++  ++m_authStageGeneration;
+ 
+   if (m_locked) {
+     m_unlocking = true;
+@@ -321,6 +336,7 @@ void LockScreen::finishUnlock() {
+ 
+   m_lockPending = false;
+   m_locked = false;
++  m_authStage = AuthCue::None;
+   clearSensitiveString(m_password);
+   m_status.clear();
+   m_statusIsError = false;
+@@ -545,6 +561,15 @@ void LockScreen::onKeyboardEvent(const KeyboardEvent& event) {
+     return;
+   }
+ 
++  // No password field while the fingerprint or the security key is asked for:
++  // Enter (or Space) is the "use password" button, other keys do nothing.
++  if (m_authStage != AuthCue::None) {
++    if (KeybindMatcher::matches(KeybindAction::Validate, event.sym, event.modifiers)) {
++      enterAuthStage(AuthCue::None);
++    }
++    return;
++  }
++
+   // The password field always owns plain printable keys; Space is a Validate
+   // chord but must type a space, not submit (passwords may contain spaces).
+   if (!isPlainPrintableKey(event.utf32, event.modifiers, event.preedit)
+@@ -600,6 +625,10 @@ void LockScreen::onSystemResumed() {
+   resetGracePeriod();
+   cancelPendingAfterLocked();
+   cancelOutputPowerOff();
++  // Back to the first method: whoever comes back to the machine starts over.
++  if (m_locked && !m_unlocking && !m_authenticating) {
++    beginAuthSequence();
++  }
+ }
+ 
+ bool LockScreen::isSessionLocked() const noexcept { return m_locked; }
+@@ -846,10 +875,8 @@ void LockScreen::handleLocked(void* data, ext_session_lock_v1* /*lock*/) {
+ 
+   self->armSleepReadyTimeout();
+ 
+-  self->updatePromptOnSurfaces();
+   self->updateIndicatorsOnSurfaces();
+-  self->startFingerprint();
+-  self->startSecurityKey();
++  self->beginAuthSequence();
+   kLog.info("session is locked");
+   if (self->m_onSessionLocked) {
+     self->m_onSessionLocked();
+@@ -870,6 +897,9 @@ void LockScreen::handleFinished(void* data, ext_session_lock_v1* /*lock*/) {
+   self->invalidatePendingAuthentication();
+   self->stopFingerprint();
+   self->stopSecurityKey();
++  self->m_fingerprintStageTimer.stop();
++  ++self->m_authStageGeneration;
++  self->m_authStage = AuthCue::None;
+ 
+   if (self->m_lock != nullptr) {
+     if (self->m_locked) {
+@@ -1252,7 +1282,13 @@ void LockScreen::createInstance(const WaylandOutput& output) {
+   surface->setOnCycleLayout([this]() { cycleKeyboardLayout(); });
+   surface->setOnPasswordChanged([this](const std::string& value) { handlePasswordEdited(value); });
+   surface->setLoginBoxServices(m_sessionActions, m_mpris, m_weather, m_httpClient);
++  surface->setOnUsePassword([this]() {
++    if (m_locked && !m_unlocking && m_authStage != AuthCue::None) {
++      enterAuthStage(AuthCue::None);
++    }
++  });
+   surface->setPromptState(m_user, m_password, m_status, m_statusIsError, m_authenticating);
++  surface->setAuthStage(m_authStage);
+   applyIndicatorsToSurface(*surface);
+ 
+   surface->setBlackout(!isInteractiveOutput(output));
+@@ -1310,6 +1346,7 @@ void LockScreen::clearInstances() { m_instances.clear(); }
+ void LockScreen::updatePromptOnSurfaces() {
+   for (auto& instance : m_instances) {
+     instance.surface->setPromptState(m_user, m_password, m_status, m_statusIsError, m_authenticating);
++    instance.surface->setAuthStage(m_authStage);
+   }
+ }
+ 
+@@ -1381,7 +1418,7 @@ void LockScreen::handlePasswordEdited(const std::string& value) {
+ }
+ 
+ void LockScreen::tryAuthenticate() {
+-  if (m_authenticating || !m_locked || m_unlocking) {
++  if (m_authenticating || !m_locked || m_unlocking || m_authStage != AuthCue::None) {
+     return;
+   }
+   if (m_password.empty()) {
+@@ -1440,18 +1477,6 @@ void LockScreen::handleAuthResult(std::uint64_t generation, PamAuthenticator::Re
+   m_status = result.message.empty() ? i18n::tr("lockscreen.authentication-failed") : result.message;
+   m_statusIsError = true;
+   updatePromptOnSurfaces();
+-  startFingerprint();
+-  startSecurityKey();
+-}
+-
+-void LockScreen::startFingerprint() {
+-  if (m_fingerprint == nullptr) {
+-    return;
+-  }
+-  if (m_configService != nullptr && !m_configService->config().lockscreen.fingerprint) {
+-    return;
+-  }
+-  m_fingerprint->start();
+ }
+ 
+ void LockScreen::stopFingerprint() {
+@@ -1460,33 +1485,94 @@ void LockScreen::stopFingerprint() {
+   }
+ }
+ 
+-void LockScreen::startSecurityKey() {
+-  if (m_securityKey == nullptr) {
+-    return;
++void LockScreen::stopSecurityKey() {
++  if (m_securityKey != nullptr) {
++    m_securityKey->stop();
+   }
+-  if (m_configService != nullptr && !m_configService->config().lockscreen.securityKey) {
+-    return;
++}
++
++bool LockScreen::fingerprintEnabled() const {
++  return m_fingerprint != nullptr
++      && (m_configService == nullptr || m_configService->config().lockscreen.fingerprint);
++}
++
++bool LockScreen::securityKeyEnabled() const {
++  return m_securityKey != nullptr
++      && (m_configService == nullptr || m_configService->config().lockscreen.securityKey);
++}
++
++void LockScreen::beginAuthSequence() {
++  if (fingerprintEnabled()) {
++    enterAuthStage(AuthCue::Fingerprint);
++  } else if (securityKeyEnabled()) {
++    enterAuthStage(AuthCue::SecurityKey);
++  } else {
++    enterAuthStage(AuthCue::None);
+   }
+-  // Keeps running while a typed password is checked: they don't share a device.
+-  m_securityKey->start();
+ }
+ 
+-void LockScreen::stopSecurityKey() {
+-  if (m_securityKey != nullptr) {
+-    m_securityKey->stop();
++void LockScreen::enterAuthStage(AuthCue stage, bool keyAlreadyCued) {
++  ++m_authStageGeneration;
++  m_authStage = stage;
++  m_status.clear();
++  m_statusIsError = false;
++  m_fingerprintStageTimer.stop();
++  // Restart even the current stage's authenticator: after a resume it must start over.
++  stopFingerprint();
++  if (!keyAlreadyCued) {
++    stopSecurityKey();
++  }
++  // Published before starting: an authenticator may report a status (or give up) right away.
++  updatePromptOnSurfaces();
++
++  switch (stage) {
++  case AuthCue::Fingerprint:
++    kLog.debug("auth stage: fingerprint");
++    m_fingerprintStageTimer.start(kFingerprintStageTimeout, [this]() { advanceAuthStage(AuthCue::Fingerprint); });
++    m_fingerprint->start();
++    break;
++  case AuthCue::SecurityKey:
++    kLog.debug("auth stage: security key");
++    if (!keyAlreadyCued) {
++      m_securityKey->start(false);
++    }
++    break;
++  case AuthCue::None:
++    kLog.debug("auth stage: password");
++    // Keeps running while a typed password is checked: they don't share a device.
++    if (securityKeyEnabled()) {
++      m_securityKey->start(true);
++    }
++    break;
+   }
+ }
+ 
++void LockScreen::advanceAuthStage(AuthCue from) {
++  const std::weak_ptr<void> guard = m_aliveGuard;
++  const std::uint64_t generation = m_authStageGeneration;
++  // Deferred: authenticators report from inside their own start() and stop().
++  DeferredCall::callLater([this, guard, generation, from]() {
++    if (guard.expired() || generation != m_authStageGeneration || m_authStage != from || !m_locked || m_unlocking) {
++      return;
++    }
++    if (from == AuthCue::Fingerprint && securityKeyEnabled()) {
++      enterAuthStage(AuthCue::SecurityKey);
++    } else {
++      enterAuthStage(AuthCue::None);
++    }
++  });
++}
++
+ void LockScreen::handleFingerprintStatus(const std::string& message, bool isError) {
+-  if (!isActive()) {
++  if (!isActive() || m_authStage != AuthCue::Fingerprint) {
+     return;
+   }
+-  // Don't clobber a password the user is typing.
+-  if (!m_password.empty()) {
+-    return;
++  // Any activity on the reader buys the stage more time.
++  if (m_fingerprintStageTimer.active()) {
++    m_fingerprintStageTimer.start(kFingerprintStageTimeout, [this]() { advanceAuthStage(AuthCue::Fingerprint); });
+   }
+-  // Empty message means verification disarmed; fall back to the idle prompt (rendered by the surface).
+-  m_status = message.empty() ? std::string{} : message;
++  // Empty message means verification disarmed; the surface shows the instruction instead.
++  m_status = message;
+   m_statusIsError = isError;
+   updatePromptOnSurfaces();
+ }
+diff --git a/src/shell/lockscreen/lock_screen.h b/src/shell/lockscreen/lock_screen.h
+index b90e93d..bfaad0c 100644
+--- a/src/shell/lockscreen/lock_screen.h
++++ b/src/shell/lockscreen/lock_screen.h
+@@ -4,6 +4,7 @@
+ #include "capture/screencopy_capture.h"
+ #include "core/timer_manager.h"
+ #include "render/core/lockscreen_transition_types.h"
++#include "shell/auth_text.h"
+ 
+ #include <cstdint>
+ #include <functional>
+@@ -148,10 +149,18 @@ private:
+   void tryAuthenticate();
+   void handleAuthResult(std::uint64_t generation, PamAuthenticator::Result result);
+   void invalidatePendingAuthentication();
+-  void startFingerprint();
+   void stopFingerprint();
+-  void startSecurityKey();
+   void stopSecurityKey();
++  /// Unlock methods in turn: fingerprint, then security key, then password.
++  /// Starts over at the first one enabled.
++  void beginAuthSequence();
++  /// Switches to `stage` (None = password) and starts its authenticator. With
++  /// `keyAlreadyCued`, the security key attempt that asked for the touch keeps running.
++  void enterAuthStage(auth_text::AuthCue stage, bool keyAlreadyCued = false);
++  /// Leaves `from` for the next stage, unless the lock screen moved on already.
++  void advanceAuthStage(auth_text::AuthCue from);
++  [[nodiscard]] bool fingerprintEnabled() const;
++  [[nodiscard]] bool securityKeyEnabled() const;
+   void handleFingerprintStatus(const std::string& message, bool isError);
+   static void clearSensitiveString(std::string& value);
+   /// Passwordless grace window: any keypress or pointer movement beyond 5px unlocks
+@@ -174,6 +183,10 @@ private:
+   std::string m_user;
+   std::string m_password;
+   std::string m_status;
++  auth_text::AuthCue m_authStage = auth_text::AuthCue::None;
++  // Bumped on every stage change; deferred stage advances from an older stage are dropped.
++  std::uint64_t m_authStageGeneration = 0;
++  Timer m_fingerprintStageTimer;
+   wl_surface* m_pointerSurface = nullptr;
+   bool m_statusIsError = false;
+   bool m_authenticating = false;
+diff --git a/src/shell/lockscreen/lock_surface.cpp b/src/shell/lockscreen/lock_surface.cpp
+index 20d3098..767f636 100644
+--- a/src/shell/lockscreen/lock_surface.cpp
++++ b/src/shell/lockscreen/lock_surface.cpp
+@@ -43,6 +43,12 @@
+ 
+ namespace {
+ 
++  using auth_text::AuthCue;
++
++  // Same glyph size as the polkit panel's fingerprint/security-key cue.
++  constexpr float kCueGlyphSize = 72.0F;
++  constexpr int kCueDetailLines = 2;
++
+   constexpr Logger kLog("lockscreen");
+ 
+   const ext_session_lock_surface_v1_listener kLockSurfaceListener = {
+@@ -448,6 +454,57 @@ LockSurface::LockSurface(WaylandConnection& connection, ConfigService* config) :
+       })
+   );
+ 
++  // Cue card: like the auth panel, floats above (or below) the login box. Shown
++  // instead of the password field while the fingerprint or the security key is asked for.
++  m_root.addChild(
++      ui::flex(
++          FlexDirection::Vertical,
++          {
++              .out = &m_cuePanel,
++              .align = FlexAlign::Center,
++              .justify = FlexJustify::Center,
++              .gap = Style::spaceSm,
++              .paddingV = Style::spaceMd,
++              .paddingH = Style::spaceMd,
++              .widthPolicy = FlexSizePolicy::Fill,
++              .heightPolicy = FlexSizePolicy::Content,
++              .visible = false,
++              .participatesInLayout = false,
++              .configure = [](Flex& flex) { flex.setZIndex(7); },
++          }
++      )
++  );
++  m_cuePanel->addChild(
++      ui::glyph({
++          .out = &m_cueGlyph,
++          .glyph = "fingerprint",
++          .glyphSize = kCueGlyphSize,
++          .color = colorSpecFromRole(ColorRole::Primary),
++          .configure = [](Glyph& glyph) { glyph.setZIndex(2); },
++      })
++  );
++  m_cuePanel->addChild(
++      ui::label({
++          .out = &m_cueTitle,
++          .fontSize = Style::fontSizeTitle,
++          .fontWeight = FontWeight::Bold,
++          .color = colorSpecFromRole(ColorRole::OnSurface),
++          .maxLines = 1,
++          .textAlign = TextAlign::Center,
++          .configure = [](Label& label) { label.setZIndex(2); },
++      })
++  );
++  m_cuePanel->addChild(
++      ui::label({
++          .out = &m_cueDetail,
++          .fontSize = Style::fontSizeBody,
++          .color = colorSpecFromRole(ColorRole::OnSurfaceVariant),
++          .maxLines = kCueDetailLines,
++          .textAlign = TextAlign::Center,
++          .configure = [](Label& label) { label.setZIndex(2); },
++      })
++  );
++
+   m_loginPanel->addChild(
+       ui::flex(
+           FlexDirection::Horizontal,
+@@ -544,6 +601,27 @@ LockSurface::LockSurface(WaylandConnection& connection, ConfigService* config) :
+       })
+   );
+ 
++  m_loginContentRow->addChild(
++      ui::button({
++          .out = &m_usePasswordButton,
++          .text = i18n::tr("lockscreen.use-password"),
++          .glyph = "password",
++          .variant = ButtonVariant::Secondary,
++          .visible = false,
++          .onClick =
++              [this]() {
++                if (m_onUsePassword) {
++                  m_onUsePassword();
++                }
++              },
++          .configure =
++              [](Button& button) {
++                button.setZIndex(2);
++                button.setFlexGrow(1.0F);
++              },
++      })
++  );
++
+   m_loginPanel->addChild(
+       ui::flex(
+           FlexDirection::Horizontal,
+@@ -713,6 +791,19 @@ void LockSurface::setPromptState(
+   requestUpdate();
+ }
+ 
++void LockSurface::setAuthStage(AuthCue stage) {
++  if (m_authStage == stage) {
++    return;
++  }
++  m_authStage = stage;
++  if (stage == AuthCue::None) {
++    focusPasswordField();
++  } else {
++    m_inputDispatcher.setFocus(nullptr);
++  }
++  requestLayout();
++}
++
+ void LockSurface::setKeyboardIndicators(
+     bool capsLock, bool hasMultipleLayouts, bool layoutSwitchable, std::string layoutLabel
+ ) {
+@@ -951,6 +1042,10 @@ void LockSurface::setOnPasswordChanged(std::function<void(const std::string&)> o
+   m_onPasswordChanged = std::move(onPasswordChanged);
+ }
+ 
++void LockSurface::setOnUsePassword(std::function<void()> onUsePassword) {
++  m_onUsePassword = std::move(onUsePassword);
++}
++
+ void LockSurface::selectAllPassword() {
+   if (m_passwordField == nullptr) {
+     return;
+@@ -1083,6 +1178,7 @@ void LockSurface::layoutCoverOnly(std::uint32_t width, std::uint32_t height) {
+   m_widgetLayer->setVisible(false);
+   m_loginPanel->setVisible(false);
+   m_authPanel->setVisible(false);
++  m_cuePanel->setVisible(false);
+   layoutTransitionCover();
+   syncTransitionCover();
+ }
+@@ -1235,6 +1331,12 @@ void LockSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
+     if (m_authPanel != nullptr) {
+       m_authPanel->setVisible(false);
+     }
++    if (m_cuePanel != nullptr) {
++      m_cuePanel->setVisible(false);
++    }
++    if (m_usePasswordButton != nullptr) {
++      m_usePasswordButton->setVisible(false);
++    }
+     layoutTransitionCover();
+     syncTransitionCover();
+     return;
+@@ -1249,16 +1351,18 @@ void LockSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
+   const lockscreen_login_box::LoginBoxStyle loginStyle = resolveLoginStyle();
+   m_loginPanel->setVisible(loginVisible);
+   m_loginContentRow->setVisible(loginVisible);
+-  m_passwordField->setVisible(loginVisible);
++  const bool cueStage = m_authStage != AuthCue::None;
++  m_passwordField->setVisible(loginVisible && !cueStage);
++  m_usePasswordButton->setVisible(loginVisible && cueStage);
+   if (m_passwordRevealButton != nullptr) {
+-    const bool showReveal = loginVisible && loginStyle.showPasswordReveal;
++    const bool showReveal = loginVisible && !cueStage && loginStyle.showPasswordReveal;
+     m_passwordRevealButton->setVisible(showReveal);
+     if (!showReveal) {
+       m_passwordField->setPasswordRevealed(false);
+       m_passwordRevealButton->setGlyph("eye");
+     }
+   }
+-  m_loginButton->setVisible(loginVisible && loginStyle.showLoginButton);
++  m_loginButton->setVisible(loginVisible && !cueStage && loginStyle.showLoginButton);
+ 
+   const bool regular = loginVisible && loginStyle.layout == lockscreen_login_box::LayoutMode::Regular;
+   ensureLayoutChipInPasswordRow();
+@@ -1517,7 +1621,7 @@ void LockSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
+   m_passwordField->setControlHeight(controlHeight);
+   m_passwordField->setFontSize(bodySize);
+ 
+-  const bool showLoginButton = loginVisible && loginStyle.showLoginButton;
++  const bool showLoginButton = loginVisible && !cueStage && loginStyle.showLoginButton;
+   m_loginButton->setVisible(showLoginButton);
+   if (showLoginButton) {
+     m_loginButton->setRadius(Style::scaledRadius(loginStyle.inputRadius));
+@@ -1531,13 +1635,21 @@ void LockSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
+     m_passwordRevealButton->setGlyphSize(sessionGlyphSize);
+   }
+ 
++  if (cueStage) {
++    m_usePasswordButton->setRadius(Style::scaledRadius(loginStyle.inputRadius));
++    m_usePasswordButton->setMinHeight(controlHeight);
++    m_usePasswordButton->setMaxHeight(controlHeight);
++    m_usePasswordButton->setFontSize(bodySize);
++    m_usePasswordButton->setGlyphSize(sessionGlyphSize);
++  }
++
+   m_loginPanel->arrange(renderer, LayoutRect{panelX, panelY, panelWidth, panelHeight});
+ 
+   // Auth panel: sibling above/below the login box (flips below when near the top edge).
+   if (m_authPanel != nullptr && m_authLabel != nullptr) {
+     bool statusError = false;
+     const std::string authText = resolveStatusText(loginStyle, statusError);
+-    const bool showAuth = m_locked && !m_blackout && loginVisible && !authText.empty();
++    const bool showAuth = m_locked && !m_blackout && loginVisible && !cueStage && !authText.empty();
+     m_authPanel->setVisible(showAuth);
+     m_authLabel->setVisible(showAuth);
+     if (showAuth) {
+@@ -1572,11 +1684,76 @@ void LockSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
+       m_authPanel->arrange(renderer, LayoutRect{authX, authY, authW, authH});
+     }
+   }
++  // Cue card: same chrome and placement as the auth panel, which it replaces.
++  if (m_cuePanel != nullptr) {
++    const bool showCue = m_locked && !m_blackout && loginVisible && cueStage;
++    m_cuePanel->setVisible(showCue);
++    if (showCue) {
++      updateCueCard();
++      const float scale = regular ? contentScale : 1.0F;
++      const float glyphSize = kCueGlyphSize * scale;
++      const float titleSize = Style::fontSizeTitle * scale;
++      const float detailSize = Style::fontSizeBody * scale;
++      const float padV = Style::spaceMd * scale;
++      const float padH = Style::spaceMd * scale;
++      const float gap = Style::spaceSm * scale;
++      const float cueW = panelWidth;
++      const float cueH = padV * 2.0F
++          + glyphSize
++          + gap * 2.0F
++          + titleSize * 1.35F
++          + detailSize * 1.35F * static_cast<float>(kCueDetailLines);
++      const float textMaxW = std::max(0.0F, cueW - padH * 2.0F);
++
++      m_cueGlyph->setGlyphSize(glyphSize);
++      m_cueTitle->setFontSize(titleSize);
++      m_cueTitle->setMaxWidth(textMaxW);
++      m_cueTitle->setEllipsize(TextEllipsize::End);
++      m_cueDetail->setFontSize(detailSize);
++      m_cueDetail->setMaxWidth(textMaxW);
++      m_cueDetail->setEllipsize(TextEllipsize::End);
++
++      m_cuePanel->setGap(gap);
++      m_cuePanel->setPadding(padV, padH);
++      m_cuePanel->setFill(loginStyle.panelFill);
++      m_cuePanel->setBorder(colorForRole(ColorRole::Outline, loginStyle.panelOpacity), Style::borderWidth);
++      m_cuePanel->setRadius(Style::scaledRadius(loginStyle.panelRadius));
++      m_cuePanel->setSoftness(1.0F);
++      m_cuePanel->setMinWidth(cueW);
++      m_cuePanel->setMaxWidth(cueW);
++      m_cuePanel->setMinHeight(cueH);
++      m_cuePanel->setMaxHeight(cueH);
++
++      const float cueGap = Style::spaceSm;
++      const float cueYAbove = panelY - cueGap - cueH;
++      const float cueYBelow = panelY + panelHeight + cueGap;
++      const float cueY = (cueYAbove >= Style::spaceLg) ? cueYAbove : cueYBelow;
++      m_cuePanel->arrange(renderer, LayoutRect{panelX, cueY, cueW, cueH});
++    }
++  }
+   layoutTransitionCover();
+   syncTransitionCover();
+ }
+ 
++void LockSurface::updateCueCard() {
++  if (m_cueGlyph == nullptr || m_cueTitle == nullptr || m_cueDetail == nullptr || m_authStage == AuthCue::None) {
++    return;
++  }
++  const bool fingerprint = m_authStage == AuthCue::Fingerprint;
++  m_cueGlyph->setGlyph(fingerprint ? "fingerprint" : "key");
++  m_cueGlyph->setColor(colorSpecFromRole(m_error ? ColorRole::Error : ColorRole::Primary));
++  m_cueTitle->setText(i18n::tr(fingerprint ? "auth.polkit.fingerprint.title" : "auth.polkit.security-key.title"));
++  // The reader's own messages ("did not match", "reading…") win over the instruction.
++  m_cueDetail->setText(
++      !m_status.empty()
++          ? m_status
++          : i18n::tr(fingerprint ? "auth.polkit.fingerprint.detail" : "auth.polkit.security-key.detail")
++  );
++  m_cueDetail->setColor(colorSpecFromRole(m_error ? ColorRole::Error : ColorRole::OnSurfaceVariant));
++}
++
+ void LockSurface::updateCopy() {
++  updateCueCard();
+   m_passwordField->setValue(m_password);
+   m_passwordField->setEnabled(!m_authenticating);
+   if (m_passwordRevealButton != nullptr) {
+@@ -1596,7 +1773,8 @@ void LockSurface::updateCopy() {
+   if (m_authPanel != nullptr && m_authLabel != nullptr) {
+     bool isError = false;
+     const std::string text = resolveStatusText(style, isError);
+-    const bool show = m_locked && !m_blackout && !text.empty() && isLoginBoxEnabled();
++    const bool show =
++        m_locked && !m_blackout && m_authStage == AuthCue::None && !text.empty() && isLoginBoxEnabled();
+     m_authPanel->setVisible(show);
+     m_authLabel->setVisible(show);
+     if (show) {
+@@ -1607,7 +1785,12 @@ void LockSurface::updateCopy() {
+ 
+   if (m_layoutChip != nullptr) {
+     const bool show =
+-        m_locked && !m_blackout && style.showKeyboardLayout && m_hasMultipleLayouts && isLoginBoxEnabled();
++        m_locked
++        && !m_blackout
++        && m_authStage == AuthCue::None
++        && style.showKeyboardLayout
++        && m_hasMultipleLayouts
++        && isLoginBoxEnabled();
+     m_layoutChip->setVisible(show);
+     if (show) {
+       m_layoutChip->setGlyph("keyboard");
+diff --git a/src/shell/lockscreen/lock_surface.h b/src/shell/lockscreen/lock_surface.h
+index 5824692..1b327bc 100644
+--- a/src/shell/lockscreen/lock_surface.h
++++ b/src/shell/lockscreen/lock_surface.h
+@@ -10,6 +10,7 @@
+ #include "render/core/texture_manager.h"
+ #include "render/scene/input_dispatcher.h"
+ #include "render/scene/node.h"
++#include "shell/auth_text.h"
+ #include "shell/lockscreen/lockscreen_login_box.h"
+ #include "wayland/surface.h"
+ 
+@@ -56,6 +57,8 @@ public:
+   bool initialize(ext_session_lock_v1* lock, wl_output* output, std::int32_t scale);
+   void setLockedState(bool locked);
+   void setPromptState(std::string user, std::string password, std::string status, bool error, bool authenticating);
++  /// Fingerprint or security key: a cue card replaces the password field. None: the password field.
++  void setAuthStage(auth_text::AuthCue stage);
+   void setKeyboardIndicators(bool capsLock, bool hasMultipleLayouts, bool layoutSwitchable, std::string layoutLabel);
+   void setTextureCache(SharedTextureCache* cache) noexcept { m_textureCache = cache; }
+   void setWallpaperPath(std::string wallpaperPath);
+@@ -78,6 +81,7 @@ public:
+   void setOnLogin(std::function<void()> onLogin);
+   void setOnCycleLayout(std::function<void()> onCycleLayout);
+   void setOnPasswordChanged(std::function<void(const std::string&)> onPasswordChanged);
++  void setOnUsePassword(std::function<void()> onUsePassword);
+   void setLoginBoxServices(
+       SessionActionRunner* sessionActions, MprisService* mpris, const WeatherService* weather, HttpClient* httpClient
+   );
+@@ -151,6 +155,7 @@ private:
+   [[nodiscard]] lockscreen_login_box::LoginBoxStyle resolveLoginStyle() const;
+   [[nodiscard]] bool isLoginBoxEnabled() const;
+   [[nodiscard]] std::string resolveStatusText(const lockscreen_login_box::LoginBoxStyle& style, bool& isError) const;
++  void updateCueCard();
+   [[nodiscard]] bool passwordFieldContainsPoint(float sceneX, float sceneY) const;
+   void focusPasswordField();
+ 
+@@ -186,6 +191,11 @@ private:
+   Flex* m_authPanel = nullptr;
+   Label* m_authLabel = nullptr;
+   Flex* m_loginContentRow = nullptr;
++  Flex* m_cuePanel = nullptr;
++  Glyph* m_cueGlyph = nullptr;
++  Label* m_cueTitle = nullptr;
++  Label* m_cueDetail = nullptr;
++  Button* m_usePasswordButton = nullptr;
+   Input* m_passwordField = nullptr;
+   Button* m_passwordRevealButton = nullptr;
+   Button* m_loginButton = nullptr;
+@@ -226,6 +236,8 @@ private:
+   std::function<void()> m_onLogin;
+   std::function<void()> m_onCycleLayout;
+   std::function<void(const std::string&)> m_onPasswordChanged;
++  std::function<void()> m_onUsePassword;
++  auth_text::AuthCue m_authStage = auth_text::AuthCue::None;
+   bool m_locked = false;
+   std::string m_user;
+   std::string m_password;

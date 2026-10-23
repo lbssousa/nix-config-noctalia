@@ -57,6 +57,12 @@ let
       # Toque na YubiKey desbloqueia a tela sem Enter, em paralelo com a digital
       # e a senha: o helper PAM da Noctalia roda o serviço "noctalia-lock-u2f"
       # em segundo plano ([lockscreen] security_key). Patch local, sem PR upstream.
+      # Na tela de bloqueio, um método por vez: digital (até 3 leituras ou 30 s),
+      # depois FIDO2 (sem chave cadastrada ou com o toque expirado, segue), depois
+      # senha. Nas duas primeiras etapas o campo de senha dá lugar a um destaque
+      # como o do polkit e a um botão "Usar senha"; plugar a chave com o campo
+      # vazio volta à FIDO2, e a sequência recomeça a cada resume. Aplicado sobre
+      # o anterior; patch local, sem PR upstream.
       #
       # O compositor Umbriel rejeita pedidos de subscribe do IPC com erro se houver
       # eventos desconhecidos, desconectando imediatamente o cliente. A Noctalia
@@ -78,6 +84,7 @@ let
               ../packages/patches/noctalia-secret-prompts.patch
               ../packages/patches/noctalia-polkit-auth-cues.patch
               ../packages/patches/noctalia-lock-security-key.patch
+              ../packages/patches/noctalia-lock-auth-sequence.patch
               ../packages/patches/noctalia-umbriel-subscribe-without-outputs.patch
             ];
           });
