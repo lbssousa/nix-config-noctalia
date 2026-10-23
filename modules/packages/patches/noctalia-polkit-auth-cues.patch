@@ -52,7 +52,7 @@ index 5a5fa27..9761b8e 100644
 +  enum class AuthCue { None, Fingerprint, SecurityKey };
 +
 +  // pam_fprintd prompts and errors (gettext: English or the system locale, here
-+  // pt_BR) and the pam_u2f cue ("Please touch the device.", not translated).
++  // pt_BR) and the pam_u2f cue ("Please touch the FIDO authenticator.", not translated).
 +  inline AuthCue classifyPamMessage(std::string_view text) {
 +    std::string lower(text);
 +    std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char ch) {
@@ -62,7 +62,7 @@ index 5a5fa27..9761b8e 100644
 +    if (contains("finger") || contains("dedo") || contains("impressão digital")) {
 +      return AuthCue::Fingerprint;
 +    }
-+    if (contains("touch the device") || contains("security key") || contains("toque")) {
++    if (contains("touch the") || contains("fido") || contains("security key") || contains("toque")) {
 +      return AuthCue::SecurityKey;
 +    }
 +    return AuthCue::None;
