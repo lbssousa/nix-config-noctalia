@@ -13,6 +13,7 @@ let
       fprintd-goodix = call ../packages/_fprintd-goodix/package.nix;
       yubikey-gpg-import = call ../packages/_yubikey-gpg-import/package.nix;
       strata = call ../packages/_strata/package.nix;
+      ai-usagebar = call ../packages/_ai-usagebar/package.nix;
 
       # Quick Unlock do KeePassXC pelo polkit (digital, FIDO2 ou senha, conforme
       # a pilha PAM "polkit-1"): backport do PR keepassxreboot/keepassxc#8983
@@ -172,6 +173,7 @@ in
         "fprintd-goodix"
         "yubikey-gpg-import"
         "strata"
+        "ai-usagebar"
         "keepassxc"
         "greetd"
         "noctalia"
