@@ -109,7 +109,7 @@
           "Mod+Ctrl+V" = once (noctalia "panel-toggle clipboard");
           "Mod+Ctrl+Space" = once (noctalia "panel-toggle wallpaper");
           "Mod+Shift+Ctrl+Space" = once (noctalia "settings-toggle theme");
-          "Mod+Ctrl+L" = once (noctalia "session lock");
+          "Mod+L" = once (noctalia "session lock");
           "Mod+Comma" = noctalia "notification-clear-active";
           "Mod+Alt+Comma" = noctalia "notification-invoke-latest";
           "Mod+K" = once "cheatsheet-toggle";
@@ -128,7 +128,7 @@
           "Mod+O" = once "window-toggle-pinned";
           # Super+J (alternar o split, no Omarchy) não tem ação equivalente nesta
           # versão do Umbriel.
-          "Mod+L" = once "workspace-set-layout:toggle";
+          "Mod+Ctrl+L" = once "workspace-set-layout:toggle";
           "Mod+Left" = "window-focus-left";
           "Mod+Right" = "window-focus-right";
           "Mod+Up" = "window-focus-up";
