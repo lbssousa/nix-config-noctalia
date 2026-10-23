@@ -176,24 +176,27 @@
               "launcher"
               "wallpaper"
               "workspaces"
-              "spacer"
+              "spacer-start"
               "media"
             ];
             # Central de controle à esquerda do relógio; área de transferência
-            # e notificações à direita ("group:inbox").
-            # O relógio é ancorado no centro da barra (anchor = true).
+            # e notificações à direita ("group:inbox"), com um respiro de cada
+            # lado. O relógio é ancorado no centro da barra (anchor = true).
             center = lib.mkDefault [
               "control-center"
+              "spacer-clock-left"
               "clock"
+              "spacer-clock-right"
               "group:inbox"
             ];
             end = lib.mkDefault [
               "tray"
+              "spacer-tray"
               "felipeartur/ai-usagebar:bar"
               "andrewdems/printers:printer"
               "mindnbytes/nix-status:status"
-              "group:system"
               "group:toggles"
+              "group:system"
               "session"
             ];
             # Cápsulas citadas nas listas acima ("group:<id>").
@@ -218,8 +221,8 @@
                 id = "toggles";
                 members = [
                   "noctalia/umbriel-companion:bar"
-                  "caffeine"
                   "nightlight"
+                  "caffeine"
                 ];
               }
             ];
@@ -237,6 +240,12 @@
             };
             network.show_label = lib.mkDefault false;
             volume.show_label = lib.mkDefault false;
+            # Espaçadores da barra, um por posição (os ids repetidos nas listas
+            # seriam o mesmo widget).
+            spacer-start.type = "spacer";
+            spacer-clock-left.type = "spacer";
+            spacer-clock-right.type = "spacer";
+            spacer-tray.type = "spacer";
           };
 
           # Atalhos padrão da central de controle mais os blocos dos plugins.
