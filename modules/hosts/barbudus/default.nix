@@ -22,6 +22,13 @@ in
         ];
 
         services.thermald.enable = true;
+
+        # O teclado USB Redragon (0c45:5004) acorda o s2idle ~2 s depois de
+        # suspender; acordar fica com a tampa, o botão de energia e o teclado
+        # interno.
+        services.udev.extraRules = ''
+          ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="0c45", ATTR{idProduct}=="5004", ATTR{power/wakeup}="disabled"
+        '';
       }
     )
   ];
