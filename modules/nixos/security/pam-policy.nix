@@ -2,7 +2,7 @@
 #
 #   login (TTY e greetd, que inclui o login)  só a senha
 #   sudo, run0, polkit-1                      digital → FIDO2 → senha
-#   tela de bloqueio (noctalia-lock)          digital ou FIDO2 ou senha
+#   tela de bloqueio                          digital ∥ FIDO2 ∥ senha
 #
 # Digital: pam_fprintd com até 3 tentativas de 10 s cada; um timeout encerra a
 # etapa e passa à seguinte. FIDO2 (security.fido2Auth): o pam_u2f só pede o
@@ -10,19 +10,16 @@
 # falha na hora e segue para a senha. Os dois são "sufficient": nenhum deles
 # tranca a conta, a senha sempre fica no fim.
 #
-# A tela de bloqueio da Noctalia usa o serviço "noctalia-lock" (patch em
-# modules/flake/packages.nix; sem ele seria o "login") e lê a digital por
-# conta própria, pelo D-Bus, em paralelo com o campo de senha (3 tentativas).
-# Por isso o pam_fprintd fica fora dessa pilha. Enter com o campo vazio pede o
-# toque na YubiKey; com uma senha digitada, o pam_u2f é pulado.
+# Na tela de bloqueio da Noctalia (patches em modules/flake/packages.nix) os
+# três correm em paralelo, sem Enter para a digital nem para a chave:
+#   - digital: a própria Noctalia fala com o fprintd pelo D-Bus (3 tentativas),
+#     por isso não há pam_fprintd em nenhuma das duas pilhas abaixo;
+#   - FIDO2: "noctalia-lock-u2f", só o pam_u2f, rodado em segundo plano
+#     enquanto a tela está bloqueada e de novo quando surge um /dev/hidraw*;
+#   - senha: "noctalia-lock" (sem o patch seria o "login").
 {
   flake.modules.nixos.pam-policy =
-    {
-      config,
-      lib,
-      pkgs,
-      ...
-    }:
+    { config, lib, ... }:
 
     let
       fido2 = config.security.fido2Auth.enable;
@@ -32,11 +29,6 @@
         timeout = 10;
       };
 
-      # pam_exec expose_authtok: a senha digitada chega pelo stdin. Sai com 0
-      # só se ela estiver vazia.
-      authtokEmpty = pkgs.writeShellScript "pam-authtok-empty" ''
-        [ -z "$(${pkgs.coreutils}/bin/head -c1)" ]
-      '';
     in
     {
       security.pam.services = {
@@ -66,23 +58,15 @@
 
         noctalia-lock = {
           fprintAuth = false;
-          rules.auth.u2fOnlyIfEmpty = lib.mkIf fido2 {
-            # Senha digitada: pula o módulo seguinte (pam_u2f).
-            control = "[success=ignore default=1]";
-            modulePath = "${pkgs.linux-pam}/lib/security/pam_exec.so";
-            args = [
-              "quiet"
-              "expose_authtok"
-              "${authtokEmpty}"
-            ];
-            order = config.security.pam.services.noctalia-lock.rules.auth.u2f.order - 10;
-          };
+          u2f.enable = false;
         };
-      };
-
-      # Enter com o campo vazio chega ao PAM (para o toque na YubiKey).
-      home-manager.sharedModules = lib.optional fido2 {
-        programs.noctalia.settings.lockscreen.allow_empty_password = lib.mkDefault true;
+        # Sem pam_unix: falha na hora se nenhuma chave cadastrada estiver
+        # conectada, sem pedir senha. Sem FIDO2, nem existe (cai no "other",
+        # que nega) e a Noctalia só espera a próxima chave plugada.
+        noctalia-lock-u2f = lib.mkIf fido2 {
+          fprintAuth = false;
+          unixAuth = false;
+        };
       };
     };
 }

@@ -1,0 +1,800 @@
+diff --git a/assets/translations/en.json b/assets/translations/en.json
+index 825cad0..0727187 100644
+--- a/assets/translations/en.json
++++ b/assets/translations/en.json
+@@ -875,6 +875,7 @@
+     "password-cleared": "Password cleared",
+     "password-placeholder": "Password",
+     "ready": "Type your password and press Enter.",
++    "security-key-touch": "Touch your security key",
+     "unlocked": "Unlocked",
+     "waiting": "Waiting for lock confirmation…"
+   },
+@@ -2496,6 +2497,10 @@
+           "description": "Choose which monitors show the lock screen; leave empty to show on all monitors",
+           "label": "Monitors"
+         },
++        "security-key": {
++          "label": "Security Key Unlock",
++          "description": "Unlock with a touch on a FIDO2 security key (pam_u2f), alongside password entry"
++        },
+         "tint-intensity": {
+           "description": "Surface-color tint over the lock screen background",
+           "label": "Tint Intensity"
+diff --git a/assets/translations/pt-BR.json b/assets/translations/pt-BR.json
+index 2359897..62dd208 100644
+--- a/assets/translations/pt-BR.json
++++ b/assets/translations/pt-BR.json
+@@ -874,6 +874,7 @@
+     "password-cleared": "Senha apagada",
+     "password-placeholder": "Senha",
+     "ready": "Digite sua senha e pressione Enter.",
++    "security-key-touch": "Toque na sua chave de segurança",
+     "unlocked": "Desbloqueado",
+     "waiting": "Aguardando confirmação de bloqueio…"
+   },
+@@ -2467,6 +2468,10 @@
+           "description": "Escolha em quais monitores a tela de bloqueio será exibida; deixe em branco para exibir em todos os monitores",
+           "label": "Monitores"
+         },
++        "security-key": {
++          "label": "Desbloquear com Chave de Segurança",
++          "description": "Desbloquear com um toque em uma chave de segurança FIDO2 (pam_u2f), junto com a senha digitada"
++        },
+         "tint-intensity": {
+           "description": "Base de cor da superfície sobre o fundo da tela de bloqueio",
+           "label": "Intensidade da Cor"
+diff --git a/docs/user/configuration/shell.mdx b/docs/user/configuration/shell.mdx
+index ad41f00..39a60d7 100644
+--- a/docs/user/configuration/shell.mdx
++++ b/docs/user/configuration/shell.mdx
+@@ -484,6 +484,7 @@ enabled               = true      # master switch for session lock
+ lock_before_suspend   = true      # lock on PrepareForSleep (lid close / systemctl suspend)
+ grace_period_seconds  = 0         # passwordless unlock window after locking; 0 (default) = off
+ fingerprint           = true      # allow fingerprint (PAM) authentication on the lock screen
++security_key          = true      # unlock with a touch on a FIDO2 key (PAM service "noctalia-lock-u2f")
+ allow_empty_password  = false     # submit Enter with an empty password (security-key PAM stacks)
+ blurred_desktop       = false     # use a desktop snapshot as the lock screen background
+ transition            = ["fade", "wipe", "disc", "stripes", "zoom", "honeycomb"]
+@@ -501,6 +502,7 @@ monitors              = []        # connectors that show the lock screen; empty
+ | `lock_before_suspend` | bool | `true` | When `true`, hold a logind sleep-delay inhibitor and lock on `PrepareForSleep` before suspend/hibernate (including lid-close sleep). Set `false` to allow external suspend without locking; explicit **Lock and Suspend** actions still lock first. |
+ | `grace_period_seconds` | int | `0` | Passwordless unlock window right after locking. Strictly opt-in: with the default `0`, every unlock requires authentication. When set to a value in `1`–`60`, any keypress or mouse movement of more than 5 px unlocks without a password for that many seconds after the lock starts, including idle-triggered locks; time spent suspended counts toward expiry. The window is always revoked when the session sleeps: locks engaged by `PrepareForSleep` or **Lock and Suspend** never offer passwordless unlock, and a resume clears whatever was left. |
+ | `fingerprint` | bool | `true` | When `true`, fingerprint (PAM) authentication is offered on the lock screen alongside the password field. Set `false` to require password entry only. |
++| `security_key` | bool | `true` | When `true`, the lock screen waits for a touch on a FIDO2 security key alongside the password field and the fingerprint reader, with no Enter needed. It runs the `noctalia-lock-u2f` PAM service (typically `auth sufficient pam_u2f.so` and nothing else) whenever a hidraw device appears; without that service, or without an enrolled key plugged in, it stays idle. |
+ | `allow_empty_password` | bool | `false` | When `true`, Enter can submit an empty password (needed for some security-key PAM stacks). When `false`, empty submits are ignored to avoid accidental `pam_faillock` lockouts from wake keys. |
+ | `blurred_desktop` | bool | `false` | Capture each output before lock and use it as the lock screen background. |
+ | `transition` | array | all effects | Pool of lock/unlock effects: `fade`, `wipe`, `disc`, `stripes`, `zoom`, and `honeycomb`. One is selected from the configured pool; an empty array disables transitions. |
+diff --git a/meson.build b/meson.build
+index 9132899..500d82e 100644
+--- a/meson.build
++++ b/meson.build
+@@ -433,6 +433,7 @@ _noctalia_sources = files(
+   'src/app/single_instance_lock.cpp',
+   'src/auth/fingerprint_authenticator.cpp',
+   'src/auth/pam_authenticator.cpp',
++  'src/auth/security_key_authenticator.cpp',
+   'src/calendar/caldav_client.cpp',
+   'src/calendar/caldav_discovery.cpp',
+   'src/calendar/calendar_cache.cpp',
+diff --git a/src/auth/pam_authenticator.cpp b/src/auth/pam_authenticator.cpp
+index dcb87a3..b234844 100644
+--- a/src/auth/pam_authenticator.cpp
++++ b/src/auth/pam_authenticator.cpp
+@@ -25,6 +25,9 @@ namespace {
+ 
+   constexpr std::size_t kMaxPamMessageBytes = 4096;
+   constexpr std::size_t kMaxPasswordBytes = 64 * 1024;
++  // Helper's fd for PAM_TEXT_INFO notifications (pam-helper --notify-info).
++  constexpr int kInfoFd = 3;
++  constexpr const char* kNotifyInfoArg = "--notify-info";
+ 
+   void secureClear(std::string& value) {
+     volatile char* ptr = value.empty() ? nullptr : value.data();
+@@ -37,6 +40,7 @@ namespace {
+   struct PamConversationData {
+     const char* password = nullptr;
+     bool passwordSent = false;
++    int infoFd = -1;
+   };
+ 
+   struct PamHandle {
+@@ -88,8 +92,16 @@ namespace {
+       case PAM_PROMPT_ECHO_ON:
+         replies[i].resp = ::strdup("");
+         break;
+-      case PAM_ERROR_MSG:
+       case PAM_TEXT_INFO:
++        // e.g. pam_u2f's cue: an enrolled key is plugged in and waits for a touch.
++        if (data->infoFd >= 0) {
++          const char byte = 'i';
++          // Best effort: the parent may have stopped listening.
++          [[maybe_unused]] const ssize_t written = ::write(data->infoFd, &byte, 1);
++        }
++        replies[i].resp = nullptr;
++        break;
++      case PAM_ERROR_MSG:
+         replies[i].resp = nullptr;
+         break;
+       default:
+@@ -164,14 +176,15 @@ namespace {
+     closeFd(pipeFds[1]);
+   }
+ 
+-  [[nodiscard]] bool moveFdAboveStdio(int& fd) {
+-    if (fd > STDERR_FILENO) {
++  // Above the fds the helper gets (stdio and kInfoFd), so dup2() never clobbers a pipe end.
++  [[nodiscard]] bool moveFdAboveHelperFds(int& fd) {
++    if (fd > kInfoFd) {
+       return true;
+     }
+ 
+     int movedFd = -1;
+     do {
+-      movedFd = ::fcntl(fd, F_DUPFD_CLOEXEC, STDERR_FILENO + 1);
++      movedFd = ::fcntl(fd, F_DUPFD_CLOEXEC, kInfoFd + 1);
+     } while (movedFd < 0 && errno == EINTR);
+     if (movedFd < 0) {
+       return false;
+@@ -183,7 +196,7 @@ namespace {
+   }
+ 
+   [[nodiscard]] bool createPipe(int (&pipeFds)[2]) {
+-    if (::pipe2(pipeFds, O_CLOEXEC) != 0 || !moveFdAboveStdio(pipeFds[0]) || !moveFdAboveStdio(pipeFds[1])) {
++    if (::pipe2(pipeFds, O_CLOEXEC) != 0 || !moveFdAboveHelperFds(pipeFds[0]) || !moveFdAboveHelperFds(pipeFds[1])) {
+       closePipe(pipeFds);
+       return false;
+     }
+@@ -269,14 +282,15 @@ namespace {
+     return true;
+   }
+ 
+-  [[nodiscard]] PamAuthenticator::Result authenticateDirect(std::string_view password, std::string_view service) {
++  [[nodiscard]] PamAuthenticator::Result
++  authenticateDirect(std::string_view password, std::string_view service, int infoFd) {
+     std::string user = PamAuthenticator::currentUsername();
+     if (user.empty()) {
+       return PamAuthenticator::Result{.success = false, .message = i18n::tr("auth.pam.user-unavailable")};
+     }
+ 
+     std::string passwordCopy(password);
+-    PamConversationData convData{.password = passwordCopy.c_str()};
++    PamConversationData convData{.password = passwordCopy.c_str(), .infoFd = infoFd};
+     pam_conv conv = {
+         .conv = &pamConversation,
+         .appdata_ptr = &convData,
+@@ -335,14 +349,21 @@ namespace {
+ PamAuthenticator::Result PamAuthenticator::authenticateCurrentUser(
+     std::string_view password, std::string_view service, std::string_view language, std::string_view startFailureMessage
+ ) const {
+-  // Re-exec before invoking PAM so the helper cannot inherit locked library
+-  // state from the shell's other threads.
+-  const auto fail = [startFailureMessage]() {
++  Helper helper;
++  Result result;
++  if (!spawnHelper(helper, password, service, language, false) || !finishHelper(helper, result)) {
+     return Result{.success = false, .message = std::string(startFailureMessage)};
+-  };
++  }
++  return result;
++}
+ 
++bool PamAuthenticator::spawnHelper(
++    Helper& helper, std::string_view password, std::string_view service, std::string_view language, bool notifyInfo
++) {
++  // Re-exec before invoking PAM so the helper cannot inherit locked library
++  // state from the shell's other threads.
+   if (password.size() > kMaxPasswordBytes || service.empty() || language.empty()) {
+-    return fail();
++    return false;
+   }
+ 
+   std::string serviceCopy(service);
+@@ -350,70 +371,99 @@ PamAuthenticator::Result PamAuthenticator::authenticateCurrentUser(
+ 
+   int inPipe[2] = {-1, -1};
+   int outPipe[2] = {-1, -1};
++  int infoPipe[2] = {-1, -1};
+   if (!createPipe(inPipe)) {
+-    return fail();
++    return false;
+   }
+-  if (!createPipe(outPipe)) {
++  if (!createPipe(outPipe) || (notifyInfo && !createPipe(infoPipe))) {
+     closePipe(inPipe);
+-    return fail();
++    closePipe(outPipe);
++    return false;
+   }
+ 
+   const char* helperArgv[] = {
+-      "noctalia", "pam-helper", serviceCopy.c_str(), languageCopy.c_str(), nullptr,
++      "noctalia", "pam-helper", serviceCopy.c_str(), languageCopy.c_str(), notifyInfo ? kNotifyInfoArg : nullptr,
++      nullptr,
+   };
+ 
+   const pid_t pid = ::fork();
+   if (pid < 0) {
+     closePipe(inPipe);
+     closePipe(outPipe);
+-    return fail();
++    closePipe(infoPipe);
++    return false;
+   }
+ 
+   if (pid == 0) {
+     // Keep this path async-signal-safe until execv().
+-    if (::dup2(inPipe[0], STDIN_FILENO) < 0 || ::dup2(outPipe[1], STDOUT_FILENO) < 0) {
++    if (::dup2(inPipe[0], STDIN_FILENO) < 0
++        || ::dup2(outPipe[1], STDOUT_FILENO) < 0
++        || (infoPipe[1] >= 0 && ::dup2(infoPipe[1], kInfoFd) < 0)) {
+       ::_exit(127);
+     }
+-    (void)::close(inPipe[0]);
+-    (void)::close(inPipe[1]);
+-    (void)::close(outPipe[0]);
+-    (void)::close(outPipe[1]);
++    for (const int fd : {inPipe[0], inPipe[1], outPipe[0], outPipe[1], infoPipe[0], infoPipe[1]}) {
++      if (fd >= 0) {
++        (void)::close(fd);
++      }
++    }
+     ::execv("/proc/self/exe", const_cast<char* const*>(helperArgv));
+     ::_exit(127);
+   }
+ 
+   closeFd(inPipe[0]);
+   closeFd(outPipe[1]);
++  closeFd(infoPipe[1]);
++
++  helper = Helper{.pid = pid, .resultFd = outPipe[0], .infoFd = infoPipe[0]};
+ 
+   const bool sentOk = sendPassword(inPipe[1], password);
+   closeFd(inPipe[1]);
++  if (!sentOk) {
++    kLog.warn("pam helper failed (could not send the password)");
++    cancelHelper(helper);
++    return false;
++  }
++  return true;
++}
+ 
+-  Result result;
+-  const bool readOk = sentOk && readResult(outPipe[0], result);
+-  closeFd(outPipe[0]);
++bool PamAuthenticator::finishHelper(Helper& helper, Result& result) {
++  const bool readOk = readResult(helper.resultFd, result);
++  closeFd(helper.resultFd);
++  closeFd(helper.infoFd);
+ 
+   int status = 0;
+   pid_t waitResult = -1;
+   do {
+-    waitResult = ::waitpid(pid, &status, 0);
++    waitResult = ::waitpid(helper.pid, &status, 0);
+   } while (waitResult < 0 && errno == EINTR);
+ 
+-  const bool exited = waitResult == pid && WIFEXITED(status);
++  const bool exited = waitResult == helper.pid && WIFEXITED(status);
+   const int exitCode = exited ? WEXITSTATUS(status) : -1;
++  helper.pid = -1;
+   const bool statusOk = readOk && (exitCode == 0 || exitCode == 1) && ((exitCode == 0) == result.success);
+-  if (!sentOk || !statusOk) {
+-    kLog.warn(
+-        "pam helper failed (sent={} read={} waited={} exited={} status={})", sentOk, readOk, waitResult == pid, exited,
+-        exitCode
+-    );
+-    return fail();
++  if (!statusOk) {
++    kLog.warn("pam helper failed (read={} exited={} status={})", readOk, exited, exitCode);
++    return false;
+   }
++  return true;
++}
+ 
+-  return result;
++void PamAuthenticator::cancelHelper(Helper& helper) {
++  closeFd(helper.resultFd);
++  closeFd(helper.infoFd);
++  if (helper.pid <= 0) {
++    return;
++  }
++  (void)::kill(helper.pid, SIGTERM);
++  int status = 0;
++  while (::waitpid(helper.pid, &status, 0) < 0 && errno == EINTR) {
++  }
++  helper.pid = -1;
+ }
+ 
+ int PamAuthenticator::runHelperMode(int argc, char* argv[]) {
+-  if (argc != 4 || argv[2][0] == '\0' || argv[3][0] == '\0') {
++  const bool notifyInfo = argc == 5 && std::strcmp(argv[4], kNotifyInfoArg) == 0;
++  if ((argc != 4 && !notifyInfo) || argv[2][0] == '\0' || argv[3][0] == '\0') {
+     return 2;
+   }
+ 
+@@ -434,7 +484,7 @@ int PamAuthenticator::runHelperMode(int argc, char* argv[]) {
+     return 2;
+   }
+ 
+-  Result result = authenticateDirect(password, service);
++  Result result = authenticateDirect(password, service, notifyInfo ? kInfoFd : -1);
+   secureClear(password);
+ 
+   if (!writeResult(STDOUT_FILENO, result)) {
+diff --git a/src/auth/pam_authenticator.h b/src/auth/pam_authenticator.h
+index 0d02fed..86ad075 100644
+--- a/src/auth/pam_authenticator.h
++++ b/src/auth/pam_authenticator.h
+@@ -2,6 +2,7 @@
+ 
+ #include <string>
+ #include <string_view>
++#include <sys/types.h>
+ 
+ class PamAuthenticator {
+ public:
+@@ -10,10 +11,26 @@ public:
+     std::string message;
+   };
+ 
++  // A PAM helper process that the caller waits on with poll() and may cancel.
++  struct Helper {
++    pid_t pid = -1;
++    // Readable once the helper has finished.
++    int resultFd = -1;
++    // One byte per PAM_TEXT_INFO message (only when spawned with notifyInfo).
++    int infoFd = -1;
++  };
++
+   [[nodiscard]] Result authenticateCurrentUser(
+       std::string_view password, std::string_view service, std::string_view language,
+       std::string_view startFailureMessage
+   ) const;
++  [[nodiscard]] static bool spawnHelper(
++      Helper& helper, std::string_view password, std::string_view service, std::string_view language, bool notifyInfo
++  );
++  // Reads the result and reaps the helper; false if it failed to report one.
++  [[nodiscard]] static bool finishHelper(Helper& helper, Result& result);
++  // Kills and reaps the helper, discarding its result.
++  static void cancelHelper(Helper& helper);
+   [[nodiscard]] static std::string currentUsername();
+   [[nodiscard]] static int runHelperMode(int argc, char* argv[]);
+ };
+diff --git a/src/auth/security_key_authenticator.cpp b/src/auth/security_key_authenticator.cpp
+new file mode 100644
+index 0000000..98de14f
+--- /dev/null
++++ b/src/auth/security_key_authenticator.cpp
+@@ -0,0 +1,221 @@
++#include "auth/security_key_authenticator.h"
++
++#include "auth/pam_authenticator.h"
++#include "core/deferred_call.h"
++#include "core/inotify/inotify.h"
++#include "core/log.h"
++#include "i18n/i18n.h"
++
++#include <cerrno>
++#include <chrono>
++#include <cstdint>
++#include <poll.h>
++#include <string_view>
++#include <sys/eventfd.h>
++#include <unistd.h>
++#include <utility>
++
++namespace {
++  constexpr Logger kLog("security-key");
++
++  constexpr std::string_view kPamService = "noctalia-lock-u2f";
++  // After a touch timeout (or a failed touch) the key is still there: ask again.
++  constexpr auto kRetryDelay = std::chrono::milliseconds(1000);
++  // A new hidraw node gets its uaccess ACL a moment after it appears.
++  constexpr auto kHotplugSettleDelay = std::chrono::milliseconds(500);
++  // The helper could not even start: don't spin.
++  constexpr auto kSpawnFailureDelay = std::chrono::milliseconds(5000);
++
++  [[nodiscard]] int pollRetrying(pollfd* fds, nfds_t count, int timeoutMs) {
++    int rc = -1;
++    do {
++      rc = ::poll(fds, count, timeoutMs);
++    } while (rc < 0 && errno == EINTR);
++    return rc;
++  }
++
++  // True if cancelled before the delay ran out.
++  [[nodiscard]] bool waitCancelled(int cancelFd, std::chrono::milliseconds delay) {
++    pollfd fd{.fd = cancelFd, .events = POLLIN, .revents = 0};
++    return pollRetrying(&fd, 1, static_cast<int>(delay.count())) != 0;
++  }
++
++  // Blocks until a hidraw device appears or changes permissions; true if cancelled.
++  [[nodiscard]] bool waitForHidraw(int cancelFd, Inotify& devWatch) {
++    while (true) {
++      pollfd fds[2] = {
++          {.fd = cancelFd, .events = POLLIN, .revents = 0},
++          {.fd = devWatch.fd(), .events = POLLIN, .revents = 0},
++      };
++      if (pollRetrying(fds, 2, -1) < 0 || fds[0].revents != 0) {
++        return true;
++      }
++      bool hidraw = false;
++      devWatch.drain([&hidraw](const inotify_event* event) {
++        if ((event->mask & IN_Q_OVERFLOW) != 0
++            || (event->len > 0 && std::string_view(event->name).starts_with("hidraw"))) {
++          hidraw = true;
++        }
++      });
++      if (hidraw) {
++        if (waitCancelled(cancelFd, kHotplugSettleDelay)) {
++          return true;
++        }
++        devWatch.drain();
++        return false;
++      }
++    }
++  }
++} // namespace
++
++SecurityKeyAuthenticator::~SecurityKeyAuthenticator() { stop(); }
++
++void SecurityKeyAuthenticator::setAuthenticatedCallback(AuthenticatedCallback callback) {
++  m_onAuthenticated = std::move(callback);
++}
++
++void SecurityKeyAuthenticator::setStatusCallback(StatusCallback callback) { m_onStatus = std::move(callback); }
++
++void SecurityKeyAuthenticator::start() {
++  if (m_running) {
++    return;
++  }
++  stop();
++  m_cancelFd = ::eventfd(0, EFD_CLOEXEC);
++  if (m_cancelFd < 0) {
++    kLog.warn("eventfd failed; security key unlock disabled");
++    return;
++  }
++  m_token = std::make_shared<int>(0);
++  m_running = true;
++  std::string language(i18n::Service::instance().language());
++  m_worker = std::thread([this, language = std::move(language), token = std::weak_ptr<void>(m_token)]() mutable {
++    run(std::move(language), std::move(token));
++  });
++}
++
++void SecurityKeyAuthenticator::stop() {
++  m_token.reset();
++  if (m_worker.joinable()) {
++    const std::uint64_t one = 1;
++    const ssize_t written = ::write(m_cancelFd, &one, sizeof(one));
++    if (written < 0) {
++      kLog.warn("failed to signal security key worker eventfd: errno={}", errno);
++    }
++    m_worker.join();
++  }
++  if (m_cancelFd >= 0) {
++    ::close(m_cancelFd);
++    m_cancelFd = -1;
++  }
++}
++
++void SecurityKeyAuthenticator::post(std::weak_ptr<void> token, std::function<void(SecurityKeyAuthenticator&)> fn) {
++  DeferredCall::callLater([this, token = std::move(token), fn = std::move(fn)]() {
++    if (!token.expired()) {
++      fn(*this);
++    }
++  });
++}
++
++void SecurityKeyAuthenticator::run(std::string language, std::weak_ptr<void> token) {
++  runAttempts(m_cancelFd, language, token);
++  m_running = false;
++}
++
++void SecurityKeyAuthenticator::runAttempts(
++    int cancelFd, const std::string& language, const std::weak_ptr<void>& token
++) {
++  // Watch /dev before the first attempt, so a key plugged in right after a
++  // failed one isn't missed.
++  Inotify devWatch;
++  const bool hotplug = devWatch.watch("/dev", IN_CREATE | IN_ATTRIB).has_value();
++
++  while (true) {
++    devWatch.drain();
++
++    PamAuthenticator::Helper helper;
++    if (!PamAuthenticator::spawnHelper(helper, "", kPamService, language, true)) {
++      kLog.warn("could not start the PAM helper");
++      if (waitCancelled(cancelFd, kSpawnFailureDelay)) {
++        return;
++      }
++      continue;
++    }
++
++    bool cued = false;
++    bool cancelled = false;
++    while (true) {
++      pollfd fds[3] = {
++          {.fd = cancelFd, .events = POLLIN, .revents = 0},
++          {.fd = helper.resultFd, .events = POLLIN, .revents = 0},
++          {.fd = helper.infoFd, .events = POLLIN, .revents = 0},
++      };
++      if (pollRetrying(fds, 3, -1) < 0 || fds[0].revents != 0) {
++        cancelled = true;
++        break;
++      }
++      if (fds[2].revents != 0) {
++        char buf[16];
++        const ssize_t n = ::read(helper.infoFd, buf, sizeof(buf));
++        if (n > 0 && !cued) {
++          cued = true;
++          post(token, [](SecurityKeyAuthenticator& self) {
++            if (self.m_onStatus) {
++              self.m_onStatus(i18n::tr("lockscreen.security-key-touch"), false);
++            }
++          });
++        } else if (n <= 0) {
++          // EOF: helper is exiting; keep waiting on the result only.
++          ::close(helper.infoFd);
++          helper.infoFd = -1;
++        }
++      }
++      if (fds[1].revents != 0) {
++        break;
++      }
++    }
++
++    if (cancelled) {
++      PamAuthenticator::cancelHelper(helper);
++      return;
++    }
++
++    PamAuthenticator::Result result;
++    const bool finished = PamAuthenticator::finishHelper(helper, result);
++    if (finished && result.success) {
++      kLog.info("unlocked with a security key");
++      post(token, [](SecurityKeyAuthenticator& self) {
++        if (self.m_onAuthenticated) {
++          self.m_onAuthenticated();
++        }
++      });
++      return;
++    }
++
++    if (cued) {
++      // Touch timed out, or the key went away (unplugged, suspend).
++      kLog.debug("security key attempt failed: {}", result.message);
++      post(token, [](SecurityKeyAuthenticator& self) {
++        if (self.m_onStatus) {
++          self.m_onStatus({}, false);
++        }
++      });
++      if (waitCancelled(cancelFd, kRetryDelay)) {
++        return;
++      }
++      continue;
++    }
++
++    // No enrolled key plugged in: wait until one may be.
++    if (!hotplug) {
++      if (waitCancelled(cancelFd, kSpawnFailureDelay)) {
++        return;
++      }
++      continue;
++    }
++    if (waitForHidraw(cancelFd, devWatch)) {
++      return;
++    }
++  }
++}
+diff --git a/src/auth/security_key_authenticator.h b/src/auth/security_key_authenticator.h
+new file mode 100644
+index 0000000..ec1f17f
+--- /dev/null
++++ b/src/auth/security_key_authenticator.h
+@@ -0,0 +1,45 @@
++#pragma once
++
++#include <atomic>
++#include <functional>
++#include <memory>
++#include <string>
++#include <thread>
++
++// Waits for a touch on a FIDO2 security key: runs the PAM helper on the
++// "noctalia-lock-u2f" service (pam_u2f) in the background, alongside the
++// password field and the fingerprint reader, and again whenever a hidraw
++// device shows up.
++class SecurityKeyAuthenticator {
++public:
++  using AuthenticatedCallback = std::function<void()>;
++  using StatusCallback = std::function<void(const std::string& message, bool isError)>;
++
++  SecurityKeyAuthenticator() = default;
++  ~SecurityKeyAuthenticator();
++
++  SecurityKeyAuthenticator(const SecurityKeyAuthenticator&) = delete;
++  SecurityKeyAuthenticator& operator=(const SecurityKeyAuthenticator&) = delete;
++
++  void setAuthenticatedCallback(AuthenticatedCallback callback);
++  void setStatusCallback(StatusCallback callback);
++
++  void start();
++  void stop();
++
++private:
++  void run(std::string language, std::weak_ptr<void> token);
++  void runAttempts(int cancelFd, const std::string& language, const std::weak_ptr<void>& token);
++  void post(std::weak_ptr<void> token, std::function<void(SecurityKeyAuthenticator&)> fn);
++
++  AuthenticatedCallback m_onAuthenticated;
++  StatusCallback m_onStatus;
++
++  std::thread m_worker;
++  // False once the worker has returned on its own (after a successful touch).
++  std::atomic<bool> m_running = false;
++  // Wakes the worker up to stop it.
++  int m_cancelFd = -1;
++  // Replaced on every start(); results from an older run are dropped.
++  std::shared_ptr<void> m_token;
++};
+diff --git a/src/config/config_types.h b/src/config/config_types.h
+index c7ceabd..4167ea6 100644
+--- a/src/config/config_types.h
++++ b/src/config/config_types.h
+@@ -569,6 +569,8 @@ struct LockscreenConfig {
+   // and on logind resume as a defense in depth.
+   int gracePeriodSeconds = 0;
+   bool fingerprint = true;
++  // Unlock with a touch on a FIDO2 key, through the "noctalia-lock-u2f" PAM service.
++  bool securityKey = true;
+   bool allowEmptyPassword = false;
+   bool blurredDesktop = false;
+   std::vector<LockscreenTransition> transitions = {LockscreenTransition::Fade, LockscreenTransition::Wipe,
+diff --git a/src/config/schema/config_schema.cpp b/src/config/schema/config_schema.cpp
+index 61f929e..75eaf13 100644
+--- a/src/config/schema/config_schema.cpp
++++ b/src/config/schema/config_schema.cpp
+@@ -132,6 +132,7 @@ namespace noctalia::config::schema {
+         field(&LockscreenConfig::lockBeforeSuspend, "lock_before_suspend"),
+         field(&LockscreenConfig::gracePeriodSeconds, "grace_period_seconds", Range<std::int64_t>{0, 60}),
+         field(&LockscreenConfig::fingerprint, "fingerprint"),
++        field(&LockscreenConfig::securityKey, "security_key"),
+         field(&LockscreenConfig::allowEmptyPassword, "allow_empty_password"),
+         field(&LockscreenConfig::blurredDesktop, "blurred_desktop"),
+         enumArrayField(
+diff --git a/src/shell/lockscreen/lock_screen.cpp b/src/shell/lockscreen/lock_screen.cpp
+index 5f9ddd3..24ac22d 100644
+--- a/src/shell/lockscreen/lock_screen.cpp
++++ b/src/shell/lockscreen/lock_screen.cpp
+@@ -1,6 +1,7 @@
+ #include "shell/lockscreen/lock_screen.h"
+ 
+ #include "auth/fingerprint_authenticator.h"
++#include "auth/security_key_authenticator.h"
+ #include "capture/screencopy_util.h"
+ #include "compositors/compositor_platform.h"
+ #include "config/config_service.h"
+@@ -117,6 +118,17 @@ bool LockScreen::initialize(
+       handleFingerprintStatus(message, isError);
+     });
+   }
++  m_securityKey = std::make_unique<SecurityKeyAuthenticator>();
++  m_securityKey->setAuthenticatedCallback([this]() {
++    m_status = i18n::tr("lockscreen.unlocked");
++    m_statusIsError = false;
++    updatePromptOnSurfaces();
++    unlock();
++  });
++  // Same rules as the fingerprint status: never over a password being typed.
++  m_securityKey->setStatusCallback([this](const std::string& message, bool isError) {
++    handleFingerprintStatus(message, isError);
++  });
+   return true;
+ }
+ 
+@@ -259,6 +271,7 @@ void LockScreen::unlock() {
+   resetGracePeriod();
+   invalidatePendingAuthentication();
+   stopFingerprint();
++  stopSecurityKey();
+ 
+   if (m_locked) {
+     m_unlocking = true;
+@@ -836,6 +849,7 @@ void LockScreen::handleLocked(void* data, ext_session_lock_v1* /*lock*/) {
+   self->updatePromptOnSurfaces();
+   self->updateIndicatorsOnSurfaces();
+   self->startFingerprint();
++  self->startSecurityKey();
+   kLog.info("session is locked");
+   if (self->m_onSessionLocked) {
+     self->m_onSessionLocked();
+@@ -855,6 +869,7 @@ void LockScreen::handleFinished(void* data, ext_session_lock_v1* /*lock*/) {
+   self->m_unlockFinishQueued = false;
+   self->invalidatePendingAuthentication();
+   self->stopFingerprint();
++  self->stopSecurityKey();
+ 
+   if (self->m_lock != nullptr) {
+     if (self->m_locked) {
+@@ -1426,6 +1441,7 @@ void LockScreen::handleAuthResult(std::uint64_t generation, PamAuthenticator::Re
+   m_statusIsError = true;
+   updatePromptOnSurfaces();
+   startFingerprint();
++  startSecurityKey();
+ }
+ 
+ void LockScreen::startFingerprint() {
+@@ -1444,6 +1460,23 @@ void LockScreen::stopFingerprint() {
+   }
+ }
+ 
++void LockScreen::startSecurityKey() {
++  if (m_securityKey == nullptr) {
++    return;
++  }
++  if (m_configService != nullptr && !m_configService->config().lockscreen.securityKey) {
++    return;
++  }
++  // Keeps running while a typed password is checked: they don't share a device.
++  m_securityKey->start();
++}
++
++void LockScreen::stopSecurityKey() {
++  if (m_securityKey != nullptr) {
++    m_securityKey->stop();
++  }
++}
++
+ void LockScreen::handleFingerprintStatus(const std::string& message, bool isError) {
+   if (!isActive()) {
+     return;
+diff --git a/src/shell/lockscreen/lock_screen.h b/src/shell/lockscreen/lock_screen.h
+index f0ed03f..b90e93d 100644
+--- a/src/shell/lockscreen/lock_screen.h
++++ b/src/shell/lockscreen/lock_screen.h
+@@ -25,6 +25,7 @@ class ConfigService;
+ 
+ class CompositorPlatform;
+ class FingerprintAuthenticator;
++class SecurityKeyAuthenticator;
+ class HttpClient;
+ class LockSurface;
+ class MprisService;
+@@ -149,6 +150,8 @@ private:
+   void invalidatePendingAuthentication();
+   void startFingerprint();
+   void stopFingerprint();
++  void startSecurityKey();
++  void stopSecurityKey();
+   void handleFingerprintStatus(const std::string& message, bool isError);
+   static void clearSensitiveString(std::string& value);
+   /// Passwordless grace window: any keypress or pointer movement beyond 5px unlocks
+@@ -167,6 +170,7 @@ private:
+   std::unordered_map<wl_output*, ScreencopyImage> m_desktopCaptures;
+   PamAuthenticator m_authenticator;
+   std::unique_ptr<FingerprintAuthenticator> m_fingerprint;
++  std::unique_ptr<SecurityKeyAuthenticator> m_securityKey;
+   std::string m_user;
+   std::string m_password;
+   std::string m_status;
+diff --git a/src/shell/settings/settings_registry.cpp b/src/shell/settings/settings_registry.cpp
+index e0cc251..4a1a728 100644
+--- a/src/shell/settings/settings_registry.cpp
++++ b/src/shell/settings/settings_registry.cpp
+@@ -1797,6 +1797,15 @@ namespace settings {
+       e.visibleWhen = lockscreenOn;
+       entries.push_back(std::move(e));
+     }
++    {
++      auto e = makeEntry(
++          SettingsSection::Security, "lock-screen", tr("settings.schema.lockscreen.security-key.label"),
++          tr("settings.schema.lockscreen.security-key.description"), {"lockscreen", "security_key"},
++          ToggleSetting{cfg.lockscreen.securityKey}, "lock screen security key yubikey fido2 u2f"
++      );
++      e.visibleWhen = lockscreenOn;
++      entries.push_back(std::move(e));
++    }
+     {
+       auto e = makeEntry(
+           SettingsSection::Security, "lock-screen", tr("settings.schema.lockscreen.allow-empty-password.label"),

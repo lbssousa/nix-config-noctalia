@@ -54,6 +54,9 @@ let
       # na YubiKey: ícone grande (impressão digital ou chave) com título e
       # descrição traduzidos, no lugar da mensagem crua do pam_fprintd/pam_u2f.
       # Aplicado sobre o anterior; patch local, sem PR upstream.
+      # Toque na YubiKey desbloqueia a tela sem Enter, em paralelo com a digital
+      # e a senha: o helper PAM da Noctalia roda o serviço "noctalia-lock-u2f"
+      # em segundo plano ([lockscreen] security_key). Patch local, sem PR upstream.
       #
       # O compositor Umbriel rejeita pedidos de subscribe do IPC com erro se houver
       # eventos desconhecidos, desconectando imediatamente o cliente. A Noctalia
@@ -74,6 +77,7 @@ let
               ../packages/patches/noctalia-lock-pam-service.patch
               ../packages/patches/noctalia-secret-prompts.patch
               ../packages/patches/noctalia-polkit-auth-cues.patch
+              ../packages/patches/noctalia-lock-security-key.patch
               ../packages/patches/noctalia-umbriel-subscribe-without-outputs.patch
             ];
           });
