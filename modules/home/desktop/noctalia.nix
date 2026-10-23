@@ -169,55 +169,57 @@
             # Ícones, texto e espessura da barra ("Escala do Conteúdo").
             scale = lib.mkDefault 1.15;
             background_opacity = lib.mkDefault 0.75;
-            # Flutuante: 4 px da borda de cima e 120 px de cada lateral da tela.
+            # Flutuante: 4 px da borda de cima e 80 px de cada lateral da tela.
             margin_edge = lib.mkDefault 4;
-            margin_ends = lib.mkDefault 120;
+            margin_ends = lib.mkDefault 80;
             start = lib.mkDefault [
               "launcher"
               "wallpaper"
               "workspaces"
-              "noctalia/umbriel-companion:bar"
+              "spacer"
               "media"
             ];
-            # À esquerda do relógio: captura de tela (screen-toolkit) e gravação
-            # de tela. À direita, o status do NixOS.
+            # Central de controle à esquerda do relógio; área de transferência
+            # e notificações à direita ("group:inbox").
             # O relógio é ancorado no centro da barra (anchor = true).
             center = lib.mkDefault [
-              "alexander/screen-toolkit:widget"
-              "noctalia/screen_recorder:recorder"
+              "control-center"
               "clock"
-              "mindnbytes/nix-status:status"
+              "group:inbox"
             ];
             end = lib.mkDefault [
               "tray"
-              "group:ai"
+              "felipeartur/ai-usagebar:bar"
               "andrewdems/printers:printer"
-              "bluetooth"
-              "network"
-              "volume"
-              "battery"
-              "control-center"
-              "group:utils"
+              "mindnbytes/nix-status:status"
+              "group:system"
+              "group:toggles"
               "session"
             ];
-            # Plugins de IA numa cápsula só ("group:ai" na lista acima); área de
-            # transferência, cafeína e notificações noutra, à esquerda do menu
-            # de energia ("group:utils").
+            # Cápsulas citadas nas listas acima ("group:<id>").
             capsule_group = lib.mkDefault [
               {
-                id = "ai";
+                id = "system";
                 members = [
-                  "ayagmar/headroom:usage"
-                  "weinguyen/opencode-companion:widget"
-                  "hy4ri/herdr:bar"
+                  "bluetooth"
+                  "network"
+                  "volume"
+                  "battery"
                 ];
               }
               {
-                id = "utils";
+                id = "inbox";
                 members = [
                   "clipboard"
-                  "caffeine"
                   "notifications"
+                ];
+              }
+              {
+                id = "toggles";
+                members = [
+                  "noctalia/umbriel-companion:bar"
+                  "caffeine"
+                  "nightlight"
                 ];
               }
             ];
@@ -312,8 +314,15 @@
               "ayagmar/headroom"
               "weinguyen/opencode-companion"
               "hy4ri/herdr"
+              "notfinaldev/agentik"
+              "miguelfm/ai-triage"
+              # Uso dos planos de IA na barra
+              "felipeartur/ai-usagebar"
             ];
           };
+
+          # Logos coloridos pela paleta da shell no status do NixOS.
+          plugin_settings."mindnbytes/nix-status".use_themed_logos = lib.mkDefault true;
         };
       };
     };

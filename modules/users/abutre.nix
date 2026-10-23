@@ -28,6 +28,9 @@
         };
 
         programs = {
+          # Status do NixOS na barra (plugin nix-status) a partir deste flake.
+          noctalia.settings.plugin_settings."mindnbytes/nix-status".flake_dir =
+            "${config.xdg.userDirs.extraConfig.PROJECTS}/lbssousa/nix-config-noctalia";
           # KeePassXC com a sessão (desligado para os demais usuários, por ora).
           keepassxc.autostart = true;
           git = {
