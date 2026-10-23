@@ -124,7 +124,7 @@
           };
 
           shell = {
-            font = lib.mkDefault "Adwaita Sans";
+            font_family = lib.mkDefault "Adwaita Sans";
             clipboard_enabled = lib.mkDefault true;
             polkit_agent = lib.mkDefault true;
             # Pinentry do GnuPG e SSH_ASKPASS no mesmo painel do polkit
