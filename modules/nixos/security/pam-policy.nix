@@ -20,12 +20,39 @@
 #   - senha: "noctalia-lock" (sem o patch seria o "login"). Com o campo vazio,
 #     plugar uma chave cadastrada (novo /dev/hidraw*) volta à FIDO2.
 # A sequência recomeça pela digital a cada bloqueio e a cada resume.
+#
+# No painel do polkit da Noctalia, o botão "Usar senha" cria o sinalizador
+# /run/user/<uid>/noctalia-polkit-use-password e reinicia a sessão: um
+# pam_exec antes da digital vê o sinalizador (do próprio usuário, com menos de
+# 60 s) e pula a digital e o pam_u2f. Sem ele o pam_exec falha (uma linha no
+# journal por autenticação) e a pilha segue normal; com ele, a senha continua
+# obrigatória (pam_unix e depois pam_deny).
 {
   flake.modules.nixos.pam-policy =
-    { config, lib, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
 
     let
       fido2 = config.security.fido2Auth.enable;
+      polkit = config.security.pam.services."polkit-1";
+
+      # Sai com 0 (pula) só se o sinalizador for um arquivo do usuário, recente.
+      polkitUsePassword = pkgs.writeShellScript "polkit-use-password" ''
+        uid=$(${pkgs.coreutils}/bin/id -u -- "$PAM_USER") || exit 1
+        flag="/run/user/$uid/noctalia-polkit-use-password"
+        [ -f "$flag" ] && [ ! -L "$flag" ] || exit 1
+        read -r owner mtime < <(${pkgs.coreutils}/bin/stat -c '%u %Y' -- "$flag") || exit 1
+        [ "$owner" = "$uid" ] && [ $(($(${pkgs.coreutils}/bin/date +%s) - mtime)) -lt 60 ]
+      '';
+      # Quantos módulos o pam_exec pula: a digital e o pam_u2f, se houver.
+      polkitSkip = lib.count lib.id [
+        polkit.fprintAuth
+        polkit.u2f.enable
+      ];
 
       fprintdSettings = {
         max-tries = 3;
@@ -54,9 +81,21 @@
           order = lib.mkForce 500;
           settings = fprintdSettings;
         };
-        "polkit-1".rules.auth.fprintd = {
-          order = lib.mkForce 10700;
-          settings = fprintdSettings;
+        "polkit-1".rules.auth = {
+          fprintd = {
+            order = lib.mkForce 10700;
+            settings = fprintdSettings;
+          };
+          usePassword = {
+            enable = polkitSkip > 0;
+            control = "[success=${toString polkitSkip} default=ignore]";
+            modulePath = "${pkgs.linux-pam}/lib/security/pam_exec.so";
+            args = [
+              "quiet"
+              "${polkitUsePassword}"
+            ];
+            order = 10600;
+          };
         };
 
         noctalia-lock = {

@@ -13,7 +13,7 @@ index 1bedc3a..825cad0 100644
        "invalid-password": "Invalid password",
        "password-placeholder": "Password",
 +      "security-key": {
-+        "detail": "Touch the YubiKey's contact when it blinks",
++        "detail": "Touch the key's contact when its light blinks",
 +        "title": "Touch your security key"
 +      },
        "title": "Authentication Required"
@@ -34,7 +34,7 @@ index a8e2135..2359897 100644
        "invalid-password": "Senha inválida",
        "password-placeholder": "Senha",
 +      "security-key": {
-+        "detail": "Toque no contato da YubiKey quando ela piscar",
++        "detail": "Toque no contato da chave quando a luz piscar",
 +        "title": "Toque na sua chave de segurança"
 +      },
        "title": "Autenticação necessária"

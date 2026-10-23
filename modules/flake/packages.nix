@@ -52,10 +52,10 @@ let
       # com a Noctalia ([shell] pinentry / ssh_askpass). Patch local, gerado do
       # branch feat/secret-prompts de ~/Projetos/lbssousa/noctalia; sem PR upstream.
       # Destaque no painel do polkit enquanto o PAM espera a digital ou o toque
-      # na YubiKey: ícone grande (impressão digital ou chave) com título e
+      # na chave de segurança: ícone grande (impressão digital ou chave) com título e
       # descrição traduzidos, no lugar da mensagem crua do pam_fprintd/pam_u2f.
       # Aplicado sobre o anterior; patch local, sem PR upstream.
-      # Toque na YubiKey desbloqueia a tela sem Enter, em paralelo com a digital
+      # Toque na chave de segurança desbloqueia a tela sem Enter, em paralelo com a digital
       # e a senha: o helper PAM da Noctalia roda o serviço "noctalia-lock-u2f"
       # em segundo plano ([lockscreen] security_key). Patch local, sem PR upstream.
       # Na tela de bloqueio, um método por vez: digital (até 3 leituras ou 30 s),
@@ -64,6 +64,11 @@ let
       # como o do polkit e a um botão "Usar senha"; plugar a chave com o campo
       # vazio volta à FIDO2, e a sequência recomeça a cada resume. Aplicado sobre
       # o anterior; patch local, sem PR upstream.
+      # No painel do polkit, o mesmo botão "Usar senha" (também Enter/Espaço) ao
+      # lado do destaque da digital ou da chave: cria o sinalizador
+      # /run/user/<uid>/noctalia-polkit-use-password e reinicia a sessão, e a
+      # pilha polkit-1 pula direto para a senha (security/pam-policy.nix).
+      # Aplicado sobre o anterior; patch local, sem PR upstream.
       #
       # O compositor Umbriel rejeita pedidos de subscribe do IPC com erro se houver
       # eventos desconhecidos, desconectando imediatamente o cliente. A Noctalia
@@ -86,6 +91,7 @@ let
               ../packages/patches/noctalia-polkit-auth-cues.patch
               ../packages/patches/noctalia-lock-security-key.patch
               ../packages/patches/noctalia-lock-auth-sequence.patch
+              ../packages/patches/noctalia-polkit-use-password.patch
               ../packages/patches/noctalia-umbriel-subscribe-without-outputs.patch
             ];
           });
