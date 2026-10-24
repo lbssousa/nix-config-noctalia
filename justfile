@@ -8,7 +8,11 @@ justfile_file := justfile_directory() + "/justfile"
 # Usage: just auto_commit=false update   or   AUTO_COMMIT=false just update
 auto_commit := env_var_or_default("AUTO_COMMIT", "true")
 
-u2f_authfile := "/persist/etc/u2f-mappings"
+# pam_u2f's default per-user authfile, relative to each user's home. The
+# Noctalia Security page (Configurações › Segurança) writes the same file.
+u2f_keys := ".config/Yubico/u2f_keys"
+# Central authfile used before the switch to per-user files; only read by yubikey-migrate.
+u2f_legacy_authfile := "/persist/etc/u2f-mappings"
 
 # The flake (including the git+ssh nix-secrets input) is evaluated by the
 # calling user, who reaches github.com through the Bitwarden SSH agent
@@ -171,88 +175,130 @@ validate:
 store-age-keys *args:
   bash "{{flake_root}}/scripts/store-age-keys.sh" {{args}}
 
-# Registers a YubiKey in the system authfile for the given user (default: current user).
-# First key: creates the line in the authfile. Additional key: appends to the existing line.
+# Registers a YubiKey in the user's authfile (~/.config/Yubico/u2f_keys; default: current user).
+# First key: creates the line. Additional key: appends to the existing line.
+# Another user's file is written as that user (run0 --user).
 # Reference: security/yubikey/setup.sh (dotfiles)
 [group("yubikey")]
 yubikey-register user='':
   #!/usr/bin/env bash
   set -euo pipefail
-  authfile="{{u2f_authfile}}"
   target="{{user}}"
   target="${target:-$(id -un)}"
+  home=$(getent passwd "${target}" | cut -d: -f6)
+  authfile="${home}/{{u2f_keys}}"
+  as_target=()
+  [ "${target}" = "$(id -un)" ] || as_target=(run0 --user="${target}")
 
   echo "Registering YubiKey for '${target}'..."
   echo "Insert the YubiKey and touch it when prompted."
   echo ""
 
-  if [ -f "${authfile}" ] && grep -q "^${target}:" "${authfile}"; then
+  "${as_target[@]}" mkdir -p -m 700 "$(dirname "${authfile}")"
+  if "${as_target[@]}" grep -q "^${target}:" "${authfile}" 2>/dev/null; then
+    # -n prints ":<credential>" (no user name); normalize to a single leading ':'.
     new_cred=$(pamu2fcfg -n -u "${target}")
-    run0 sed -i "/^${target}:/ s|$|:${new_cred}|" "${authfile}"
+    new_cred="${new_cred#:}"
+    "${as_target[@]}" sed -i "/^${target}:/ s|$|:${new_cred}|" "${authfile}"
     echo "Additional key registered for '${target}'."
   else
     new_line=$(pamu2fcfg -u "${target}")
-    printf '%s\n' "${new_line}" | run0 tee -a "${authfile}" > /dev/null
+    printf '%s\n' "${new_line}" | "${as_target[@]}" sh -c 'umask 077; cat >> "$1"' sh "${authfile}"
     echo "First key registered for '${target}'."
   fi
 
   echo ""
-  n=$(grep "^${target}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep ',' | wc -l)
+  n=$("${as_target[@]}" grep "^${target}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep -c ',' || true)
   echo "Total keys for '${target}': ${n}"
 
-# Removes all keys for a user from the authfile (asks for confirmation).
+# Removes all keys of a user from their authfile (asks for confirmation).
 # Reference: security/yubikey/uninstall.sh (dotfiles)
 [group("yubikey")]
-yubikey-remove user:
+yubikey-remove user='':
   #!/usr/bin/env bash
   set -euo pipefail
-  authfile="{{u2f_authfile}}"
   target="{{user}}"
+  target="${target:-$(id -un)}"
+  home=$(getent passwd "${target}" | cut -d: -f6)
+  authfile="${home}/{{u2f_keys}}"
+  as_target=()
+  [ "${target}" = "$(id -un)" ] || as_target=(run0 --user="${target}")
 
-  if [ ! -f "${authfile}" ] || ! grep -q "^${target}:" "${authfile}"; then
+  if ! "${as_target[@]}" grep -q "^${target}:" "${authfile}" 2>/dev/null; then
     echo "No key registered for '${target}'."
     exit 0
   fi
 
-  n=$(grep "^${target}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep ',' | wc -l)
+  n=$("${as_target[@]}" grep "^${target}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep -c ',' || true)
   read -rp "Remove ${n} key(s) from '${target}'? [y/N] " answer
   case "${answer}" in
     [yY]*)
-      run0 sed -i "/^${target}:/d" "${authfile}"
-      echo "Entries for '${target}' removed from the authfile."
+      "${as_target[@]}" sed -i "/^${target}:/d" "${authfile}"
+      echo "Entries for '${target}' removed from ${authfile}."
       ;;
     *)
       echo "Operation cancelled."
       ;;
   esac
 
-# Lists registered U2F keys. No argument: all users with a count.
+# Lists the U2F keys registered for a user (default: current user).
 [group("yubikey")]
 yubikey-list user='':
   #!/usr/bin/env bash
   set -euo pipefail
-  authfile="{{u2f_authfile}}"
-  filter="{{user}}"
+  target="{{user}}"
+  target="${target:-$(id -un)}"
+  home=$(getent passwd "${target}" | cut -d: -f6)
+  authfile="${home}/{{u2f_keys}}"
+  as_target=()
+  [ "${target}" = "$(id -un)" ] || as_target=(run0 --user="${target}")
 
-  if [ ! -f "${authfile}" ]; then
-    echo "Authfile not found: ${authfile}"
-    exit 1
-  fi
-
-  if [ -n "${filter}" ]; then
-    if grep -q "^${filter}:" "${authfile}"; then
-      n=$(grep "^${filter}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep ',' | wc -l)
-      echo "${filter}: ${n} key(s) registered"
-    else
-      echo "No key registered for '${filter}'."
-    fi
+  if "${as_target[@]}" grep -q "^${target}:" "${authfile}" 2>/dev/null; then
+    n=$("${as_target[@]}" grep "^${target}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep -c ',' || true)
+    echo "${target}: ${n} key(s) registered in ${authfile}"
   else
-    while IFS= read -r line; do
-      u="${line%%:*}"
-      n=$(printf '%s' "${line#*:}" | tr ':' '\n' | grep ',' | wc -l)
-      printf "%-20s %s key(s)\n" "${u}" "${n}"
-    done < "${authfile}"
+    echo "No key registered for '${target}'."
   fi
+
+# One-time move from the central authfile ({{u2f_legacy_authfile}}) to each
+# user's ~/.config/Yubico/u2f_keys. Run it BEFORE switching to the
+# configuration without the central authfile, or sudo loses the YubiKey.
+[group("yubikey")]
+yubikey-migrate:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  legacy="{{u2f_legacy_authfile}}"
+  if [ ! -f "${legacy}" ]; then
+    echo "Nothing to migrate: ${legacy} does not exist."
+    exit 0
+  fi
+  while IFS= read -r line; do
+    [ -n "${line}" ] || continue
+    user="${line%%:*}"
+    creds="${line#*:}"
+    if ! home=$(getent passwd "${user}" | cut -d: -f6) || [ -z "${home}" ]; then
+      echo "Skipping '${user}': no such user."
+      continue
+    fi
+    authfile="${home}/{{u2f_keys}}"
+    # Runs as the user, so the file gets the right owner and mode.
+    run0 --user="${user}" sh -c '
+      set -eu
+      umask 077
+      mkdir -p "$(dirname "$1")"
+      if grep -q "^$2:" "$1" 2>/dev/null; then
+        echo "  $2: $1 already has an entry; left untouched."
+      else
+        printf "%s:%s\n" "$2" "$3" >> "$1"
+        echo "  $2: migrated to $1"
+      fi
+    ' sh "${authfile}" "${user}" "${creds}"
+  done < "${legacy}"
+  read -rp "Delete ${legacy}? [y/N] " answer
+  case "${answer}" in
+    [yY]*) run0 rm -f "${legacy}" && echo "Removed ${legacy}." ;;
+    *) echo "Kept ${legacy} (no longer read by pam_u2f)." ;;
+  esac
 
 # Checks hardware, authfile and PAM stack for U2F authentication diagnostics.
 # Reference: security/yubikey/troubleshoot.sh (dotfiles)
@@ -260,8 +306,8 @@ yubikey-list user='':
 yubikey-check:
   #!/usr/bin/env bash
   set -euo pipefail
-  authfile="{{u2f_authfile}}"
   current_user=$(id -un)
+  authfile="${HOME}/{{u2f_keys}}"
 
   echo "=== U2F/FIDO2 diagnostics ==="
   echo ""
@@ -279,20 +325,16 @@ yubikey-check:
   if [ -f "${authfile}" ]; then
     echo "  OK  File exists"
     if grep -q "^${current_user}:" "${authfile}"; then
-      n=$(grep "^${current_user}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep ',' | wc -l)
+      n=$(grep "^${current_user}:" "${authfile}" | tr ':' '\n' | tail -n +2 | grep -c ',' || true)
       echo "  OK  ${n} key(s) for '${current_user}'"
     else
       echo "  --  No entry for '${current_user}' — run: just yubikey-register"
     fi
-    echo ""
-    echo "  Registered users:"
-    while IFS= read -r line; do
-      u="${line%%:*}"
-      n=$(printf '%s' "${line#*:}" | tr ':' '\n' | grep ',' | wc -l)
-      printf "       %-20s %s key(s)\n" "${u}" "${n}"
-    done < "${authfile}"
   else
     echo "  --  Authfile not found — run: just yubikey-register"
+  fi
+  if [ -f "{{u2f_legacy_authfile}}" ]; then
+    echo "  --  {{u2f_legacy_authfile}} still exists and is no longer read — run: just yubikey-migrate"
   fi
 
   echo ""

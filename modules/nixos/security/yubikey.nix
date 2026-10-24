@@ -85,7 +85,11 @@
               # touch. This lets GNOME's polkit agent (built into gnome-shell)
               # show the graphical auth dialog — the user inserts the YubiKey and
               # touches the key without needing to interact with a terminal.
-              authfile = "/persist/etc/u2f-mappings";
+              #
+              # authfile deliberately omitted: pam_u2f reads each user's
+              # ~/.config/Yubico/u2f_keys (opened as that user), the file the
+              # Noctalia Security page and `just yubikey-register` write to.
+              # /home is a persistent subvolume, so it survives the root wipe.
             };
           };
 
@@ -96,16 +100,17 @@
           system.activationScripts.checkPamU2FMapping = {
             deps = [ "users" ];
             text = ''
-              authfile="/persist/etc/u2f-mappings"
-
-              if [ ! -f "$authfile" ]; then
-                echo "WARNING: $authfile does not exist. sudo with YubiKey (pam_u2f) will fail." >&2
-              else
-                for user in ${lib.concatStringsSep " " (map lib.escapeShellArg wheelUsers)}; do
-                  if ! grep -q "^${"$"}user:" "$authfile"; then
-                    echo "WARNING: $authfile has no entry for '${"$"}user' (wheel group)." >&2
-                  fi
-                done
+              for user in ${lib.concatStringsSep " " (map lib.escapeShellArg wheelUsers)}; do
+                home=$(${pkgs.getent}/bin/getent passwd "$user" | cut -d: -f6)
+                authfile="$home/.config/Yubico/u2f_keys"
+                if [ ! -f "$authfile" ]; then
+                  echo "WARNING: $authfile does not exist. sudo with YubiKey (pam_u2f) will fail for '${"$"}user'." >&2
+                elif ! grep -q "^${"$"}user:" "$authfile"; then
+                  echo "WARNING: $authfile has no entry for '${"$"}user' (wheel group)." >&2
+                fi
+              done
+              if [ -f /persist/etc/u2f-mappings ]; then
+                echo "WARNING: /persist/etc/u2f-mappings is no longer read by pam_u2f. Run: just yubikey-migrate" >&2
               fi
             '';
           };
