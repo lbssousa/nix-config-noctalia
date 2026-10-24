@@ -57,5 +57,16 @@
       # Sem ssh-agent do sistema: o agente SSH é o do próprio Bitwarden
       # (home/security/bitwarden.nix).
       programs.ssh.startAgent = false;
+
+      # Bitwarden's Linux biometrics expects the polkit policy in /usr/share/polkit-1/actions/
+      environment.etc."polkit-1/actions/com.bitwarden.Bitwarden.policy".source =
+        "${pkgs.bitwarden-desktop}/share/polkit-1/actions/com.bitwarden.Bitwarden.policy";
+      system.activationScripts.bitwardenPolkitUsr = {
+        text = ''
+          mkdir -p /usr/share/polkit-1/actions
+          ln -sf ${pkgs.bitwarden-desktop}/share/polkit-1/actions/com.bitwarden.Bitwarden.policy /usr/share/polkit-1/actions/com.bitwarden.Bitwarden.policy
+        '';
+        deps = [ ];
+      };
     };
 }
