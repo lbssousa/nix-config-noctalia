@@ -25,6 +25,9 @@
           pdfViewer = "org.pwmt.zathura.desktop";
           # Strata como gerenciador de arquivos (Nautilus para os demais).
           fileManager = "strata";
+          # Bitwarden: agente SSH, autostart na bandeja e preferências do app
+          # (desligado para os demais usuários, por ora).
+          bitwarden.enable = true;
 
           # Provedores do ai-usagebar (plugin AI Usage da Noctalia): Claude Code
           # (OAuth de ~/.claude/.credentials.json) e Antigravity (`agy`). Os
@@ -48,8 +51,6 @@
           # Status do NixOS na barra (plugin nix-status) a partir deste flake.
           noctalia.settings.plugin_settings."mindnbytes/nix-status".flake_dir =
             "${config.xdg.userDirs.extraConfig.PROJECTS}/lbssousa/nix-config-noctalia";
-          # KeePassXC com a sessão (desligado para os demais usuários, por ora).
-          keepassxc.autostart = true;
           git = {
             signing = {
               key = "BAC0B1B569777A733E37447FB10712C404063D38";

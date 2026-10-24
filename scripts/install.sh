@@ -2,8 +2,8 @@
 # install.sh — Automated NixOS installation script
 #
 # Automates the steps described in INSTALLATION.md:
-#   0a. (--age-keys-from-vault) Fetches the age keys from the vault (KeePass
-#       database or Bitwarden, scripts/lib/vault.sh), as the calling user
+#   0a. (--age-keys-from-vault) Fetches the age keys from the vault
+#       (Bitwarden, scripts/lib/vault.sh), as the calling user
 #   0b. Clones and unlocks the nix-keys repository via git-crypt
 #   1.  Asks every question (gum form) and shows a summary to confirm
 #   2.  Writes the chosen disk to the host file
@@ -48,8 +48,7 @@
 #   --age-keys-from-vault
 #                       Reads the age keys (system and per user) declared in
 #                       the "install" profile of secretspec.toml from the
-#                       vault: a KeePass database or Bitwarden (asks which,
-#                       unless VAULT_PROVIDER is set). Replaces
+#                       vault (Bitwarden). Replaces
 #                       nix-keys/git-crypt. Run WITHOUT sudo —
 #                       install-from-vault.sh unlocks the vault first.
 #   --age-keys-from-bitwarden
@@ -131,10 +130,10 @@ fi
 gum() { command "${INSTALL_GUM:-gum}" "$@"; }
 
 # ---------------------------------------------------------------------------
-# 0a. Vault (KeePass or Bitwarden) — runs as the calling user, before sudo
+# 0a. Vault (Bitwarden) — runs as the calling user, before sudo
 # ---------------------------------------------------------------------------
-# The vault session (keepassxc-cli with the YubiKey reachable by this user, or
-# BW_SESSION + the bw data in this user's $HOME) belongs to the live user, so
+# The vault session (BW_SESSION + the bw data in this user's $HOME) belongs to
+# the live user, so
 # the secrets are fetched here, before the re-execution as root. They go to a
 # 0700 directory in RAM ($XDG_RUNTIME_DIR), handed to the root process via
 # INSTALL_VAULT_KEYS_DIR and removed when the script exits:
@@ -178,8 +177,6 @@ _vault_fetch_secrets() {
       warn "No personal age key for '$login' in $(vault_describe) ($name). Skipping."
     fi
   done
-  # Only the keys go to the root process.
-  unset VAULT_KDBX_PASSWORD
 }
 
 _vault_mode=false
@@ -343,7 +340,7 @@ Options:
   --age-keys-from-vault
                       Reads the age keys (system and per user) of the
                       "install" profile of secretspec.toml from the vault
-                      (KeePass database or Bitwarden; asks which) instead of
+                      (Bitwarden) instead of
                       nix-keys. Run WITHOUT sudo
                       (scripts/install-from-vault.sh unlocks the vault first).
   --age-keys-from-bitwarden
@@ -377,7 +374,7 @@ nothing touches the disk before that. In the prompts, Esc starts the
 questions over and Ctrl+C cancels.
 
 This script automates the steps described in INSTALLATION.md:
-  0a. (--age-keys-from-vault) Reads the keys from the vault (KeePass or Bitwarden)
+  0a. (--age-keys-from-vault) Reads the keys from the vault (Bitwarden)
   0b. Clones and unlocks the nix-keys repository via git-crypt
   1.  Asks every question (gum form) and shows a summary to confirm
   2.  Writes the chosen disk to the host file
@@ -1381,7 +1378,7 @@ echo -e "      (see ${BOLD}INSTALLATION.md${RESET} → 'Secure Boot')"
 echo -e "    • Then enable automatic LUKS unlock via TPM2: ${CYAN}sudo scripts/enroll-tpm2.sh${RESET}"
 if [[ "$OPT_AGE_KEYS_FROM_VAULT" == "true" ]]; then
   echo -e "    • Personal age keys already installed from the vault (step 7b)."
-  echo -e "    • install-from-vault.sh locks the vault on exit (Bitwarden: otherwise ${CYAN}bw lock${RESET})."
+  echo -e "    • install-from-vault.sh locks the vault on exit (otherwise ${CYAN}bw lock${RESET})."
 else
   echo -e "    • Clone and unlock nix-keys for each user that uses sops in Home Manager:"
   echo -e "        ${CYAN}# Example for the abutre user:${RESET}"

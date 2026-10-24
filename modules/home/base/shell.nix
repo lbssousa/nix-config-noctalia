@@ -22,7 +22,7 @@
         dk = "podman";
         dkc = "podman-compose";
         # O nixos-rebuild avalia o flake como o próprio usuário (que alcança o
-        # nix-secrets pelo ssh-agent com as chaves do KeePassXC) e só a ativação usa sudo.
+        # nix-secrets pelo agente SSH do Bitwarden) e só a ativação usa sudo.
         nrs = "nixos-rebuild switch --sudo --flake /etc/nixos";
         nrb = "nixos-rebuild boot --sudo --flake /etc/nixos";
         nru = "nix flake update --flake /etc/nixos && nixos-rebuild switch --sudo --flake /etc/nixos";

@@ -3,12 +3,10 @@
 # stored in a vault (recommended path in INSTALLATION.md)
 #
 # Wraps every manual step around install.sh:
-#   1. Provides git, openssh and gum, asks for the vault provider (kdbx or
-#      bitwarden, unless --provider) and adds that provider's tools
-#      (keepassxc-cli, or bw + secretspec), re-running itself inside
-#      `nix shell` with the nixpkgs pinned in flake.lock when any is missing
-#   2. Unlocks the vault: KeePass database (path, master password, YubiKey
-#      challenge-response) or Bitwarden (master password + YubiKey OTP)
+#   1. Provides git, openssh, gum and the vault tools (bw + secretspec),
+#      re-running itself inside `nix shell` with the nixpkgs pinned in
+#      flake.lock when any is missing
+#   2. Unlocks the vault: Bitwarden (master password + YubiKey OTP)
 #   3. Checks that every required key of the secretspec "install" profile is
 #      there
 #   4. Imports the YubiKey resident SSH keys for nix-secrets
@@ -17,17 +15,10 @@
 #   6. Locks the vault on exit, whatever the outcome
 #
 # Usage:
-#   bash scripts/install-from-vault.sh [--provider kdbx|bitwarden]
-#                                      [--kdbx <file>] [--yubikey <slot[:serial]>]
-#                                      [--email <e-mail>] [--no-yubikey-ssh]
+#   bash scripts/install-from-vault.sh [--email <e-mail>] [--no-yubikey-ssh]
 #                                      [install.sh options...]
 #
 # Options:
-#   --provider        Vault provider (default: $VAULT_PROVIDER, else asks)
-#   --kdbx            KeePass database (default: asks; suggests
-#                     ~/Dropbox/KeePass/LaercioSousa.kdbx when it exists)
-#   --yubikey         YubiKey challenge-response "slot[:serial]" of the
-#                     database (default: asks, suggesting 1); "" for none
 #   --email           Bitwarden account (default: $BW_EMAIL, else asks)
 #   --no-yubikey-ssh  Don't import the YubiKey SSH keys (another key in the
 #                     ssh-agent reaches nix-secrets)
@@ -55,8 +46,6 @@ INSTALL_ARGS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --provider)       export VAULT_PROVIDER="$2"; shift 2 ;;
-    --kdbx)           export VAULT_KDBX_PATH="$2"; shift 2 ;;
-    --yubikey)        export VAULT_KDBX_YUBIKEY="$2"; shift 2 ;;
     --email)          export BW_EMAIL="$2"; shift 2 ;;
     --no-yubikey-ssh) OPT_YUBIKEY_SSH=false; shift ;;
     --help | -h)      sed -n '2,/^$/s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"; exit 0 ;;
@@ -86,7 +75,7 @@ _ensure_tools() {
   done
 }
 
-# 1. Tools, provider dialog, provider tools
+# 1. Tools, vault provider, vault tools
 BASE_PKGS=(nixpkgs#git nixpkgs#openssh nixpkgs#gum)
 _ensure_tools git ssh gum -- "${BASE_PKGS[@]}"
 vault_choose_provider || die "No vault provider chosen."

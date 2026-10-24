@@ -9,11 +9,12 @@ no lugar de Flatpaks. Sucessor do [nix-config](https://github.com/lbssousa/nix-c
   btrfs sobre LVM sobre LUKS, swap com hibernação.
 - Secure Boot (Limine + sbctl) e desbloqueio do LUKS por TPM2 nos dois hosts.
 - Segredos no repositório privado `nix-secrets` (sops-nix); chaves age no `nix-keys`.
-- **KeePassXC** é o gerenciador de senhas padrão e alimenta o `ssh-agent` do
-  sistema: as chaves SSH marcadas nos bancos (ex.: a do GitHub/`nix-secrets`)
-  entram no agente ao destravar e saem ao travar; remover a YubiKey trava os
-  bancos. Desbloqueio rápido pelo polkit (digital), com o backport do PR
-  #8983.
+- **Bitwarden** (app desktop e `bw`) é o gerenciador de senhas padrão. Para
+  quem tem `my.bitwarden.enable` (por ora, o `abutre`), o agente SSH do app
+  fica no `SSH_AUTH_SOCK` da sessão (ex.: a chave do GitHub/`nix-secrets`), o
+  app sobe na bandeja com a sessão e as preferências dele são declaradas no
+  Nix; desbloqueio pelo polkit (digital). Os demais usuários ficam com o
+  `ssh-agent` do sistema.
 
 Instalação: [INSTALLATION.md](INSTALLATION.md).
 
@@ -96,8 +97,8 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
   do GDM, toda conta nova nasce sem senha e expirada: ao escolher o usuário,
   o greeter pede direto a nova senha e a confirmação (`nullresetok` no PAM:
   senha vazia só entra enquanto expirada).
-- **Firefox** é o navegador padrão: extensões do KeePassXC (native
-  messaging declarativo), Multi-Account Containers e os "Container" de
+- **Firefox** é o navegador padrão: extensões do Bitwarden (native
+  messaging declarativo com o app), Multi-Account Containers e os "Container" de
   Facebook, Google, Microsoft, Twitter, Discord, Amazon e TikTok (os domínios
   de cada empresa abrem no container dela; o GitHub fica no da Microsoft; as
   demais extensões vêm da sincronização com a conta Mozilla) e web apps como
@@ -125,7 +126,7 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 | `Super+Shift+N` | neovim | `Super+K` | cheatsheet de atalhos |
 | `Super+Alt+Return` | tmux | `Super+Ctrl+V` | histórico do clipboard |
 | `Super+Ctrl+Return` | herdr | `Super+Ctrl+E` | emojis |
-| `Super+Ctrl+/` | KeePassXC | `Super+Ctrl+Space` | papéis de parede |
+| `Super+Shift+/` | Bitwarden | `Super+Ctrl+Space` | papéis de parede |
 | `Super+W` | fechar janela | `Super+Shift+Ctrl+Space` | temas |
 | `Super+T` / `Super+F` | flutuante / tela cheia | `Print` / `Shift+Print` | captura de região / tela |
 | `Super+L` | alternar layout (dwindle/scrolling) | `Alt+Print` | gravação de tela |

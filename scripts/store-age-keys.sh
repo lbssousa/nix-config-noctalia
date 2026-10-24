@@ -1,28 +1,18 @@
 #!/usr/bin/env bash
 # store-age-keys.sh — Copies the sops-nix age keys from an unlocked nix-keys
-# clone to the installation vault (secretspec profile "install"): a KeePass
-# database (kdbx, through keepassxc-cli) or Bitwarden (through SecretSpec).
+# clone to the installation vault (secretspec profile "install"): Bitwarden,
+# through SecretSpec.
 #
 # For each AGE_KEY_* declared in the "install" profile of secretspec.toml:
 #   AGE_KEY_SYSTEM  ← <nix-keys>/sops/age/keys.txt
 #   AGE_KEY_<LOGIN> ← <nix-keys>/sops/age/<login>/keys.txt  (skipped if absent)
 # then reads each key back and prints its public key, to be compared with the
-# recipients in nix-secrets/.sops.yaml. Layout in each vault: scripts/lib/vault.sh.
-#
-# With KeePassXC open on the same database, lock it first (or let it reload
-# the file when it notices the change): both would otherwise save their copy.
+# recipients in nix-secrets/.sops.yaml. Layout in the vault: scripts/lib/vault.sh.
 #
 # Usage:
-#   bash scripts/store-age-keys.sh [--provider kdbx|bitwarden] [--kdbx <file>]
-#                                  [--yubikey <slot[:serial]>]
-#                                  [--nix-keys-dir <dir>] [--email <e-mail>]
+#   bash scripts/store-age-keys.sh [--nix-keys-dir <dir>] [--email <e-mail>]
 #
 # Options:
-#   --provider      Vault provider (default: $VAULT_PROVIDER, else asks)
-#   --kdbx          KeePass database (default: asks; suggests
-#                   ~/Dropbox/KeePass/LaercioSousa.kdbx when it exists)
-#   --yubikey       YubiKey challenge-response "slot[:serial]" of the database
-#                   (default: asks, suggesting 1); "" for none
 #   --nix-keys-dir  Unlocked nix-keys clone (default: ../nix-keys, sibling of
 #                   this repository)
 #   --email         Bitwarden account, if a login is needed (default: $BW_EMAIL)
@@ -44,8 +34,6 @@ OPT_NIX_KEYS_DIR="$(dirname "$CONFIG_DIR")/nix-keys"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --provider)     export VAULT_PROVIDER="$2"; shift 2 ;;
-    --kdbx)         export VAULT_KDBX_PATH="$2"; shift 2 ;;
-    --yubikey)      export VAULT_KDBX_YUBIKEY="$2"; shift 2 ;;
     --nix-keys-dir) OPT_NIX_KEYS_DIR="$2"; shift 2 ;;
     --email)        export BW_EMAIL="$2"; shift 2 ;;
     --help | -h)    sed -n '2,/^$/s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"; exit 0 ;;

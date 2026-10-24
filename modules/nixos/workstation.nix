@@ -24,7 +24,7 @@ in
       m.yubikey
       m.yubikey-notify
       m.pam-policy
-      m.keepassxc
+      m.bitwarden
       m.selinux
       m.sshd
       m.secret-prompts

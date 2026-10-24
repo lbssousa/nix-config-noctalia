@@ -8,7 +8,7 @@
 # xdg-desktop-portal-gnome, e o Strata tem o próprio backend
 # (org.freedesktop.impl.portal.desktop.strata). Os apps só usam o portal
 # quando pedido: GTK_USE_PORTAL no GTK3, GDK_DEBUG=portals no GTK4 e o tema
-# xdgdesktopportal no Qt (KeePassXC, OBS...); sem ele, o Qt abre o próprio
+# xdgdesktopportal no Qt (OBS...); sem ele, o Qt abre o próprio
 # diálogo. O Firefox (nixos/desktop/firefox.nix), o Chromium e o Electron já o
 # usam.
 #

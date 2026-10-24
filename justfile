@@ -166,7 +166,7 @@ validate:
 
 # Run inside `nix develop`.
 # Copies the age keys from an unlocked nix-keys clone to the installation vault
-# (secretspec "install"): asks for the provider (kdbx or bitwarden).
+# (secretspec "install"): Bitwarden.
 [group("secrets")]
 store-age-keys *args:
   bash "{{flake_root}}/scripts/store-age-keys.sh" {{args}}

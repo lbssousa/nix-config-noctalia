@@ -5,11 +5,11 @@
 #    desligadas, e browser.taskbarTabs.enabled não é aceita na chave
 #    Preferences das políticas; vai pelo autoconfig, só como padrão;
 #  - abas de container ligadas (privacy.userContext.enabled);
-#  - extensões do KeePassXC, Multi-Account Containers e os "<empresa>
+#  - extensões do Bitwarden, Multi-Account Containers e os "<empresa>
 #    Container" (Facebook, Google, Microsoft, Twitter, Discord, Amazon e
 #    TikTok) instaladas por padrão (o usuário pode desativá-las, não
 #    removê-las); as demais vêm da sincronização com a conta Mozilla de cada
-#    usuário. O native messaging do KeePassXC vem do módulo HM do KeePassXC.
+#    usuário. O native messaging do Bitwarden vem de nixos/security/bitwarden.nix.
 #    Os containers não são declarados: cada "<empresa> Container" cria o seu,
 #    com o nome da empresa, e abre nele os domínios dela. O da Microsoft
 #    inclui o GitHub, a menos que se marque "Ignore GitHub" nas opções dele;
@@ -25,7 +25,7 @@
     let
       # id da extensão → slug em addons.mozilla.org.
       extensions = {
-        "keepassxc-browser@keepassxc.org" = "keepassxc-browser";
+        "{446900e4-71c2-419f-a6a7-df9c091e268b}" = "bitwarden-password-manager";
         "@testpilot-containers" = "multi-account-containers";
         "@contain-facebook" = "facebook-container";
         "@contain-google" = "google-container";
