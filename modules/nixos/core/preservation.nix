@@ -1,10 +1,30 @@
 # Root efêmero: "/" é tmpfs (ver modules/hosts/_disko-btrfs.nix) e o estado
 # que precisa sobreviver ao boot fica em /persist, montado pelo preservation.
 # /home é um subvolume btrfs próprio e não precisa de regras por usuário.
+#
+# O módulo do preservation ainda lê boot.initrd.systemd.enable numa assertion
+# ("cannot be used with scripted initrd"), mas o nixpkgs removeu a opção (o
+# initrd é sempre o do systemd) e lê-la virou erro. Importa o mesmo módulo
+# sem a assertion; remover quando o upstream corrigir.
 { inputs, ... }:
+let
+  preservationModule =
+    args:
+    let
+      module = import inputs.preservation.nixosModules.default args;
+    in
+    assert module.config._type or null == "if";
+    module
+    // {
+      _file = toString inputs.preservation.nixosModules.default;
+      config = module.config // {
+        content = removeAttrs module.config.content [ "assertions" ];
+      };
+    };
+in
 {
   flake.modules.nixos.preservation = {
-    imports = [ inputs.preservation.nixosModules.default ];
+    imports = [ preservationModule ];
 
     fileSystems = {
       "/persist".neededForBoot = true;

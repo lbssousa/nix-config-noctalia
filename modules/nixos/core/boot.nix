@@ -1,5 +1,6 @@
-# Boot: kernel mais recente, initrd do systemd (exigido pelo preservation e
-# usado pelo desbloqueio TPM2), Plymouth e Limine silencioso.
+# Boot: kernel mais recente, Plymouth e Limine silencioso. O initrd é sempre o
+# do systemd (o nixpkgs removeu o initrd em script), que o preservation exige e
+# o desbloqueio TPM2 usa.
 {
   flake.modules.nixos.boot =
     { lib, pkgs, ... }:
@@ -7,11 +8,6 @@
       boot = {
         kernelPackages = lib.mkDefault pkgs.linuxPackages_latest;
         supportedFilesystems = [ "btrfs" ];
-
-        initrd = {
-          systemd.enable = true;
-          verbose = false;
-        };
 
         loader = {
           efi.canTouchEfiVariables = true;
