@@ -28,23 +28,6 @@
           # Bitwarden: agente SSH, autostart na bandeja e preferências do app
           # (desligado para os demais usuários, por ora).
           bitwarden.enable = true;
-
-          # Provedores do ai-usagebar (plugin AI Usage da Noctalia): Claude Code
-          # (OAuth de ~/.claude/.credentials.json) e Antigravity (`agy`). Os
-          # que vêm ligados por padrão (Codex, Z.AI, OpenRouter) ficam
-          # desligados para não aparecerem com erro. Ajustes locais vão em
-          # ~/.config/ai-usagebar/config.toml.local.
-          mutableConfigs."ai-usagebar/config.toml".base = {
-            ui.overview_vendors = [
-              "anthropic"
-              "antigravity"
-            ];
-            anthropic.enabled = true;
-            antigravity.enabled = true;
-            openai.enabled = false;
-            zai.enabled = false;
-            openrouter.enabled = false;
-          };
         };
 
         programs = {

@@ -13,7 +13,6 @@ let
       fprintd-goodix = call ../packages/_fprintd-goodix/package.nix;
       yubikey-gpg-import = call ../packages/_yubikey-gpg-import/package.nix;
       strata = call ../packages/_strata/package.nix;
-      ai-usagebar = call ../packages/_ai-usagebar/package.nix;
 
       # Senha expirada (pam_acct_mgmt: NEW_AUTHTOK_REQD) no login gráfico.
       # O greetd 0.10.3 só falhava; o patch chama pam_chauthtok na mesma
@@ -167,7 +166,6 @@ in
         "fprintd-goodix"
         "yubikey-gpg-import"
         "strata"
-        "ai-usagebar"
         "greetd"
         "noctalia"
         "noctalia-greeter"

@@ -77,10 +77,6 @@
         };
       };
 
-      # CLI que o plugin felipeartur/ai-usagebar roda (`ai-usagebar usage --json`);
-      # os provedores ficam em ~/.config/ai-usagebar/config.toml.
-      home.packages = [ pkgs.ai-usagebar ];
-
       programs.noctalia = {
         enable = true;
         systemd.enable = true;
@@ -329,8 +325,6 @@
               "hy4ri/herdr"
               "notfinaldev/agentik"
               "miguelfm/ai-triage"
-              # Uso dos planos de IA na barra
-              "felipeartur/ai-usagebar"
             ];
           };
 
