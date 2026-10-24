@@ -1,0 +1,3223 @@
+diff --git a/assets/translations/en.json b/assets/translations/en.json
+index 76988f4f3..14e4a0e78 100644
+--- a/assets/translations/en.json
++++ b/assets/translations/en.json
+@@ -1329,6 +1329,68 @@
+       "merged-user-title": "Merged User Config (Recommended)",
+       "title": "Export Config"
+     },
++    "fingerprint": {
++      "add": "Add Fingerprint",
++      "choose-finger": "Choose the finger to enroll.",
++      "description": "Fingerprints used to unlock and to authorize administrative actions",
++      "enroll-title": "Add Fingerprint",
++      "enrolled": "Enrolled fingerprints",
++      "error": {
++        "generic": "Fingerprint reader error: {message}",
++        "in-use": "The fingerprint reader is in use by another program",
++        "no-device": "The fingerprint reader is no longer available",
++        "no-prints": "No fingerprints are enrolled on this reader",
++        "not-deleted": "The fingerprint could not be deleted",
++        "permission-denied": "Not authorized to use the fingerprint reader"
++      },
++      "finger": {
++        "left-index": "Left index finger",
++        "left-little": "Left little finger",
++        "left-middle": "Left middle finger",
++        "left-ring": "Left ring finger",
++        "left-thumb": "Left thumb",
++        "right-index": "Right index finger",
++        "right-little": "Right little finger",
++        "right-middle": "Right middle finger",
++        "right-ring": "Right ring finger",
++        "right-thumb": "Right thumb"
++      },
++      "label": "Fingerprint Reader",
++      "left-hand": "Left hand",
++      "no-reader": "No fingerprint reader found",
++      "none-enrolled": "No fingerprints enrolled yet",
++      "reader": "Reader:",
++      "right-hand": "Right hand",
++      "scan-type": {
++        "press": "touch sensor",
++        "swipe": "swipe sensor"
++      },
++      "stages": "Scan {done} of {total}",
++      "status": {
++        "data-full": "The reader has no room for more fingerprints",
++        "deleted": "{finger} deleted",
++        "disconnected": "The fingerprint reader was disconnected",
++        "duplicate": "This fingerprint is already enrolled",
++        "enroll-completed": "Fingerprint enrolled",
++        "enroll-failed": "Enrollment failed. Try again",
++        "finger-not-centered": "Center your finger on the reader",
++        "match": "Fingerprint recognized",
++        "match-finger": "Recognized: {finger}",
++        "no-match": "Fingerprint not recognized",
++        "preparing": "Preparing the reader…",
++        "remove-and-retry": "Lift your finger and try again",
++        "retry-scan": "Scan again",
++        "stage-passed": "Lift your finger and touch the reader again",
++        "swipe": "Swipe your finger across the reader",
++        "swipe-too-short": "Swipe was too short. Try again",
++        "touch": "Touch the reader with your finger",
++        "verify-failed": "Could not read the fingerprint",
++        "verify-timeout": "No finger detected. Test stopped"
++      },
++      "stop-test": "Stop Test",
++      "test": "Test Fingerprint",
++      "try-again": "Try Again"
++    },
+     "idle": {
+       "behavior": {
+         "add": "Add Behavior",
+@@ -1382,6 +1444,7 @@
+         "display": "Display",
+         "effects": "Effects",
+         "filtering": "Filtering",
++        "fingerprint": "Fingerprint",
+         "focus-styling": "Focus Styling",
+         "formats": "Formats",
+         "general": "General",
+@@ -1425,6 +1488,7 @@
+         "screenshot-capture": "Capture",
+         "screenshot-output": "Output",
+         "security": "Security",
++        "security-keys": "Security Keys",
+         "session-panel": "Session Panel",
+         "shape": "Shape",
+         "system": "System",
+@@ -3693,6 +3757,84 @@
+         }
+       }
+     },
++    "security-hardware": {
++      "cancel": "Cancel",
++      "confirm-delete": "Delete",
++      "delete": "Delete",
++      "done": "Done",
++      "loading": "Loading…",
++      "refresh": "Refresh"
++    },
++    "security-keys": {
++      "fido": {
++        "authfile": "Stored in {path}",
++        "connected": "Connected keys",
++        "credential": "Key {index} · {handle}",
++        "description": "FIDO2/U2F keys (e.g. YubiKey) accepted by pam_u2f for sudo, polkit and the lock screen",
++        "label": "FIDO2 / U2F Keys",
++        "none-connected": "No security key connected",
++        "none-registered": "No keys registered for this user",
++        "pin-hint": "If the key has a FIDO2 PIN, enter it below. Leave it empty otherwise.",
++        "pin-placeholder": "Key PIN (optional)",
++        "register": "Register Key",
++        "register-intro": "Plug in the security key, then press Register and touch the key when it blinks.",
++        "register-title": "Register Security Key",
++        "registered": "Registered keys",
++        "status": {
++          "no-device": "No security key found. Plug it in and try again",
++          "pin-required": "This key requires its PIN",
++          "register-failed": "Registration failed: {message}",
++          "registered": "Key registered",
++          "removed": "Key removed",
++          "test-no-key": "No registered key is plugged in",
++          "test-ok": "Key accepted",
++          "test-timeout": "The key was not touched in time",
++          "testing": "Waiting for a registered key…",
++          "timeout": "The key was not touched in time",
++          "touch": "Touch the security key when it blinks",
++          "write-failed": "Could not write {path}"
++        },
++        "stop-test": "Stop Test",
++        "test": "Test Key"
++      },
++      "gpg": {
++        "card": "Card:",
++        "description": "OpenPGP key stored on a smartcard or security key",
++        "fingerprint": "Signing key:",
++        "holder": "Holder:",
++        "import": "Import Public Key",
++        "import-file": "Import From File…",
++        "import-file-title": "Choose the public key file",
++        "label": "GPG Key on Card",
++        "no-card": "No OpenPGP card detected",
++        "serial": "serial {serial}",
++        "state": {
++          "label": "Status:",
++          "missing": "public key not in the keyring",
++          "no-key": "no key stored on the card",
++          "public-only": "public key imported, card not linked yet",
++          "ready": "ready to use"
++        },
++        "status": {
++          "fetching-keyserver": "Fetching the public key from the keyserver…",
++          "fetching-url": "Fetching the public key from the card URL…",
++          "import-failed": "Could not fetch the public key. Import it from a file",
++          "import-file-failed": "Import failed: {message}",
++          "imported": "Public key imported and linked to the card",
++          "importing-file": "Importing the public key…",
++          "offline": "Offline mode is on. Import the public key from a file",
++          "trust-failed": "Could not set the trust: {message}",
++          "trusted": "Key marked as ultimately trusted"
++        },
++        "trust": {
++          "label": "Trust:",
++          "not-ultimate": "not ultimate",
++          "ultimate": "ultimate"
++        },
++        "trust-button": "Trust Ultimately",
++        "url": "Public key URL:"
++      }
++    },
+     "session-actions": {
+       "add": "Add Action",
+       "clear-glyph": "Clear",
+diff --git a/assets/translations/pt-BR.json b/assets/translations/pt-BR.json
+index fedbb2b81..e65649a85 100644
+--- a/assets/translations/pt-BR.json
++++ b/assets/translations/pt-BR.json
+@@ -1328,6 +1328,68 @@
+       "merged-user-title": "Configuração de Usuário Mesclada (Recomendado)",
+       "title": "Exportar Configuração"
+     },
++    "fingerprint": {
++      "add": "Adicionar Digital",
++      "choose-finger": "Escolha o dedo a cadastrar.",
++      "description": "Digitais usadas para desbloquear e para autorizar ações administrativas",
++      "enroll-title": "Adicionar Digital",
++      "enrolled": "Digitais cadastradas",
++      "error": {
++        "generic": "Erro no leitor de digitais: {message}",
++        "in-use": "O leitor de digitais está em uso por outro programa",
++        "no-device": "O leitor de digitais não está mais disponível",
++        "no-prints": "Nenhuma digital cadastrada neste leitor",
++        "not-deleted": "Não foi possível excluir a digital",
++        "permission-denied": "Sem autorização para usar o leitor de digitais"
++      },
++      "finger": {
++        "left-index": "Indicador esquerdo",
++        "left-little": "Mínimo esquerdo",
++        "left-middle": "Médio esquerdo",
++        "left-ring": "Anelar esquerdo",
++        "left-thumb": "Polegar esquerdo",
++        "right-index": "Indicador direito",
++        "right-little": "Mínimo direito",
++        "right-middle": "Médio direito",
++        "right-ring": "Anelar direito",
++        "right-thumb": "Polegar direito"
++      },
++      "label": "Leitor de Impressão Digital",
++      "left-hand": "Mão esquerda",
++      "no-reader": "Nenhum leitor de impressão digital encontrado",
++      "none-enrolled": "Nenhuma digital cadastrada",
++      "reader": "Leitor:",
++      "right-hand": "Mão direita",
++      "scan-type": {
++        "press": "sensor de toque",
++        "swipe": "sensor de deslizar"
++      },
++      "stages": "Leitura {done} de {total}",
++      "status": {
++        "data-full": "O leitor não tem espaço para mais digitais",
++        "deleted": "{finger} excluído",
++        "disconnected": "O leitor de digitais foi desconectado",
++        "duplicate": "Esta digital já está cadastrada",
++        "enroll-completed": "Digital cadastrada",
++        "enroll-failed": "O cadastro falhou. Tente de novo",
++        "finger-not-centered": "Centralize o dedo no leitor",
++        "match": "Digital reconhecida",
++        "match-finger": "Reconhecida: {finger}",
++        "no-match": "Digital não reconhecida",
++        "preparing": "Preparando o leitor…",
++        "remove-and-retry": "Levante o dedo e tente de novo",
++        "retry-scan": "Leia de novo",
++        "stage-passed": "Levante o dedo e toque no leitor de novo",
++        "swipe": "Deslize o dedo pelo leitor",
++        "swipe-too-short": "Deslize curto demais. Tente de novo",
++        "touch": "Toque no leitor com o dedo",
++        "verify-failed": "Não foi possível ler a digital",
++        "verify-timeout": "Nenhum dedo detectado. Teste encerrado"
++      },
++      "stop-test": "Parar Teste",
++      "test": "Testar Digital",
++      "try-again": "Tentar de Novo"
++    },
+     "idle": {
+       "behavior": {
+         "add": "Adicionar Comportamento",
+@@ -1381,6 +1443,7 @@
+         "display": "Mostrar",
+         "effects": "Efeitos",
+         "filtering": "Filtragem",
++        "fingerprint": "Impressão Digital",
+         "focus-styling": "Estilo de Foco",
+         "formats": "Formatos",
+         "general": "Geral",
+@@ -1424,6 +1487,7 @@
+         "screenshot-capture": "Captura",
+         "screenshot-output": "Saída",
+         "security": "Segurança",
++        "security-keys": "Chaves de Segurança",
+         "session-panel": "Sessão",
+         "shape": "Forma",
+         "system": "Sistema",
+@@ -3664,6 +3728,84 @@
+         }
+       }
+     },
++    "security-hardware": {
++      "cancel": "Cancelar",
++      "confirm-delete": "Excluir",
++      "delete": "Excluir",
++      "done": "Concluir",
++      "loading": "Carregando…",
++      "refresh": "Atualizar"
++    },
++    "security-keys": {
++      "fido": {
++        "authfile": "Gravadas em {path}",
++        "connected": "Chaves conectadas",
++        "credential": "Chave {index} · {handle}",
++        "description": "Chaves FIDO2/U2F (ex.: YubiKey) aceitas pelo pam_u2f no sudo, no polkit e na tela de bloqueio",
++        "label": "Chaves FIDO2 / U2F",
++        "none-connected": "Nenhuma chave de segurança conectada",
++        "none-registered": "Nenhuma chave registrada para este usuário",
++        "pin-hint": "Se a chave tiver PIN FIDO2, digite-o abaixo. Caso contrário, deixe em branco.",
++        "pin-placeholder": "PIN da chave (opcional)",
++        "register": "Registrar Chave",
++        "register-intro": "Conecte a chave de segurança, clique em Registrar e toque na chave quando ela piscar.",
++        "register-title": "Registrar Chave de Segurança",
++        "registered": "Chaves registradas",
++        "status": {
++          "no-device": "Nenhuma chave de segurança encontrada. Conecte-a e tente de novo",
++          "pin-required": "Esta chave exige o PIN",
++          "register-failed": "O registro falhou: {message}",
++          "registered": "Chave registrada",
++          "removed": "Chave removida",
++          "test-no-key": "Nenhuma chave registrada está conectada",
++          "test-ok": "Chave aceita",
++          "test-timeout": "A chave não foi tocada a tempo",
++          "testing": "Aguardando uma chave registrada…",
++          "timeout": "A chave não foi tocada a tempo",
++          "touch": "Toque na chave de segurança quando ela piscar",
++          "write-failed": "Não foi possível gravar {path}"
++        },
++        "stop-test": "Parar Teste",
++        "test": "Testar Chave"
++      },
++      "gpg": {
++        "card": "Cartão:",
++        "description": "Chave OpenPGP guardada num cartão inteligente ou chave de segurança",
++        "fingerprint": "Chave de assinatura:",
++        "holder": "Titular:",
++        "import": "Importar Chave Pública",
++        "import-file": "Importar de Arquivo…",
++        "import-file-title": "Escolha o arquivo da chave pública",
++        "label": "Chave GPG no Cartão",
++        "no-card": "Nenhum cartão OpenPGP detectado",
++        "serial": "serial {serial}",
++        "state": {
++          "label": "Situação:",
++          "missing": "chave pública fora do chaveiro",
++          "no-key": "nenhuma chave guardada no cartão",
++          "public-only": "chave pública importada, cartão ainda não vinculado",
++          "ready": "pronta para uso"
++        },
++        "status": {
++          "fetching-keyserver": "Buscando a chave pública no servidor de chaves…",
++          "fetching-url": "Buscando a chave pública pela URL do cartão…",
++          "import-failed": "Não foi possível obter a chave pública. Importe-a de um arquivo",
++          "import-file-failed": "A importação falhou: {message}",
++          "imported": "Chave pública importada e vinculada ao cartão",
++          "importing-file": "Importando a chave pública…",
++          "offline": "O modo offline está ativo. Importe a chave pública de um arquivo",
++          "trust-failed": "Não foi possível definir a confiança: {message}",
++          "trusted": "Chave marcada com confiança absoluta"
++        },
++        "trust": {
++          "label": "Confiança:",
++          "not-ultimate": "não absoluta",
++          "ultimate": "absoluta"
++        },
++        "trust-button": "Confiar Plenamente",
++        "url": "URL da chave pública:"
++      }
++    },
+     "session-actions": {
+       "add": "Adicionar Ação",
+       "clear-glyph": "Apagar",
+diff --git a/meson.build b/meson.build
+index 500d82e9d..ef86c5184 100644
+--- a/meson.build
++++ b/meson.build
+@@ -616,7 +616,9 @@ _noctalia_sources = files(
+   'src/scripting/script_worker_pool.cpp',
+   'src/scripting/plugin_bindings.cpp',
+   'src/security/encrypted_file_store.cpp',
++  'src/security/fingerprint_manager.cpp',
+   'src/security/secret_store.cpp',
++  'src/security/security_key_manager.cpp',
+   'src/security/prompt/assuan_session.cpp',
+   'src/security/prompt/secret_prompt_service.cpp',
+   'src/security/secure_buffer.cpp',
+@@ -734,6 +736,7 @@ _noctalia_sources = files(
+   'src/shell/settings/template_store_tile.cpp',
+   'src/shell/settings/settings_control_factory.cpp',
+   'src/shell/settings/settings_content_idle_behavior.cpp',
++  'src/shell/settings/settings_security_hardware.cpp',
+   'src/shell/settings/settings_content_notification_filter.cpp',
+   'src/shell/settings/settings_content_session_action.cpp',
+   'src/shell/settings/settings_bar_management.cpp',
+@@ -752,6 +755,7 @@ _noctalia_sources = files(
+   'src/shell/settings/settings_window_popups.cpp',
+   'src/shell/settings/settings_window_palette.cpp',
+   'src/shell/settings/settings_window_scene.cpp',
++  'src/shell/settings/settings_window_security.cpp',
+   'src/shell/settings/settings_window.cpp',
+   'src/shell/test/test_panel.cpp',
+   'src/shell/tray/tray_drawer_panel.cpp',
+diff --git a/src/app/application.cpp b/src/app/application.cpp
+index 6c93908a8..e8d482584 100644
+--- a/src/app/application.cpp
++++ b/src/app/application.cpp
+@@ -64,8 +64,10 @@
+ #include "scripting/plugin_panel_shell.h"
+ #include "scripting/plugin_registry.h"
+ #include "scripting/plugin_runtime_context.h"
++#include "security/fingerprint_manager.h"
+ #include "security/prompt/secret_prompt_poll_source.h"
+ #include "security/prompt/secret_prompt_service.h"
++#include "security/security_key_manager.h"
+ #include "shell/clipboard/clipboard_panel.h"
+ #include "shell/clipboard/clipboard_paste.h"
+ #include "shell/control_center/control_center_panel.h"
+diff --git a/src/app/application.h b/src/app/application.h
+index aff85742f..7edb72e56 100644
+--- a/src/app/application.h
++++ b/src/app/application.h
+@@ -138,6 +138,8 @@ class ScreenSaverService;
+ class SessionBus;
+ class SessionBusPollSource;
+ class SoundPlayer;
++class FingerprintManager;
++class SecurityKeyManager;
+ class SystemBus;
+ class SystemBusPollSource;
+ class SystemMonitorService;
+@@ -301,6 +303,10 @@ private:
+   std::unique_ptr<ModemManagerService> m_modemManagerService;
+   Timer m_bluetoothResumeTimer;
+   std::unique_ptr<PolkitAgent> m_polkitAgent;
++  // Back the Security page's fingerprint and security key blocks; declared before
++  // m_settingsWindow so they outlive it.
++  std::unique_ptr<FingerprintManager> m_fingerprintManager;
++  std::unique_ptr<SecurityKeyManager> m_securityKeyManager;
+   std::unique_ptr<SecretPromptService> m_secretPromptService;
+   std::optional<bool> m_notificationDaemonEnabled;
+   bool m_notificationDaemonInitFailed = false;
+diff --git a/src/app/application_ui.cpp b/src/app/application_ui.cpp
+index 6f70c4dc3..fcbcaee75 100644
+--- a/src/app/application_ui.cpp
++++ b/src/app/application_ui.cpp
+@@ -62,8 +62,10 @@
+ #include "scripting/plugin_panel_shell.h"
+ #include "scripting/plugin_registry.h"
+ #include "scripting/plugin_runtime_context.h"
++#include "security/fingerprint_manager.h"
+ #include "security/prompt/secret_prompt_poll_source.h"
+ #include "security/prompt/secret_prompt_service.h"
++#include "security/security_key_manager.h"
+ #include "shell/clipboard/clipboard_panel.h"
+ #include "shell/clipboard/clipboard_paste.h"
+ #include "shell/control_center/control_center_panel.h"
+@@ -191,6 +193,11 @@ void Application::initUiRenderSurfacesAndSettings() {
+     }
+   });
+   m_settingsWindow.setSyncGreeterAppearance([this]() { performGreeterSync(); });
++  if (m_systemBus != nullptr) {
++    m_fingerprintManager = std::make_unique<FingerprintManager>(*m_systemBus);
++  }
++  m_securityKeyManager = std::make_unique<SecurityKeyManager>();
++  m_settingsWindow.setSecurityHardware(m_fingerprintManager.get(), m_securityKeyManager.get());
+   m_settingsWindow.setSaveWallpaperPaletteAsCustom([this]() {
+     std::string paletteName;
+     std::string error;
+diff --git a/src/core/process/process.cpp b/src/core/process/process.cpp
+index 6db64c840..a2abc4a3c 100644
+--- a/src/core/process/process.cpp
++++ b/src/core/process/process.cpp
+@@ -379,18 +379,45 @@ namespace {
+ 
+     // O_CLOEXEC atomically: a concurrent fork() on another thread must not inherit the write
+     // ends, or EOF is delayed for that unrelated child's lifetime. dup2() clears the flag.
++    // Filled before fork(): the data sits in the pipe buffer and the write end closes right
++    // away, so the child sees EOF and a child exiting early can never raise SIGPIPE here.
++    int inPipe[2] = {-1, -1};
++    if (options.stdinData.has_value()) {
++      if (::pipe2(inPipe, O_CLOEXEC) != 0) {
++        return {-1, {}, {}};
++      }
++      const std::string& data = *options.stdinData;
++      std::size_t written = 0;
++      (void)setNonBlocking(inPipe[1]);
++      while (written < data.size()) {
++        const ssize_t n = ::write(inPipe[1], data.data() + written, data.size() - written);
++        if (n < 0 && errno == EINTR) {
++          continue;
++        }
++        if (n <= 0) {
++          closePipe(inPipe);
++          return {-1, {}, {}};
++        }
++        written += static_cast<std::size_t>(n);
++      }
++      closeFd(inPipe[1]);
++    }
++
+     int outPipe[2] = {-1, -1};
+     int errPipe[2] = {-1, -1};
+     if (::pipe2(outPipe, O_CLOEXEC) != 0) {
++      closeFd(inPipe[0]);
+       return {-1, {}, {}};
+     }
+     if (::pipe2(errPipe, O_CLOEXEC) != 0) {
++      closeFd(inPipe[0]);
+       closePipe(outPipe);
+       return {-1, {}, {}};
+     }
+ 
+     const pid_t pid = ::fork();
+     if (pid < 0) {
++      closeFd(inPipe[0]);
+       closePipe(outPipe);
+       closePipe(errPipe);
+       return {-1, {}, {}};
+@@ -402,6 +429,10 @@ namespace {
+       ::setpgid(0, 0);
+       closeFd(outPipe[0]);
+       closeFd(errPipe[0]);
++      if (inPipe[0] >= 0) {
++        ::dup2(inPipe[0], STDIN_FILENO);
++        closeFd(inPipe[0]);
++      }
+       ::dup2(outPipe[1], STDOUT_FILENO);
+       ::dup2(errPipe[1], STDERR_FILENO);
+       closeFd(outPipe[1]);
+@@ -418,6 +449,7 @@ namespace {
+     // wins the race; harmless if the child has already exec'd.
+     ::setpgid(pid, pid);
+ 
++    closeFd(inPipe[0]);
+     closeFd(outPipe[1]);
+     closeFd(errPipe[1]);
+     (void)setNonBlocking(outPipe[0]);
+diff --git a/src/core/process/process.h b/src/core/process/process.h
+index 55cd318ec..edea38d2e 100644
+--- a/src/core/process/process.h
++++ b/src/core/process/process.h
+@@ -48,6 +48,9 @@ namespace process {
+     std::shared_ptr<std::atomic<bool>> cancel;
+     // Child-only environment changes. `nullopt` unsets the variable.
+     std::vector<EnvOverride> env;
++    // Captured runs only: fed to the child's stdin, then EOF. Must fit in a pipe buffer (64 KiB);
++    // larger input fails the run. Without it the child inherits the caller's stdin.
++    std::optional<std::string> stdinData;
+   };
+ 
+   [[nodiscard]] bool commandExists(const char* name);
+diff --git a/src/security/fingerprint_manager.cpp b/src/security/fingerprint_manager.cpp
+new file mode 100644
+index 000000000..82a25ea77
+--- /dev/null
++++ b/src/security/fingerprint_manager.cpp
+@@ -0,0 +1,593 @@
++#include "security/fingerprint_manager.h"
++
++#include "core/deferred_call.h"
++#include "core/log.h"
++#include "dbus/system_bus.h"
++#include "i18n/i18n.h"
++
++#include <algorithm>
++#include <chrono>
++#include <cstdint>
++#include <map>
++#include <optional>
++#include <sdbus-c++/Error.h>
++#include <sdbus-c++/IConnection.h>
++#include <sdbus-c++/IProxy.h>
++#include <sdbus-c++/Types.h>
++#include <string>
++#include <utility>
++
++namespace {
++  constexpr Logger kLog("fingerprint-manager");
++
++  const sdbus::ServiceName kFprintBusName{"net.reactivated.Fprint"};
++  const sdbus::ObjectPath kManagerPath{"/net/reactivated/Fprint/Manager"};
++  constexpr auto kManagerInterface = "net.reactivated.Fprint.Manager";
++  constexpr auto kDeviceInterface = "net.reactivated.Fprint.Device";
++
++  const sdbus::ServiceName kDbusBusName{"org.freedesktop.DBus"};
++  const sdbus::ObjectPath kDbusPath{"/org/freedesktop/DBus"};
++  constexpr auto kDbusInterface = "org.freedesktop.DBus";
++
++  // Claim and EnrollStart may wait on a polkit prompt; the default 25 s D-Bus timeout is too short.
++  constexpr auto kInteractiveTimeout = std::chrono::minutes(2);
++  constexpr auto kVerifyTimeout = std::chrono::seconds(30);
++
++  std::string errorMessage(const sdbus::Error& error) {
++    static const std::map<std::string, std::string> kErrors = {
++        {"net.reactivated.Fprint.Error.PermissionDenied", "settings.fingerprint.error.permission-denied"},
++        {"net.reactivated.Fprint.Error.AlreadyInUse", "settings.fingerprint.error.in-use"},
++        {"net.reactivated.Fprint.Error.NoEnrolledPrints", "settings.fingerprint.error.no-prints"},
++        {"net.reactivated.Fprint.Error.PrintsNotDeleted", "settings.fingerprint.error.not-deleted"},
++        {"net.reactivated.Fprint.Error.NoSuchDevice", "settings.fingerprint.error.no-device"},
++    };
++    const auto it = kErrors.find(std::string(error.getName()));
++    if (it != kErrors.end()) {
++      return i18n::tr(it->second);
++    }
++    return i18n::tr("settings.fingerprint.error.generic", "message", error.getMessage());
++  }
++
++  // fprintd scan feedback shared by enroll and verify ("enroll-retry-scan", "verify-retry-scan").
++  std::optional<std::string> retryMessage(std::string_view suffix) {
++    if (suffix == "retry-scan") {
++      return i18n::tr("settings.fingerprint.status.retry-scan");
++    }
++    if (suffix == "swipe-too-short") {
++      return i18n::tr("settings.fingerprint.status.swipe-too-short");
++    }
++    if (suffix == "finger-not-centered") {
++      return i18n::tr("settings.fingerprint.status.finger-not-centered");
++    }
++    if (suffix == "remove-and-retry") {
++      return i18n::tr("settings.fingerprint.status.remove-and-retry");
++    }
++    return std::nullopt;
++  }
++
++  std::string touchPrompt(const std::vector<FingerprintDevice>& devices, const std::string& path) {
++    const auto it = std::ranges::find(devices, path, &FingerprintDevice::path);
++    if (it != devices.end() && it->scanType == "swipe") {
++      return i18n::tr("settings.fingerprint.status.swipe");
++    }
++    return i18n::tr("settings.fingerprint.status.touch");
++  }
++} // namespace
++
++FingerprintManager::FingerprintManager(SystemBus& bus) : m_bus(bus) {}
++
++FingerprintManager::~FingerprintManager() {
++  m_alive.reset();
++  m_verifyTimeout.stop();
++  if (m_device != nullptr && m_claimed) {
++    try {
++      m_device->callMethod("Release").onInterface(kDeviceInterface);
++    } catch (const sdbus::Error&) {
++    }
++  }
++}
++
++void FingerprintManager::setChangedCallback(ChangedCallback callback) { m_onChanged = std::move(callback); }
++
++bool FingerprintManager::serviceAvailable() {
++  if (m_serviceAvailable.has_value()) {
++    return *m_serviceAvailable;
++  }
++  bool available = m_bus.nameHasOwner(std::string(kFprintBusName));
++  if (!available) {
++    try {
++      auto dbus = sdbus::createProxy(m_bus.connection(), kDbusBusName, kDbusPath);
++      std::vector<std::string> names;
++      dbus->callMethod("ListActivatableNames").onInterface(kDbusInterface).storeResultsTo(names);
++      available = std::ranges::contains(names, std::string(kFprintBusName));
++    } catch (const sdbus::Error& e) {
++      kLog.debug("could not list activatable names: {}", e.what());
++    }
++  }
++  m_serviceAvailable = available;
++  return available;
++}
++
++void FingerprintManager::refresh() {
++  if (m_loading || busy()) {
++    return;
++  }
++  m_loading = true;
++  try {
++    if (m_manager == nullptr) {
++      m_manager = sdbus::createProxy(m_bus.connection(), kFprintBusName, kManagerPath);
++    }
++  } catch (const sdbus::Error& e) {
++    kLog.warn("could not create fprintd manager proxy: {}", e.what());
++    m_loading = false;
++    m_loaded = true;
++    notifyChanged();
++    return;
++  }
++
++  // GetDevices D-Bus-activates fprintd on first use, which can take a moment: keep it async.
++  m_manager->callMethodAsync("GetDevices")
++      .onInterface(kManagerInterface)
++      .uponReplyInvoke([this, alive = std::weak_ptr<void>(m_alive)](
++                           std::optional<sdbus::Error> e, std::vector<sdbus::ObjectPath> paths
++                       ) {
++        if (alive.expired()) {
++          return;
++        }
++        m_loading = false;
++        m_loaded = true;
++        if (e.has_value()) {
++          kLog.info("could not list fingerprint readers: {}", e->what());
++          paths.clear();
++        }
++
++        std::vector<FingerprintDevice> devices;
++        for (const auto& path : paths) {
++          FingerprintDevice device{.path = path, .name = path, .scanType = "press"};
++          try {
++            auto proxy = sdbus::createProxy(m_bus.connection(), kFprintBusName, path);
++            device.name = proxy->getProperty("name").onInterface(kDeviceInterface).get<std::string>();
++            device.scanType = proxy->getProperty("scan-type").onInterface(kDeviceInterface).get<std::string>();
++          } catch (const sdbus::Error& err) {
++            kLog.debug("could not read fingerprint reader properties: {}", err.what());
++          }
++          devices.push_back(std::move(device));
++        }
++        m_devices = std::move(devices);
++
++        if (std::ranges::find(m_devices, m_selectedPath, &FingerprintDevice::path) == m_devices.end()) {
++          m_selectedPath = m_devices.empty() ? std::string{} : m_devices.front().path;
++          dropDeviceProxyLater();
++        }
++        if (m_selectedPath.empty()) {
++          m_enrolled.clear();
++          notifyChanged();
++          return;
++        }
++        // The proxy may be dropped on the next loop iteration; list on a fresh one afterwards.
++        DeferredCall::callLater([this, alive]() {
++          if (!alive.expired()) {
++            loadEnrolled();
++          }
++        });
++      });
++}
++
++void FingerprintManager::selectDevice(const std::string& path) {
++  if (path == m_selectedPath || busy()) {
++    return;
++  }
++  m_selectedPath = path;
++  m_enrolled.clear();
++  clearStatus();
++  dropDeviceProxyLater();
++  DeferredCall::callLater([this, alive = std::weak_ptr<void>(m_alive)]() {
++    if (!alive.expired()) {
++      loadEnrolled();
++    }
++  });
++  notifyChanged();
++}
++
++bool FingerprintManager::ensureDeviceProxy() {
++  if (m_device != nullptr) {
++    return true;
++  }
++  if (m_selectedPath.empty()) {
++    return false;
++  }
++  try {
++    m_device = sdbus::createProxy(m_bus.connection(), kFprintBusName, sdbus::ObjectPath{m_selectedPath});
++  } catch (const sdbus::Error& e) {
++    kLog.warn("could not create fingerprint reader proxy: {}", e.what());
++    return false;
++  }
++  m_device->uponSignal("EnrollStatus").onInterface(kDeviceInterface).call([this](const std::string& result, bool done) {
++    handleEnrollStatus(result, done);
++  });
++  m_device->uponSignal("VerifyStatus").onInterface(kDeviceInterface).call([this](const std::string& result, bool done) {
++    handleVerifyStatus(result, done);
++  });
++  m_device->uponSignal("VerifyFingerSelected").onInterface(kDeviceInterface).call([this](const std::string& finger) {
++    if (m_mode == Mode::Verifying) {
++      m_matchedFinger = finger;
++    }
++  });
++  return true;
++}
++
++void FingerprintManager::dropDeviceProxyLater() {
++  if (m_device == nullptr) {
++    return;
++  }
++  // Never destroy a proxy from inside one of its own reply handlers.
++  DeferredCall::callLater([this, alive = std::weak_ptr<void>(m_alive)]() {
++    if (alive.expired() || busy()) {
++      return;
++    }
++    m_device.reset();
++    m_claimed = false;
++  });
++}
++
++void FingerprintManager::loadEnrolled() {
++  if (!ensureDeviceProxy()) {
++    m_enrolled.clear();
++    notifyChanged();
++    return;
++  }
++  // Empty user name: fprintd uses the caller's user.
++  m_device->callMethodAsync("ListEnrolledFingers")
++      .onInterface(kDeviceInterface)
++      .withArguments(std::string{})
++      .uponReplyInvoke([this, alive = std::weak_ptr<void>(m_alive)](
++                           std::optional<sdbus::Error> e, std::vector<std::string> fingers
++                       ) {
++        if (alive.expired()) {
++          return;
++        }
++        if (e.has_value()) {
++          // NoEnrolledPrints is the normal "nothing enrolled yet" answer.
++          if (e->getName() != sdbus::Error::Name{"net.reactivated.Fprint.Error.NoEnrolledPrints"}) {
++            kLog.info("could not list enrolled fingers: {}", e->what());
++          }
++          fingers.clear();
++        }
++        m_enrolled = std::move(fingers);
++        notifyChanged();
++      });
++}
++
++void FingerprintManager::claimThen(std::function<void()> next) {
++  if (!ensureDeviceProxy()) {
++    setStatus(i18n::tr("settings.fingerprint.error.no-device"), true);
++    finishOperation();
++    return;
++  }
++  if (m_claimed) {
++    next();
++    return;
++  }
++  m_claiming = true;
++  m_device->callMethodAsync("Claim")
++      .onInterface(kDeviceInterface)
++      .withTimeout(kInteractiveTimeout)
++      .withArguments(std::string{})
++      .uponReplyInvoke([this, alive = std::weak_ptr<void>(m_alive),
++                        next = std::move(next)](std::optional<sdbus::Error> e) {
++        if (alive.expired()) {
++          return;
++        }
++        m_claiming = false;
++        if (e.has_value()) {
++          kLog.info("could not claim fingerprint reader: {}", e->what());
++          setStatus(errorMessage(*e), true);
++          finishOperation();
++          return;
++        }
++        m_claimed = true;
++        if (m_mode == Mode::Idle) {
++          // Cancelled while the claim was pending.
++          release();
++          return;
++        }
++        next();
++      });
++}
++
++void FingerprintManager::release() {
++  if (m_device == nullptr || !m_claimed) {
++    return;
++  }
++  m_claimed = false;
++  m_device->callMethodAsync("Release").onInterface(kDeviceInterface).uponReplyInvoke([](std::optional<sdbus::Error> e) {
++    if (e.has_value()) {
++      kLog.debug("could not release fingerprint reader: {}", e->what());
++    }
++  });
++}
++
++void FingerprintManager::finishOperation() {
++  m_verifyTimeout.stop();
++  m_mode = Mode::Idle;
++  release();
++  notifyChanged();
++}
++
++void FingerprintManager::deleteFinger(const std::string& finger) {
++  if (busy()) {
++    return;
++  }
++  clearStatus();
++  // Claim is required by DeleteEnrolledFinger; borrow the Verifying mode so cancel() and the
++  // claim callback treat it as a running operation.
++  m_mode = Mode::Verifying;
++  claimThen([this, finger]() {
++    m_device->callMethodAsync("DeleteEnrolledFinger")
++        .onInterface(kDeviceInterface)
++        .withTimeout(kInteractiveTimeout)
++        .withArguments(finger)
++        .uponReplyInvoke([this, alive = std::weak_ptr<void>(m_alive), finger](std::optional<sdbus::Error> e) {
++          if (alive.expired()) {
++            return;
++          }
++          if (e.has_value()) {
++            kLog.info("could not delete fingerprint: {}", e->what());
++            setStatus(errorMessage(*e), true);
++          } else {
++            std::erase(m_enrolled, finger);
++            setStatus(i18n::tr("settings.fingerprint.status.deleted", "finger", fingerLabel(finger)), false);
++          }
++          finishOperation();
++          DeferredCall::callLater([this, alive]() {
++            if (!alive.expired() && !busy()) {
++              loadEnrolled();
++            }
++          });
++        });
++  });
++  notifyChanged();
++}
++
++void FingerprintManager::startEnroll(const std::string& finger) {
++  if (busy()) {
++    return;
++  }
++  m_mode = Mode::Enrolling;
++  m_enrollFinger = finger;
++  m_stagesDone = 0;
++  m_stagesTotal = -1;
++  m_enrollCompleted = false;
++  m_matchedFinger.clear();
++  setStatus(i18n::tr("settings.fingerprint.status.preparing"), false);
++
++  claimThen([this, finger]() {
++    try {
++      m_stagesTotal = m_device->getProperty("num-enroll-stages").onInterface(kDeviceInterface).get<std::int32_t>();
++    } catch (const sdbus::Error& e) {
++      kLog.debug("could not read num-enroll-stages: {}", e.what());
++      m_stagesTotal = -1;
++    }
++    m_device->callMethodAsync("EnrollStart")
++        .onInterface(kDeviceInterface)
++        .withTimeout(kInteractiveTimeout)
++        .withArguments(finger)
++        .uponReplyInvoke([this, alive = std::weak_ptr<void>(m_alive)](std::optional<sdbus::Error> e) {
++          if (alive.expired()) {
++            return;
++          }
++          if (e.has_value()) {
++            kLog.info("could not start enrollment: {}", e->what());
++            setStatus(errorMessage(*e), true);
++            finishOperation();
++            return;
++          }
++          if (m_mode == Mode::Enrolling) {
++            setStatus(touchPrompt(m_devices, m_selectedPath), false);
++          }
++        });
++  });
++  notifyChanged();
++}
++
++void FingerprintManager::handleEnrollStatus(const std::string& result, bool done) {
++  if (m_mode != Mode::Enrolling) {
++    return;
++  }
++  kLog.debug("enroll status: {} (done={})", result, done);
++  constexpr std::string_view kPrefix = "enroll-";
++  const std::string_view suffix =
++      std::string_view(result).starts_with(kPrefix) ? std::string_view(result).substr(kPrefix.size()) : result;
++
++  if (suffix == "completed") {
++    m_enrollCompleted = true;
++    if (m_stagesTotal > 0) {
++      m_stagesDone = m_stagesTotal;
++    }
++    if (!std::ranges::contains(m_enrolled, m_enrollFinger)) {
++      m_enrolled.push_back(m_enrollFinger);
++    }
++    setStatus(i18n::tr("settings.fingerprint.status.enroll-completed"), false);
++  } else if (suffix == "stage-passed") {
++    ++m_stagesDone;
++    setStatus(i18n::tr("settings.fingerprint.status.stage-passed"), false);
++  } else if (const auto retry = retryMessage(suffix)) {
++    setStatus(*retry, false);
++  } else if (suffix == "duplicate") {
++    setStatus(i18n::tr("settings.fingerprint.status.duplicate"), true);
++  } else if (suffix == "data-full") {
++    setStatus(i18n::tr("settings.fingerprint.status.data-full"), true);
++  } else if (suffix == "disconnected") {
++    setStatus(i18n::tr("settings.fingerprint.status.disconnected"), true);
++  } else {
++    // enroll-failed, enroll-unknown-error and anything newer than this code.
++    setStatus(i18n::tr("settings.fingerprint.status.enroll-failed"), true);
++  }
++
++  if (!done) {
++    notifyChanged();
++    return;
++  }
++  if (m_device != nullptr) {
++    m_device->callMethodAsync("EnrollStop")
++        .onInterface(kDeviceInterface)
++        .uponReplyInvoke([](std::optional<sdbus::Error>) {});
++  }
++  finishOperation();
++}
++
++void FingerprintManager::startVerify() {
++  if (busy()) {
++    return;
++  }
++  m_mode = Mode::Verifying;
++  m_matchedFinger.clear();
++  m_enrollCompleted = false;
++  setStatus(i18n::tr("settings.fingerprint.status.preparing"), false);
++
++  claimThen([this]() {
++    m_device->callMethodAsync("VerifyStart")
++        .onInterface(kDeviceInterface)
++        .withTimeout(kInteractiveTimeout)
++        .withArguments(std::string{"any"})
++        .uponReplyInvoke([this, alive = std::weak_ptr<void>(m_alive)](std::optional<sdbus::Error> e) {
++          if (alive.expired()) {
++            return;
++          }
++          if (e.has_value()) {
++            kLog.info("could not start verification: {}", e->what());
++            setStatus(errorMessage(*e), true);
++            finishOperation();
++            return;
++          }
++          if (m_mode != Mode::Verifying) {
++            return;
++          }
++          setStatus(touchPrompt(m_devices, m_selectedPath), false);
++          m_verifyTimeout.start(kVerifyTimeout, [this]() {
++            if (m_mode != Mode::Verifying) {
++              return;
++            }
++            cancel();
++            setStatus(i18n::tr("settings.fingerprint.status.verify-timeout"), true);
++          });
++        });
++  });
++  notifyChanged();
++}
++
++void FingerprintManager::handleVerifyStatus(const std::string& result, bool done) {
++  if (m_mode != Mode::Verifying) {
++    return;
++  }
++  kLog.debug("verify status: {} (done={})", result, done);
++  constexpr std::string_view kPrefix = "verify-";
++  const std::string_view suffix =
++      std::string_view(result).starts_with(kPrefix) ? std::string_view(result).substr(kPrefix.size()) : result;
++
++  if (suffix == "match") {
++    if (m_matchedFinger.empty()) {
++      m_matchedFinger = "any";
++    }
++    if (m_matchedFinger == "any") {
++      setStatus(i18n::tr("settings.fingerprint.status.match"), false);
++    } else {
++      setStatus(i18n::tr("settings.fingerprint.status.match-finger", "finger", fingerLabel(m_matchedFinger)), false);
++    }
++  } else if (suffix == "no-match") {
++    m_matchedFinger.clear();
++    setStatus(i18n::tr("settings.fingerprint.status.no-match"), true);
++  } else if (const auto retry = retryMessage(suffix)) {
++    setStatus(*retry, false);
++  } else if (suffix == "disconnected") {
++    m_matchedFinger.clear();
++    setStatus(i18n::tr("settings.fingerprint.status.disconnected"), true);
++  } else {
++    m_matchedFinger.clear();
++    setStatus(i18n::tr("settings.fingerprint.status.verify-failed"), true);
++  }
++
++  if (!done) {
++    notifyChanged();
++    return;
++  }
++  if (m_device != nullptr) {
++    m_device->callMethodAsync("VerifyStop")
++        .onInterface(kDeviceInterface)
++        .uponReplyInvoke([](std::optional<sdbus::Error>) {});
++  }
++  finishOperation();
++}
++
++void FingerprintManager::cancel() {
++  if (m_mode == Mode::Idle && !m_claiming) {
++    return;
++  }
++  const Mode mode = m_mode;
++  m_verifyTimeout.stop();
++  m_mode = Mode::Idle;
++  if (m_device != nullptr && m_claimed) {
++    const char* stop = mode == Mode::Enrolling ? "EnrollStop" : "VerifyStop";
++    m_device->callMethodAsync(stop).onInterface(kDeviceInterface).uponReplyInvoke([](std::optional<sdbus::Error>) {});
++  }
++  release();
++  if (mode == Mode::Enrolling && !m_enrollCompleted) {
++    m_enrollFinger.clear();
++  }
++  clearStatus();
++  notifyChanged();
++}
++
++void FingerprintManager::clearStatus() {
++  m_status.clear();
++  m_statusError = false;
++  m_matchedFinger.clear();
++}
++
++void FingerprintManager::resetEnrollment() {
++  if (m_mode == Mode::Enrolling) {
++    return;
++  }
++  m_enrollFinger.clear();
++  m_stagesDone = 0;
++  m_stagesTotal = -1;
++  m_enrollCompleted = false;
++  clearStatus();
++}
++
++void FingerprintManager::setStatus(std::string message, bool error) {
++  m_status = std::move(message);
++  m_statusError = error;
++  notifyChanged();
++}
++
++void FingerprintManager::notifyChanged() {
++  if (m_onChanged) {
++    m_onChanged();
++  }
++}
++
++const std::vector<std::string>& FingerprintManager::selectableFingers() {
++  static const std::vector<std::string> kFingers = {
++      "right-thumb", "right-index-finger", "right-middle-finger",
++      "left-thumb",  "left-index-finger",  "left-middle-finger",
++  };
++  return kFingers;
++}
++
++std::string FingerprintManager::fingerLabel(std::string_view finger) {
++  static const std::map<std::string, std::string, std::less<>> kKeys = {
++      {"left-thumb", "settings.fingerprint.finger.left-thumb"},
++      {"left-index-finger", "settings.fingerprint.finger.left-index"},
++      {"left-middle-finger", "settings.fingerprint.finger.left-middle"},
++      {"left-ring-finger", "settings.fingerprint.finger.left-ring"},
++      {"left-little-finger", "settings.fingerprint.finger.left-little"},
++      {"right-thumb", "settings.fingerprint.finger.right-thumb"},
++      {"right-index-finger", "settings.fingerprint.finger.right-index"},
++      {"right-middle-finger", "settings.fingerprint.finger.right-middle"},
++      {"right-ring-finger", "settings.fingerprint.finger.right-ring"},
++      {"right-little-finger", "settings.fingerprint.finger.right-little"},
++  };
++  const auto it = kKeys.find(finger);
++  return it == kKeys.end() ? std::string(finger) : i18n::tr(it->second);
++}
+diff --git a/src/security/fingerprint_manager.h b/src/security/fingerprint_manager.h
+new file mode 100644
+index 000000000..01941e252
+--- /dev/null
++++ b/src/security/fingerprint_manager.h
+@@ -0,0 +1,117 @@
++#pragma once
++
++#include "core/timer_manager.h"
++
++#include <functional>
++#include <memory>
++#include <optional>
++#include <string>
++#include <string_view>
++#include <vector>
++
++class SystemBus;
++
++namespace sdbus {
++  class IProxy;
++} // namespace sdbus
++
++struct FingerprintDevice {
++  std::string path;
++  std::string name;
++  std::string scanType; // "press" or "swipe"
++};
++
++// Manages the current user's enrolled fingerprints through fprintd's D-Bus API: lists the
++// readers, enrolls, verifies and deletes prints on the selected one. The fprintd CLI tools only
++// ever enroll and verify on the default (first) reader, so reader selection needs D-Bus.
++// All state lives here so the settings page, rebuilt on every change, can stay stateless.
++class FingerprintManager {
++public:
++  enum class Mode { Idle, Enrolling, Verifying };
++
++  using ChangedCallback = std::function<void()>;
++
++  explicit FingerprintManager(SystemBus& bus);
++  ~FingerprintManager();
++
++  FingerprintManager(const FingerprintManager&) = delete;
++  FingerprintManager& operator=(const FingerprintManager&) = delete;
++
++  void setChangedCallback(ChangedCallback callback);
++
++  // Whether fprintd is installed (running or D-Bus activatable).
++  [[nodiscard]] bool serviceAvailable();
++  // Re-reads the readers and the selected reader's enrolled fingers.
++  void refresh();
++  [[nodiscard]] bool loaded() const noexcept { return m_loaded; }
++  [[nodiscard]] bool loading() const noexcept { return m_loading; }
++
++  [[nodiscard]] const std::vector<FingerprintDevice>& devices() const noexcept { return m_devices; }
++  [[nodiscard]] const std::string& selectedDevice() const noexcept { return m_selectedPath; }
++  void selectDevice(const std::string& path);
++  [[nodiscard]] const std::vector<std::string>& enrolledFingers() const noexcept { return m_enrolled; }
++
++  void deleteFinger(const std::string& finger);
++  void startEnroll(const std::string& finger);
++  void startVerify();
++  // Stops a running enroll/verify and releases the reader.
++  void cancel();
++  // Clears the outcome of the last enroll/verify (status line, matched finger).
++  void clearStatus();
++  // Forgets a finished enrollment so the enroll sheet starts at the finger picker again.
++  void resetEnrollment();
++
++  [[nodiscard]] Mode mode() const noexcept { return m_mode; }
++  [[nodiscard]] bool busy() const noexcept { return m_mode != Mode::Idle || m_claiming; }
++  [[nodiscard]] const std::string& enrollFinger() const noexcept { return m_enrollFinger; }
++  [[nodiscard]] int enrollStagesDone() const noexcept { return m_stagesDone; }
++  // -1 when the driver does not report it.
++  [[nodiscard]] int enrollStagesTotal() const noexcept { return m_stagesTotal; }
++  [[nodiscard]] bool enrollCompleted() const noexcept { return m_enrollCompleted; }
++  // Finger recognized by the last verify; "any" when the reader does not tell which one.
++  [[nodiscard]] const std::string& matchedFinger() const noexcept { return m_matchedFinger; }
++  [[nodiscard]] const std::string& status() const noexcept { return m_status; }
++  [[nodiscard]] bool statusIsError() const noexcept { return m_statusError; }
++
++  // fprintd finger names offered for enrollment, right hand first (thumb, index, middle), like
++  // GNOME Settings.
++  [[nodiscard]] static const std::vector<std::string>& selectableFingers();
++  [[nodiscard]] static std::string fingerLabel(std::string_view finger);
++
++private:
++  bool ensureDeviceProxy();
++  void loadEnrolled();
++  void claimThen(std::function<void()> next);
++  void release();
++  void finishOperation();
++  void handleEnrollStatus(const std::string& result, bool done);
++  void handleVerifyStatus(const std::string& result, bool done);
++  void setStatus(std::string message, bool error);
++  void notifyChanged();
++  void dropDeviceProxyLater();
++
++  SystemBus& m_bus;
++  std::unique_ptr<sdbus::IProxy> m_manager;
++  std::unique_ptr<sdbus::IProxy> m_device;
++  std::shared_ptr<void> m_alive = std::make_shared<int>(0);
++  ChangedCallback m_onChanged;
++  Timer m_verifyTimeout;
++
++  std::optional<bool> m_serviceAvailable;
++  bool m_loaded = false;
++  bool m_loading = false;
++  std::vector<FingerprintDevice> m_devices;
++  std::string m_selectedPath;
++  std::vector<std::string> m_enrolled;
++
++  Mode m_mode = Mode::Idle;
++  bool m_claimed = false;
++  bool m_claiming = false;
++  std::string m_enrollFinger;
++  int m_stagesDone = 0;
++  int m_stagesTotal = -1;
++  bool m_enrollCompleted = false;
++  std::string m_matchedFinger;
++  std::string m_status;
++  bool m_statusError = false;
++};
+diff --git a/src/security/security_key_manager.cpp b/src/security/security_key_manager.cpp
+new file mode 100644
+index 000000000..9cf237df5
+--- /dev/null
++++ b/src/security/security_key_manager.cpp
+@@ -0,0 +1,650 @@
++#include "security/security_key_manager.h"
++
++#include "auth/security_key_authenticator.h"
++#include "core/deferred_call.h"
++#include "core/log.h"
++#include "core/process/process.h"
++#include "i18n/i18n.h"
++
++#include <algorithm>
++#include <cstdlib>
++#include <fstream>
++#include <pwd.h>
++#include <string_view>
++#include <sys/stat.h>
++#include <system_error>
++#include <unistd.h>
++#include <utility>
++
++namespace {
++  constexpr Logger kLog("security-keys");
++
++  constexpr int kCommandTimeoutSeconds = 20;
++  // pamu2fcfg waits for a touch; give the user time to find the key.
++  constexpr int kRegisterTimeoutSeconds = 60;
++  constexpr int kNetworkTimeoutSeconds = 60;
++
++  std::vector<std::string> split(std::string_view text, char separator) {
++    std::vector<std::string> parts;
++    std::size_t start = 0;
++    while (true) {
++      const std::size_t end = text.find(separator, start);
++      parts.emplace_back(text.substr(start, end == std::string_view::npos ? std::string_view::npos : end - start));
++      if (end == std::string_view::npos) {
++        return parts;
++      }
++      start = end + 1;
++    }
++  }
++
++  std::vector<std::string> lines(std::string_view text) {
++    std::vector<std::string> out;
++    for (auto& line : split(text, '\n')) {
++      if (!line.empty() && line.back() == '\r') {
++        line.pop_back();
++      }
++      if (!line.empty()) {
++        out.push_back(std::move(line));
++      }
++    }
++    return out;
++  }
++
++  // gpg --with-colons escapes ':' and control characters as C-style "\xHH".
++  std::string unescapeColons(std::string_view field) {
++    std::string out;
++    out.reserve(field.size());
++    for (std::size_t i = 0; i < field.size(); ++i) {
++      if (field[i] == '\\' && i + 3 < field.size() && field[i + 1] == 'x') {
++        const std::string hex(field.substr(i + 2, 2));
++        char* end = nullptr;
++        const long value = std::strtol(hex.c_str(), &end, 16);
++        if (end != nullptr && *end == '\0' && hex.size() == 2) {
++          out.push_back(static_cast<char>(value));
++          i += 3;
++          continue;
++        }
++      }
++      out.push_back(field[i]);
++    }
++    return out;
++  }
++
++  std::string field(const std::vector<std::string>& fields, std::size_t index) {
++    return index < fields.size() ? unescapeColons(fields[index]) : std::string{};
++  }
++
++  std::string currentUserName() {
++    if (const passwd* pw = ::getpwuid(::getuid()); pw != nullptr && pw->pw_name != nullptr) {
++      return pw->pw_name;
++    }
++    if (const char* user = std::getenv("USER"); user != nullptr) {
++      return user;
++    }
++    return {};
++  }
++
++  // Last meaningful stderr line, for error messages.
++  std::string lastLine(std::string_view text) {
++    const auto all = lines(text);
++    return all.empty() ? std::string{} : all.back();
++  }
++} // namespace
++
++SecurityKeyManager::SecurityKeyManager() : m_user(currentUserName()) {}
++
++SecurityKeyManager::~SecurityKeyManager() {
++  m_alive.reset();
++  if (m_registerCancel) {
++    m_registerCancel->store(true);
++  }
++  if (m_tester != nullptr) {
++    m_tester->stop();
++  }
++}
++
++void SecurityKeyManager::setChangedCallback(ChangedCallback callback) { m_onChanged = std::move(callback); }
++
++bool SecurityKeyManager::fido2ToolsAvailable() { return process::commandExists("pamu2fcfg"); }
++
++bool SecurityKeyManager::gpgAvailable() { return process::commandExists("gpg"); }
++
++bool SecurityKeyManager::testServiceAvailable() {
++  std::error_code ec;
++  return std::filesystem::exists("/etc/pam.d/noctalia-lock-u2f", ec)
++      || std::filesystem::exists("/usr/lib/pam.d/noctalia-lock-u2f", ec);
++}
++
++std::filesystem::path SecurityKeyManager::authfilePath() {
++  // Same lookup as pam_u2f's default authfile.
++  std::filesystem::path base;
++  if (const char* xdg = std::getenv("XDG_CONFIG_HOME"); xdg != nullptr && *xdg != '\0') {
++    base = xdg;
++  } else if (const char* home = std::getenv("HOME"); home != nullptr && *home != '\0') {
++    base = std::filesystem::path(home) / ".config";
++  } else if (const passwd* pw = ::getpwuid(::getuid()); pw != nullptr && pw->pw_dir != nullptr) {
++    base = std::filesystem::path(pw->pw_dir) / ".config";
++  }
++  return base / "Yubico" / "u2f_keys";
++}
++
++bool SecurityKeyManager::run(
++    std::vector<std::string> args, ResultHandler done, std::optional<std::string> stdinData,
++    std::shared_ptr<std::atomic<bool>> cancel, std::optional<int> timeoutSeconds
++) {
++  process::RunOptions options;
++  options.timeout = std::chrono::seconds(timeoutSeconds.value_or(kCommandTimeoutSeconds));
++  options.maxOutputBytes = 1024 * 1024;
++  options.cancel = std::move(cancel);
++  options.stdinData = std::move(stdinData);
++  // Untranslated output: it is parsed.
++  options.env.push_back({.name = "LC_ALL", .value = "C"});
++  return process::runAsync(
++      args,
++      process::RunCallbacks{
++          .stdOut = {},
++          .stdErr = {},
++          .onExit =
++              [alive = std::weak_ptr<void>(m_alive), done = std::move(done)](process::RunResult result) {
++                DeferredCall::callLater([alive, done, result = std::move(result)]() {
++                  if (!alive.expired()) {
++                    done(result);
++                  }
++                });
++              },
++      },
++      std::move(options)
++  );
++}
++
++void SecurityKeyManager::refresh() {
++  m_loaded = true;
++  if (fido2ToolsAvailable()) {
++    loadConnectedKeys();
++    loadCredentials();
++  }
++  if (gpgAvailable() && !m_gpgBusy) {
++    loadCard();
++  }
++  notifyChanged();
++}
++
++void SecurityKeyManager::loadConnectedKeys() {
++  if (process::commandExists("fido2-token")) {
++    // "/dev/hidraw4: vendor=0x1050, product=0x0407 (Yubico YubiKey OTP+FIDO+CCID)"
++    (void)run({"fido2-token", "-L"}, [this](const process::RunResult& result) {
++      m_connectedKeys.clear();
++      for (const auto& line : lines(result.out)) {
++        const auto open = line.find('(');
++        const auto close = line.rfind(')');
++        if (open != std::string::npos && close != std::string::npos && close > open) {
++          m_connectedKeys.push_back(line.substr(open + 1, close - open - 1));
++        } else {
++          m_connectedKeys.push_back(line);
++        }
++      }
++      notifyChanged();
++    });
++    return;
++  }
++  if (process::commandExists("ykman")) {
++    // "YubiKey 5 NFC (5.4.3) [OTP+FIDO+CCID] Serial: 12345678"
++    (void)run({"ykman", "list"}, [this](const process::RunResult& result) {
++      m_connectedKeys = result ? lines(result.out) : std::vector<std::string>{};
++      notifyChanged();
++    });
++  }
++}
++
++void SecurityKeyManager::loadCredentials() {
++  m_credentials.clear();
++  std::ifstream in(authfilePath());
++  std::string line;
++  const std::string prefix = m_user + ":";
++  while (std::getline(in, line)) {
++    if (!line.starts_with(prefix)) {
++      continue;
++    }
++    // user:KeyHandle,PublicKey,CoseType,Options[:KeyHandle2,...]
++    for (auto& cred : split(std::string_view(line).substr(prefix.size()), ':')) {
++      if (cred.empty()) {
++        continue;
++      }
++      const auto comma = cred.find(',');
++      m_credentials.push_back(Credential{.keyHandle = cred.substr(0, comma), .raw = cred});
++    }
++  }
++}
++
++bool SecurityKeyManager::writeCredentials(const std::vector<std::string>& creds) {
++  const auto path = authfilePath();
++  std::error_code ec;
++  std::filesystem::create_directories(path.parent_path(), ec);
++  if (ec) {
++    kLog.warn("could not create {}: {}", path.parent_path().string(), ec.message());
++    return false;
++  }
++
++  std::vector<std::string> kept;
++  bool replaced = false;
++  std::string joined = m_user;
++  for (const auto& cred : creds) {
++    joined += ":" + cred;
++  }
++  {
++    std::ifstream in(path);
++    std::string line;
++    const std::string prefix = m_user + ":";
++    while (std::getline(in, line)) {
++      if (line.starts_with(prefix)) {
++        if (!replaced && !creds.empty()) {
++          kept.push_back(joined);
++        }
++        replaced = true;
++        continue;
++      }
++      if (!line.empty()) {
++        kept.push_back(line);
++      }
++    }
++  }
++  if (!replaced && !creds.empty()) {
++    kept.push_back(joined);
++  }
++
++  // Write a private temp file next to the authfile, then rename over it.
++  const auto tmp = path.parent_path() / (path.filename().string() + ".tmp");
++  {
++    const mode_t oldMask = ::umask(077);
++    std::ofstream out(tmp, std::ios::trunc);
++    ::umask(oldMask);
++    for (const auto& line : kept) {
++      out << line << '\n';
++    }
++    out.flush();
++    if (!out) {
++      kLog.warn("could not write {}", tmp.string());
++      std::filesystem::remove(tmp, ec);
++      return false;
++    }
++  }
++  std::filesystem::permissions(tmp, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write, ec);
++  std::filesystem::rename(tmp, path, ec);
++  if (ec) {
++    kLog.warn("could not replace {}: {}", path.string(), ec.message());
++    std::filesystem::remove(tmp, ec);
++    return false;
++  }
++  return true;
++}
++
++void SecurityKeyManager::startRegister(std::string pin) {
++  if (m_registering || m_user.empty()) {
++    return;
++  }
++  m_registering = true;
++  m_registerResult.reset();
++  m_registerCancel = std::make_shared<std::atomic<bool>>(false);
++  setFidoStatus(i18n::tr("settings.security-keys.fido.status.touch"), false);
++
++  std::optional<std::string> stdinData;
++  if (!pin.empty()) {
++    // Without a terminal, pamu2fcfg reads the PIN from stdin.
++    stdinData = pin + "\n";
++  }
++  const bool started = run(
++      {"pamu2fcfg", "-u", m_user},
++      [this](const process::RunResult& result) {
++        m_registering = false;
++        const bool cancelled = m_registerCancel && m_registerCancel->load();
++        m_registerCancel.reset();
++        if (cancelled) {
++          m_fidoStatus.clear();
++          notifyChanged();
++          return;
++        }
++        // Output: "user:KeyHandle,PublicKey,CoseType,Options"
++        const std::string out = lastLine(result.out);
++        const auto colon = out.find(':');
++        if (!result || colon == std::string::npos || colon + 1 >= out.size()) {
++          m_registerResult = false;
++          const std::string err = result.err;
++          if (result.timedOut) {
++            setFidoStatus(i18n::tr("settings.security-keys.fido.status.timeout"), true);
++          } else if (err.find("PIN") != std::string::npos) {
++            setFidoStatus(i18n::tr("settings.security-keys.fido.status.pin-required"), true);
++          } else if (err.find("No device") != std::string::npos || err.find("No FIDO") != std::string::npos) {
++            setFidoStatus(i18n::tr("settings.security-keys.fido.status.no-device"), true);
++          } else {
++            setFidoStatus(
++                i18n::tr("settings.security-keys.fido.status.register-failed", "message", lastLine(err)), true
++            );
++          }
++          return;
++        }
++
++        std::vector<std::string> creds;
++        for (const auto& cred : m_credentials) {
++          creds.push_back(cred.raw);
++        }
++        creds.push_back(out.substr(colon + 1));
++        if (!writeCredentials(creds)) {
++          m_registerResult = false;
++          setFidoStatus(
++              i18n::tr("settings.security-keys.fido.status.write-failed", "path", authfilePath().string()), true
++          );
++          return;
++        }
++        loadCredentials();
++        m_registerResult = true;
++        setFidoStatus(i18n::tr("settings.security-keys.fido.status.registered"), false);
++      },
++      std::move(stdinData), m_registerCancel, kRegisterTimeoutSeconds
++  );
++  if (!started) {
++    m_registering = false;
++    m_registerResult = false;
++    setFidoStatus(i18n::tr("settings.security-keys.fido.status.register-failed", "message", "pamu2fcfg"), true);
++  }
++}
++
++void SecurityKeyManager::cancelRegister() {
++  if (m_registerCancel) {
++    m_registerCancel->store(true);
++  }
++}
++
++void SecurityKeyManager::clearRegisterResult() {
++  m_registerResult.reset();
++  if (!m_registering && !m_testing) {
++    m_fidoStatus.clear();
++    m_fidoStatusError = false;
++  }
++}
++
++void SecurityKeyManager::removeCredential(std::size_t index) {
++  if (index >= m_credentials.size() || m_registering) {
++    return;
++  }
++  std::vector<std::string> creds;
++  for (std::size_t i = 0; i < m_credentials.size(); ++i) {
++    if (i != index) {
++      creds.push_back(m_credentials[i].raw);
++    }
++  }
++  if (!writeCredentials(creds)) {
++    setFidoStatus(i18n::tr("settings.security-keys.fido.status.write-failed", "path", authfilePath().string()), true);
++    return;
++  }
++  loadCredentials();
++  setFidoStatus(i18n::tr("settings.security-keys.fido.status.removed"), false);
++}
++
++void SecurityKeyManager::startTest() {
++  if (m_testing || m_registering) {
++    return;
++  }
++  if (m_tester == nullptr) {
++    m_tester = std::make_unique<SecurityKeyAuthenticator>();
++    m_tester->setCueCallback([this]() { setFidoStatus(i18n::tr("settings.security-keys.fido.status.touch"), false); });
++    m_tester->setAuthenticatedCallback([this]() {
++      m_testing = false;
++      setFidoStatus(i18n::tr("settings.security-keys.fido.status.test-ok"), false);
++    });
++    m_tester->setGaveUpCallback([this](bool cued) {
++      m_testing = false;
++      setFidoStatus(
++          i18n::tr(
++              cued ? "settings.security-keys.fido.status.test-timeout"
++                   : "settings.security-keys.fido.status.test-no-key"
++          ),
++          true
++      );
++    });
++  }
++  m_testing = true;
++  setFidoStatus(i18n::tr("settings.security-keys.fido.status.testing"), false);
++  m_tester->start(false);
++}
++
++void SecurityKeyManager::stopTest() {
++  if (!m_testing) {
++    return;
++  }
++  m_testing = false;
++  if (m_tester != nullptr) {
++    m_tester->stop();
++  }
++  m_fidoStatus.clear();
++  m_fidoStatusError = false;
++  notifyChanged();
++}
++
++void SecurityKeyManager::loadCard() {
++  m_gpgBusy = true;
++  const bool started = run({"gpg", "--card-status", "--with-colons"}, [this](const process::RunResult& result) {
++    m_gpgBusy = false;
++    if (!result) {
++      m_card.reset();
++      m_keyState = KeyState::Unknown;
++      m_trusted = false;
++      notifyChanged();
++      return;
++    }
++    CardInfo card;
++    for (const auto& line : lines(result.out)) {
++      const auto fields = split(line, ':');
++      const std::string& kind = fields.front();
++      if (kind == "Reader") {
++        card.reader = field(fields, 1);
++      } else if (kind == "vendor") {
++        card.vendor = field(fields, 2);
++      } else if (kind == "serial") {
++        card.serial = field(fields, 1);
++      } else if (kind == "name") {
++        card.holder = field(fields, 1);
++        const std::string last = field(fields, 2);
++        if (!last.empty()) {
++          card.holder += card.holder.empty() ? last : " " + last;
++        }
++      } else if (kind == "url") {
++        card.url = field(fields, 1);
++      } else if (kind == "fpr") {
++        for (std::size_t i = 1; i <= 3; ++i) {
++          std::string fpr = field(fields, i);
++          if (!fpr.empty()) {
++            if (i == 1) {
++              card.signatureFingerprint = fpr;
++            }
++            card.fingerprints.push_back(std::move(fpr));
++          }
++        }
++      }
++    }
++    m_card = std::move(card);
++    loadKeyState();
++  });
++  if (!started) {
++    m_gpgBusy = false;
++  }
++}
++
++void SecurityKeyManager::loadKeyState() {
++  if (!m_card.has_value() || m_card->fingerprints.empty()) {
++    m_keyState = KeyState::Unknown;
++    m_trusted = false;
++    notifyChanged();
++    return;
++  }
++  const std::string fpr = m_card->fingerprints.front();
++  (void)run({"gpg", "--list-secret-keys", "--with-colons", fpr}, [this, fpr](const process::RunResult& secret) {
++    if (!m_card.has_value()) {
++      return;
++    }
++    // A key on a card shows the card serial in field 15 of its sec/ssb record.
++    bool onCard = false;
++    std::string serial;
++    for (const auto& line : lines(secret.out)) {
++      const auto fields = split(line, ':');
++      if (fields.front() == "sec" || fields.front() == "ssb") {
++        serial = field(fields, 14);
++      } else if (fields.front() == "fpr" && std::ranges::contains(m_card->fingerprints, field(fields, 9))) {
++        if (!serial.empty() && serial != "#") {
++          onCard = true;
++        }
++      }
++    }
++    (void)run({"gpg", "--list-keys", "--with-colons", fpr}, [this, onCard](const process::RunResult& pub) {
++      m_trusted = false;
++      m_primaryFingerprint.clear();
++      bool afterPub = false;
++      for (const auto& line : lines(pub.out)) {
++        const auto fields = split(line, ':');
++        if (fields.front() == "pub") {
++          m_trusted = field(fields, 8) == "u";
++          afterPub = true;
++        } else if (fields.front() == "fpr" && afterPub) {
++          m_primaryFingerprint = field(fields, 9);
++          afterPub = false;
++        }
++      }
++      if (!pub) {
++        m_keyState = KeyState::Missing;
++      } else {
++        m_keyState = onCard ? KeyState::Ready : KeyState::PublicOnly;
++      }
++      notifyChanged();
++    });
++  });
++}
++
++void SecurityKeyManager::importPublicKey(bool offline) {
++  if (m_gpgBusy || !m_card.has_value()) {
++    return;
++  }
++  if (offline) {
++    setGpgStatus(i18n::tr("settings.security-keys.gpg.status.offline"), true);
++    return;
++  }
++  m_gpgBusy = true;
++  if (m_card->url.empty()) {
++    importFromKeyserver();
++    return;
++  }
++  setGpgStatus(i18n::tr("settings.security-keys.gpg.status.fetching-url"), false);
++  const bool started = run(
++      {"gpg", "--fetch-keys", m_card->url},
++      [this](const process::RunResult& result) {
++        if (result) {
++          createStubs(i18n::tr("settings.security-keys.gpg.status.imported"));
++          return;
++        }
++        kLog.info("gpg --fetch-keys failed: {}", lastLine(result.err));
++        importFromKeyserver();
++      },
++      std::nullopt, nullptr, kNetworkTimeoutSeconds
++  );
++  if (!started) {
++    importFromKeyserver();
++  }
++}
++
++void SecurityKeyManager::importFromKeyserver() {
++  if (!m_card.has_value() || m_card->fingerprints.empty()) {
++    m_gpgBusy = false;
++    setGpgStatus(i18n::tr("settings.security-keys.gpg.status.import-failed"), true);
++    return;
++  }
++  setGpgStatus(i18n::tr("settings.security-keys.gpg.status.fetching-keyserver"), false);
++  // Uses the keyserver configured for gpg/dirmngr.
++  const bool started = run(
++      {"gpg", "--recv-keys", m_card->fingerprints.front()},
++      [this](const process::RunResult& result) {
++        if (result) {
++          createStubs(i18n::tr("settings.security-keys.gpg.status.imported"));
++          return;
++        }
++        kLog.info("gpg --recv-keys failed: {}", lastLine(result.err));
++        m_gpgBusy = false;
++        setGpgStatus(i18n::tr("settings.security-keys.gpg.status.import-failed"), true);
++      },
++      std::nullopt, nullptr, kNetworkTimeoutSeconds
++  );
++  if (!started) {
++    m_gpgBusy = false;
++    setGpgStatus(i18n::tr("settings.security-keys.gpg.status.import-failed"), true);
++  }
++}
++
++void SecurityKeyManager::importPublicKeyFromFile(const std::filesystem::path& file) {
++  if (m_gpgBusy) {
++    return;
++  }
++  m_gpgBusy = true;
++  setGpgStatus(i18n::tr("settings.security-keys.gpg.status.importing-file"), false);
++  const bool started = run({"gpg", "--import", file.string()}, [this](const process::RunResult& result) {
++    if (result) {
++      createStubs(i18n::tr("settings.security-keys.gpg.status.imported"));
++      return;
++    }
++    m_gpgBusy = false;
++    setGpgStatus(
++        i18n::tr("settings.security-keys.gpg.status.import-file-failed", "message", lastLine(result.err)), true
++    );
++  });
++  if (!started) {
++    m_gpgBusy = false;
++  }
++}
++
++void SecurityKeyManager::createStubs(std::string successMessage) {
++  // Reading the card with the public key in the keyring links the secret-key stubs to it.
++  (void)run({"gpg", "--card-status"}, [this, successMessage = std::move(successMessage)](const process::RunResult&) {
++    m_gpgBusy = false;
++    setGpgStatus(successMessage, false);
++    loadCard();
++  });
++}
++
++void SecurityKeyManager::trustKey() {
++  if (m_gpgBusy || m_primaryFingerprint.empty()) {
++    return;
++  }
++  m_gpgBusy = true;
++  const bool started = run(
++      {"gpg", "--import-ownertrust"},
++      [this](const process::RunResult& result) {
++        m_gpgBusy = false;
++        if (result) {
++          setGpgStatus(i18n::tr("settings.security-keys.gpg.status.trusted"), false);
++        } else {
++          setGpgStatus(
++              i18n::tr("settings.security-keys.gpg.status.trust-failed", "message", lastLine(result.err)), true
++          );
++        }
++        loadKeyState();
++      },
++      m_primaryFingerprint + ":6:\n"
++  );
++  if (!started) {
++    m_gpgBusy = false;
++  }
++}
++
++void SecurityKeyManager::setFidoStatus(std::string message, bool error) {
++  m_fidoStatus = std::move(message);
++  m_fidoStatusError = error;
++  notifyChanged();
++}
++
++void SecurityKeyManager::setGpgStatus(std::string message, bool error) {
++  m_gpgStatus = std::move(message);
++  m_gpgStatusError = error;
++  notifyChanged();
++}
++
++void SecurityKeyManager::notifyChanged() {
++  if (m_onChanged) {
++    m_onChanged();
++  }
++}
+diff --git a/src/security/security_key_manager.h b/src/security/security_key_manager.h
+new file mode 100644
+index 000000000..41e8e02d3
+--- /dev/null
++++ b/src/security/security_key_manager.h
+@@ -0,0 +1,138 @@
++#pragma once
++
++#include <atomic>
++#include <filesystem>
++#include <functional>
++#include <memory>
++#include <optional>
++#include <string>
++#include <vector>
++
++class SecurityKeyAuthenticator;
++
++namespace process {
++  struct RunResult;
++} // namespace process
++
++// FIDO2/U2F security keys for pam_u2f and the OpenPGP key stored on a smartcard (e.g. a YubiKey).
++//
++// FIDO2: registers credentials with pamu2fcfg into pam_u2f's default per-user authfile,
++// $XDG_CONFIG_HOME/Yubico/u2f_keys, so no privileges are needed. A system that points pam_u2f at
++// another authfile must arrange that itself.
++//
++// OpenPGP: reads the card with gpg, imports its public key (from the URL stored on the card, the
++// keyservers configured for gpg, or a file), creates the secret-key stubs and optionally marks
++// the key as ultimately trusted.
++//
++// Commands run off the main thread; results are applied on the main loop. All state lives here
++// so the settings page, rebuilt on every change, can stay stateless.
++class SecurityKeyManager {
++public:
++  using ChangedCallback = std::function<void()>;
++
++  struct Credential {
++    std::string keyHandle;
++    std::string raw;
++  };
++
++  struct CardInfo {
++    std::string reader;
++    std::string vendor;
++    std::string serial;
++    std::string holder;
++    std::string url;
++    std::string signatureFingerprint;
++    std::vector<std::string> fingerprints; // signature, encryption, authentication (non-empty only)
++  };
++
++  enum class KeyState { Unknown, Missing, PublicOnly, Ready };
++
++  SecurityKeyManager();
++  ~SecurityKeyManager();
++
++  SecurityKeyManager(const SecurityKeyManager&) = delete;
++  SecurityKeyManager& operator=(const SecurityKeyManager&) = delete;
++
++  void setChangedCallback(ChangedCallback callback);
++
++  // pamu2fcfg is required to register FIDO2 keys.
++  [[nodiscard]] static bool fido2ToolsAvailable();
++  [[nodiscard]] static bool gpgAvailable();
++  // The test reuses the lock screen's "noctalia-lock-u2f" PAM service.
++  [[nodiscard]] static bool testServiceAvailable();
++  [[nodiscard]] static std::filesystem::path authfilePath();
++
++  // Re-reads connected keys, the authfile and the OpenPGP card.
++  void refresh();
++  [[nodiscard]] bool loaded() const noexcept { return m_loaded; }
++
++  // FIDO2/U2F
++  [[nodiscard]] const std::vector<std::string>& connectedKeys() const noexcept { return m_connectedKeys; }
++  [[nodiscard]] const std::vector<Credential>& credentials() const noexcept { return m_credentials; }
++  void startRegister(std::string pin);
++  void cancelRegister();
++  [[nodiscard]] bool registering() const noexcept { return m_registering; }
++  // Set once the last registration finished: true on success.
++  [[nodiscard]] std::optional<bool> registerResult() const noexcept { return m_registerResult; }
++  void clearRegisterResult();
++  void removeCredential(std::size_t index);
++  void startTest();
++  void stopTest();
++  [[nodiscard]] bool testing() const noexcept { return m_testing; }
++  [[nodiscard]] const std::string& fidoStatus() const noexcept { return m_fidoStatus; }
++  [[nodiscard]] bool fidoStatusIsError() const noexcept { return m_fidoStatusError; }
++
++  // OpenPGP card
++  [[nodiscard]] const std::optional<CardInfo>& card() const noexcept { return m_card; }
++  [[nodiscard]] KeyState keyState() const noexcept { return m_keyState; }
++  [[nodiscard]] bool ultimatelyTrusted() const noexcept { return m_trusted; }
++  // Imports the card's public key from the card URL, then gpg's keyservers (network sources are
++  // skipped when offline).
++  void importPublicKey(bool offline);
++  void importPublicKeyFromFile(const std::filesystem::path& file);
++  void trustKey();
++  [[nodiscard]] bool gpgBusy() const noexcept { return m_gpgBusy; }
++  [[nodiscard]] const std::string& gpgStatus() const noexcept { return m_gpgStatus; }
++  [[nodiscard]] bool gpgStatusIsError() const noexcept { return m_gpgStatusError; }
++
++private:
++  using ResultHandler = std::function<void(const process::RunResult&)>;
++
++  // Runs args on a worker; `done` runs on the main loop unless this manager is gone.
++  bool
++  run(std::vector<std::string> args, ResultHandler done, std::optional<std::string> stdinData = std::nullopt,
++      std::shared_ptr<std::atomic<bool>> cancel = nullptr, std::optional<int> timeoutSeconds = std::nullopt);
++  void loadConnectedKeys();
++  void loadCredentials();
++  bool writeCredentials(const std::vector<std::string>& creds);
++  void loadCard();
++  void loadKeyState();
++  void createStubs(std::string successMessage);
++  void importFromKeyserver();
++  void setFidoStatus(std::string message, bool error);
++  void setGpgStatus(std::string message, bool error);
++  void notifyChanged();
++
++  std::shared_ptr<void> m_alive = std::make_shared<int>(0);
++  ChangedCallback m_onChanged;
++  std::string m_user;
++
++  bool m_loaded = false;
++  std::vector<std::string> m_connectedKeys;
++  std::vector<Credential> m_credentials;
++  bool m_registering = false;
++  std::optional<bool> m_registerResult;
++  std::shared_ptr<std::atomic<bool>> m_registerCancel;
++  bool m_testing = false;
++  std::unique_ptr<SecurityKeyAuthenticator> m_tester;
++  std::string m_fidoStatus;
++  bool m_fidoStatusError = false;
++
++  std::optional<CardInfo> m_card;
++  std::string m_primaryFingerprint;
++  KeyState m_keyState = KeyState::Unknown;
++  bool m_trusted = false;
++  bool m_gpgBusy = false;
++  std::string m_gpgStatus;
++  bool m_gpgStatusError = false;
++};
+diff --git a/src/shell/settings/settings_content.cpp b/src/shell/settings/settings_content.cpp
+index 8cf059114..3355bf836 100644
+--- a/src/shell/settings/settings_content.cpp
++++ b/src/shell/settings/settings_content.cpp
+@@ -1188,6 +1188,8 @@ namespace settings {
+               return nullptr;
+             } else if constexpr (std::is_same_v<T, NotificationFiltersSetting>) {
+               return nullptr;
++            } else if constexpr (std::is_same_v<T, CustomBlockSetting>) {
++              return nullptr;
+             } else if constexpr (std::is_same_v<T, ButtonSetting>) {
+               if (control.glyph.empty()) {
+                 return ui::button({
+@@ -1443,6 +1445,12 @@ namespace settings {
+           makeIdleBehaviorsInlineBlock(*activeGroupBody, entry, *idle);
+         } else if (const auto* filters = std::get_if<NotificationFiltersSetting>(&entry.control)) {
+           makeNotificationFiltersInlineBlock(*activeGroupBody, entry, *filters);
++        } else if (const auto* custom = std::get_if<CustomBlockSetting>(&entry.control)) {
++          auto block = makeCollectionBlock(entry, /*overridden=*/false);
++          if (custom->build) {
++            custom->build(*block);
++          }
++          activeGroupBody->addChild(std::move(block));
+         } else if (const auto* picker = std::get_if<SearchPickerSetting>(&entry.control)) {
+           makeRow(*activeGroupBody, entry, makeSearchPickerButton(entry, *picker));
+         } else if (const auto* multi = std::get_if<MultiSelectSetting>(&entry.control)) {
+diff --git a/src/shell/settings/settings_registry.h b/src/shell/settings/settings_registry.h
+index 38e73d720..a8373fa94 100644
+--- a/src/shell/settings/settings_registry.h
++++ b/src/shell/settings/settings_registry.h
+@@ -274,11 +274,18 @@ namespace settings {
+     std::string defaultAction;
+   };
+ 
++  // Runtime-only block (no config path) whose body is built by its owner, e.g. the fingerprint
++  // and security key managers on the Security page. `build` receives the entry's card block.
++  struct CustomBlockSetting {
++    std::function<void(Flex& block)> build;
++  };
++
+   using SettingControl = std::variant<
+       ToggleSetting, SelectSetting, SliderSetting, RangeSliderSetting, TextSetting, OptionalNumberSetting,
+       OptionalStepperSetting, StepperSetting, ListSetting, StringMapSetting, ShortcutListSetting, KeybindListSetting,
+       SessionPanelActionsSetting, IdleBehaviorsSetting, NotificationFiltersSetting, MultiSelectSetting,
+-      TemplateGridSetting, ButtonSetting, ColorSpecPickerSetting, SearchPickerSetting, GestureActionSetting>;
++      TemplateGridSetting, ButtonSetting, ColorSpecPickerSetting, SearchPickerSetting, GestureActionSetting,
++      CustomBlockSetting>;
+ 
+   // Visibility predicate, evaluated against the same Config the registry was built from
+   // (the registry rebuilds on every config change). Capture snapshot values or read the
+diff --git a/src/shell/settings/settings_security_hardware.cpp b/src/shell/settings/settings_security_hardware.cpp
+new file mode 100644
+index 000000000..1ba7be0ce
+--- /dev/null
++++ b/src/shell/settings/settings_security_hardware.cpp
+@@ -0,0 +1,653 @@
++#include "shell/settings/settings_security_hardware.h"
++
++#include "i18n/i18n.h"
++#include "security/fingerprint_manager.h"
++#include "security/security_key_manager.h"
++#include "ui/builders.h"
++#include "ui/controls/button.h"
++#include "ui/controls/flex.h"
++#include "ui/controls/glyph.h"
++#include "ui/controls/input.h"
++#include "ui/controls/label.h"
++#include "ui/controls/progress_bar.h"
++#include "ui/controls/select.h"
++#include "ui/palette.h"
++#include "ui/style.h"
++
++#include <algorithm>
++#include <memory>
++#include <string>
++#include <utility>
++#include <vector>
++
++namespace settings {
++
++  namespace {
++
++    std::unique_ptr<Label> bodyLabel(std::string text, float scale, ColorRole role = ColorRole::OnSurface) {
++      return ui::label({
++          .text = std::move(text),
++          .fontSize = Style::fontSizeBody * scale,
++          .color = colorSpecFromRole(role),
++          .maxLines = 0,
++      });
++    }
++
++    std::unique_ptr<Label> captionLabel(std::string text, float scale) {
++      return ui::label({
++          .text = std::move(text),
++          .fontSize = Style::fontSizeCaption * scale,
++          .color = colorSpecFromRole(ColorRole::OnSurfaceVariant),
++          .maxLines = 0,
++      });
++    }
++
++    std::unique_ptr<Label> sectionLabel(std::string text, float scale) {
++      return ui::label({
++          .text = std::move(text),
++          .fontSize = Style::fontSizeCaption * scale,
++          .fontWeight = FontWeight::Bold,
++          .color = colorSpecFromRole(ColorRole::OnSurfaceVariant),
++      });
++    }
++
++    void addStatus(Flex& parent, const std::string& message, bool error, float scale) {
++      if (message.empty()) {
++        return;
++      }
++      auto row = ui::row({.align = FlexAlign::Center, .gap = Style::spaceSm * scale});
++      row->addChild(
++          ui::glyph({
++              .glyph = error ? "alert-circle" : "circle-check",
++              .glyphSize = Style::fontSizeBody * scale,
++              .color = colorSpecFromRole(error ? ColorRole::Error : ColorRole::Primary),
++          })
++      );
++      row->addChild(bodyLabel(message, scale, error ? ColorRole::Error : ColorRole::OnSurface));
++      parent.addChild(std::move(row));
++    }
++
++    // "Label: value" line.
++    void addInfoRow(Flex& parent, const std::string& label, const std::string& value, float scale) {
++      auto row = ui::row({.align = FlexAlign::Center, .gap = Style::spaceSm * scale});
++      row->addChild(
++          ui::label({
++              .text = label,
++              .fontSize = Style::fontSizeBody * scale,
++              .color = colorSpecFromRole(ColorRole::OnSurfaceVariant),
++          })
++      );
++      row->addChild(
++          ui::label({
++              .text = value,
++              .fontSize = Style::fontSizeBody * scale,
++              .color = colorSpecFromRole(ColorRole::OnSurface),
++              .maxLines = 0,
++              .flexGrow = 1.0F,
++          })
++      );
++      parent.addChild(std::move(row));
++    }
++
++    std::unique_ptr<Button> actionButton(
++        std::string text, std::string glyph, bool enabled, ButtonVariant variant, float scale,
++        std::function<void()> onClick
++    ) {
++      return ui::button({
++          .text = std::move(text),
++          .glyph = glyph.empty() ? std::nullopt : std::optional<std::string>{std::move(glyph)},
++          .fontSize = Style::fontSizeBody * scale,
++          .glyphSize = Style::fontSizeBody * scale,
++          .enabled = enabled,
++          .variant = variant,
++          .minHeight = Style::controlHeight * scale,
++          .paddingV = Style::spaceSm * scale,
++          .paddingH = Style::spaceMd * scale,
++          .gap = Style::spaceXs * scale,
++          .radius = Style::scaledRadiusMd(scale),
++          .onClick = std::move(onClick),
++      });
++    }
++
++    std::unique_ptr<Button>
++    iconButton(std::string glyph, std::string tooltip, bool enabled, float scale, std::function<void()> onClick) {
++      return ui::button({
++          .glyph = std::move(glyph),
++          .glyphSize = Style::fontSizeBody * scale,
++          .enabled = enabled,
++          .variant = ButtonVariant::Ghost,
++          .tooltip = std::move(tooltip),
++          .minWidth = Style::controlHeightSm * scale,
++          .minHeight = Style::controlHeightSm * scale,
++          .padding = Style::spaceXs * scale,
++          .radius = Style::scaledRadiusMd(scale),
++          .onClick = std::move(onClick),
++      });
++    }
++
++    std::unique_ptr<Flex> buttonRow(float scale) {
++      return ui::row({.align = FlexAlign::Center, .wrap = true, .gap = Style::spaceSm * scale});
++    }
++
++    // One row of a list: leading glyph, text, then trailing controls.
++    std::unique_ptr<Flex> listRow(const std::string& glyph, std::string text, float scale) {
++      auto row = ui::row({
++          .align = FlexAlign::Center,
++          .gap = Style::spaceSm * scale,
++          .paddingH = Style::spaceSm * scale,
++          .fill = colorSpecFromRole(ColorRole::SurfaceVariant, 0.35F),
++          .radius = Style::scaledRadiusMd(scale),
++          .minHeight = Style::controlHeight * scale,
++          .fillWidth = true,
++      });
++      row->addChild(
++          ui::glyph({
++              .glyph = glyph,
++              .glyphSize = Style::fontSizeBody * scale,
++              .color = colorSpecFromRole(ColorRole::OnSurfaceVariant),
++          })
++      );
++      row->addChild(
++          ui::label({
++              .text = std::move(text),
++              .fontSize = Style::fontSizeBody * scale,
++              .color = colorSpecFromRole(ColorRole::OnSurface),
++              .ellipsize = TextEllipsize::End,
++              .flexGrow = 1.0F,
++          })
++      );
++      return row;
++    }
++
++    // Trailing delete control with an inline confirmation step.
++    void addDeleteControls(
++        Flex& row, bool pending, bool enabled, float scale, std::function<void()> ask, std::function<void()> confirm,
++        std::function<void()> dismiss
++    ) {
++      if (!pending) {
++        row.addChild(
++            iconButton("trash", i18n::tr("settings.security-hardware.delete"), enabled, scale, std::move(ask))
++        );
++        return;
++      }
++      row.addChild(actionButton(
++          i18n::tr("settings.security-hardware.confirm-delete"), "trash", enabled, ButtonVariant::Destructive, scale,
++          std::move(confirm)
++      ));
++      row.addChild(iconButton("close", i18n::tr("settings.security-hardware.cancel"), true, scale, std::move(dismiss)));
++    }
++
++    std::string scanTypeLabel(const std::string& scanType) {
++      return scanType == "swipe" ? i18n::tr("settings.fingerprint.scan-type.swipe")
++                                 : i18n::tr("settings.fingerprint.scan-type.press");
++    }
++
++    bool allFingersEnrolled(const FingerprintManager& manager) {
++      return std::ranges::all_of(FingerprintManager::selectableFingers(), [&](const std::string& finger) {
++        return std::ranges::contains(manager.enrolledFingers(), finger);
++      });
++    }
++
++  } // namespace
++
++  void buildFingerprintBlock(
++      Flex& block, FingerprintManager& manager, SecurityHardwareUiState& state, const SecurityHardwareActions& actions,
++      float scale
++  ) {
++    if (!manager.loaded()) {
++      if (!manager.loading()) {
++        manager.refresh();
++      }
++      block.addChild(captionLabel(i18n::tr("settings.security-hardware.loading"), scale));
++      return;
++    }
++
++    const auto& devices = manager.devices();
++    if (devices.empty()) {
++      block.addChild(bodyLabel(i18n::tr("settings.fingerprint.no-reader"), scale, ColorRole::OnSurfaceVariant));
++      auto buttons = buttonRow(scale);
++      buttons->addChild(actionButton(
++          i18n::tr("settings.security-hardware.refresh"), "refresh", true, ButtonVariant::Default, scale,
++          [&manager]() { manager.refresh(); }
++      ));
++      block.addChild(std::move(buttons));
++      return;
++    }
++
++    const bool busy = manager.busy();
++
++    // Reader: a plain label for one reader, a selector when there are several (like GNOME's
++    // device page, but inline).
++    if (devices.size() == 1) {
++      addInfoRow(
++          block, i18n::tr("settings.fingerprint.reader"),
++          devices.front().name + " · " + scanTypeLabel(devices.front().scanType), scale
++      );
++    } else {
++      std::vector<std::string> options;
++      std::vector<std::string> paths;
++      std::size_t selected = 0;
++      for (std::size_t i = 0; i < devices.size(); ++i) {
++        options.push_back(devices[i].name + " · " + scanTypeLabel(devices[i].scanType));
++        paths.push_back(devices[i].path);
++        if (devices[i].path == manager.selectedDevice()) {
++          selected = i;
++        }
++      }
++      auto row = ui::row({.align = FlexAlign::Center, .gap = Style::spaceSm * scale, .fillWidth = true});
++      row->addChild(
++          ui::label({
++              .text = i18n::tr("settings.fingerprint.reader"),
++              .fontSize = Style::fontSizeBody * scale,
++              .color = colorSpecFromRole(ColorRole::OnSurfaceVariant),
++          })
++      );
++      row->addChild(
++          ui::select({
++              .options = std::move(options),
++              .selectedIndex = selected,
++              .fontSize = Style::fontSizeBody * scale,
++              .controlHeight = Style::controlHeight * scale,
++              .enabled = !busy,
++              .flexGrow = 1.0F,
++              .onSelectionChanged = [&manager,
++                                     paths = std::move(paths)](std::size_t index, std::string_view /*label*/) {
++                if (index < paths.size()) {
++                  manager.selectDevice(paths[index]);
++                }
++              },
++          })
++      );
++      block.addChild(std::move(row));
++    }
++
++    block.addChild(sectionLabel(i18n::tr("settings.fingerprint.enrolled"), scale));
++    if (manager.enrolledFingers().empty()) {
++      block.addChild(captionLabel(i18n::tr("settings.fingerprint.none-enrolled"), scale));
++    }
++    for (const auto& finger : manager.enrolledFingers()) {
++      auto row = listRow("fingerprint", FingerprintManager::fingerLabel(finger), scale);
++      if (manager.mode() == FingerprintManager::Mode::Idle && manager.matchedFinger() == finger) {
++        row->addChild(
++            ui::glyph({
++                .glyph = "circle-check",
++                .glyphSize = Style::fontSizeBody * scale,
++                .color = colorSpecFromRole(ColorRole::Primary),
++            })
++        );
++      }
++      addDeleteControls(
++          *row, state.pendingFingerDelete == finger, !busy, scale,
++          [&state, finger, rebuild = actions.requestRebuild]() {
++            state.pendingFingerDelete = finger;
++            rebuild();
++          },
++          [&state, &manager, finger]() {
++            state.pendingFingerDelete.clear();
++            manager.deleteFinger(finger);
++          },
++          [&state, rebuild = actions.requestRebuild]() {
++            state.pendingFingerDelete.clear();
++            rebuild();
++          }
++      );
++      block.addChild(std::move(row));
++    }
++
++    if (manager.mode() != FingerprintManager::Mode::Enrolling) {
++      addStatus(block, manager.status(), manager.statusIsError(), scale);
++    }
++
++    auto buttons = buttonRow(scale);
++    buttons->addChild(actionButton(
++        i18n::tr("settings.fingerprint.add"), "add", !busy && !allFingersEnrolled(manager), ButtonVariant::Primary,
++        scale, actions.openFingerprintEnrollSheet
++    ));
++    if (manager.mode() == FingerprintManager::Mode::Verifying) {
++      buttons->addChild(actionButton(
++          i18n::tr("settings.fingerprint.stop-test"), "close", true, ButtonVariant::Default, scale,
++          [&manager]() { manager.cancel(); }
++      ));
++    } else {
++      buttons->addChild(actionButton(
++          i18n::tr("settings.fingerprint.test"), "fingerprint", !busy && !manager.enrolledFingers().empty(),
++          ButtonVariant::Default, scale, [&manager]() { manager.startVerify(); }
++      ));
++    }
++    buttons->addChild(iconButton("refresh", i18n::tr("settings.security-hardware.refresh"), !busy, scale, [&manager]() {
++      manager.refresh();
++    }));
++    block.addChild(std::move(buttons));
++  }
++
++  void buildFingerprintEnrollSheet(
++      Flex& body, FingerprintManager& manager, const std::function<void()>& close, float scale
++  ) {
++    auto content = ui::column({.align = FlexAlign::Stretch, .gap = Style::spaceMd * scale, .fillWidth = true});
++
++    const bool enrolling = manager.mode() == FingerprintManager::Mode::Enrolling;
++    const bool finished = !enrolling && !manager.enrollFinger().empty();
++
++    if (!enrolling && !finished) {
++      // Step 1: pick a finger, right hand first, like GNOME Settings.
++      content->addChild(bodyLabel(i18n::tr("settings.fingerprint.choose-finger"), scale));
++      const auto& fingers = FingerprintManager::selectableFingers();
++      const auto addHand = [&](const std::string& title, std::size_t first) {
++        content->addChild(sectionLabel(title, scale));
++        auto row = buttonRow(scale);
++        for (std::size_t i = first; i < first + 3 && i < fingers.size(); ++i) {
++          const std::string& finger = fingers[i];
++          const bool enrolled = std::ranges::contains(manager.enrolledFingers(), finger);
++          row->addChild(actionButton(
++              FingerprintManager::fingerLabel(finger), enrolled ? "check" : "fingerprint", !enrolled,
++              ButtonVariant::Outline, scale, [&manager, finger]() { manager.startEnroll(finger); }
++          ));
++        }
++        content->addChild(std::move(row));
++      };
++      addHand(i18n::tr("settings.fingerprint.right-hand"), 0);
++      addHand(i18n::tr("settings.fingerprint.left-hand"), 3);
++      auto buttons = buttonRow(scale);
++      buttons->addChild(
++          actionButton(i18n::tr("settings.security-hardware.cancel"), {}, true, ButtonVariant::Default, scale, close)
++      );
++      content->addChild(std::move(buttons));
++      body.addChild(std::move(content));
++      return;
++    }
++
++    // Step 2: enrollment progress.
++    content->addChild(
++        ui::label({
++            .text = FingerprintManager::fingerLabel(manager.enrollFinger()),
++            .fontSize = Style::fontSizeTitle * scale,
++            .fontWeight = FontWeight::Bold,
++            .color = colorSpecFromRole(ColorRole::OnSurface),
++        })
++    );
++
++    const int total = manager.enrollStagesTotal();
++    const int done = manager.enrollStagesDone();
++    float progress = 0.0F;
++    if (manager.enrollCompleted()) {
++      progress = 1.0F;
++    } else if (total > 0) {
++      progress = std::clamp(static_cast<float>(done) / static_cast<float>(total), 0.0F, 1.0F);
++    }
++    content->addChild(
++        ui::progressBar({
++            .progress = progress,
++            .height = Style::spaceSm * scale,
++            .flexGrow = 0.0F,
++        })
++    );
++    if (total > 0) {
++      content->addChild(captionLabel(
++          i18n::tr(
++              "settings.fingerprint.stages", "done", std::to_string(std::min(done, total)), "total",
++              std::to_string(total)
++          ),
++          scale
++      ));
++    }
++    addStatus(*content, manager.status(), manager.statusIsError(), scale);
++
++    auto buttons = buttonRow(scale);
++    if (enrolling) {
++      buttons->addChild(
++          actionButton(i18n::tr("settings.security-hardware.cancel"), {}, true, ButtonVariant::Default, scale, close)
++      );
++    } else {
++      if (!manager.enrollCompleted()) {
++        buttons->addChild(actionButton(
++            i18n::tr("settings.fingerprint.try-again"), "refresh", true, ButtonVariant::Default, scale,
++            [&manager, finger = manager.enrollFinger()]() { manager.startEnroll(finger); }
++        ));
++      }
++      buttons->addChild(
++          actionButton(i18n::tr("settings.security-hardware.done"), {}, true, ButtonVariant::Primary, scale, close)
++      );
++    }
++    content->addChild(std::move(buttons));
++    body.addChild(std::move(content));
++  }
++
++  void buildFido2Block(
++      Flex& block, SecurityKeyManager& manager, SecurityHardwareUiState& state, const SecurityHardwareActions& actions,
++      float scale
++  ) {
++    if (!manager.loaded()) {
++      manager.refresh();
++    }
++    const bool busy = manager.registering() || manager.testing();
++
++    block.addChild(sectionLabel(i18n::tr("settings.security-keys.fido.connected"), scale));
++    if (manager.connectedKeys().empty()) {
++      block.addChild(captionLabel(i18n::tr("settings.security-keys.fido.none-connected"), scale));
++    }
++    for (const auto& key : manager.connectedKeys()) {
++      block.addChild(listRow("usb", key, scale));
++    }
++
++    block.addChild(sectionLabel(i18n::tr("settings.security-keys.fido.registered"), scale));
++    block.addChild(captionLabel(
++        i18n::tr("settings.security-keys.fido.authfile", "path", SecurityKeyManager::authfilePath().string()), scale
++    ));
++    if (manager.credentials().empty()) {
++      block.addChild(captionLabel(i18n::tr("settings.security-keys.fido.none-registered"), scale));
++    }
++    for (std::size_t i = 0; i < manager.credentials().size(); ++i) {
++      std::string handle = manager.credentials()[i].keyHandle;
++      if (handle.size() > 16) {
++        handle = handle.substr(0, 16) + "…";
++      }
++      auto row = listRow(
++          "key", i18n::tr("settings.security-keys.fido.credential", "index", std::to_string(i + 1), "handle", handle),
++          scale
++      );
++      addDeleteControls(
++          *row, state.pendingCredentialRemove == i, !busy, scale,
++          [&state, i, rebuild = actions.requestRebuild]() {
++            state.pendingCredentialRemove = i;
++            rebuild();
++          },
++          [&state, &manager, i]() {
++            state.pendingCredentialRemove.reset();
++            manager.removeCredential(i);
++          },
++          [&state, rebuild = actions.requestRebuild]() {
++            state.pendingCredentialRemove.reset();
++            rebuild();
++          }
++      );
++      block.addChild(std::move(row));
++    }
++
++    if (!manager.registering()) {
++      addStatus(block, manager.fidoStatus(), manager.fidoStatusIsError(), scale);
++    }
++
++    auto buttons = buttonRow(scale);
++    buttons->addChild(actionButton(
++        i18n::tr("settings.security-keys.fido.register"), "add", !busy, ButtonVariant::Primary, scale,
++        actions.openSecurityKeyRegisterSheet
++    ));
++    if (SecurityKeyManager::testServiceAvailable()) {
++      if (manager.testing()) {
++        buttons->addChild(actionButton(
++            i18n::tr("settings.security-keys.fido.stop-test"), "close", true, ButtonVariant::Default, scale,
++            [&manager]() { manager.stopTest(); }
++        ));
++      } else {
++        buttons->addChild(actionButton(
++            i18n::tr("settings.security-keys.fido.test"), "key", !busy && !manager.credentials().empty(),
++            ButtonVariant::Default, scale, [&manager]() { manager.startTest(); }
++        ));
++      }
++    }
++    buttons->addChild(iconButton("refresh", i18n::tr("settings.security-hardware.refresh"), !busy, scale, [&manager]() {
++      manager.refresh();
++    }));
++    block.addChild(std::move(buttons));
++  }
++
++  void buildFido2RegisterSheet(
++      Flex& body, SecurityKeyManager& manager, std::string& pin, const std::function<void()>& close, float scale
++  ) {
++    auto content = ui::column({.align = FlexAlign::Stretch, .gap = Style::spaceMd * scale, .fillWidth = true});
++
++    if (manager.registering()) {
++      content->addChild(
++          ui::glyph({
++              .glyph = "key",
++              .glyphSize = Style::fontSizeHeader * 2.0F * scale,
++              .color = colorSpecFromRole(ColorRole::Primary),
++          })
++      );
++      content->addChild(bodyLabel(i18n::tr("settings.security-keys.fido.status.touch"), scale));
++      auto buttons = buttonRow(scale);
++      buttons->addChild(actionButton(
++          i18n::tr("settings.security-hardware.cancel"), {}, true, ButtonVariant::Default, scale,
++          [&manager]() { manager.cancelRegister(); }
++      ));
++      content->addChild(std::move(buttons));
++      body.addChild(std::move(content));
++      return;
++    }
++
++    if (manager.registerResult() == true) {
++      addStatus(*content, manager.fidoStatus(), false, scale);
++      auto buttons = buttonRow(scale);
++      buttons->addChild(
++          actionButton(i18n::tr("settings.security-hardware.done"), {}, true, ButtonVariant::Primary, scale, close)
++      );
++      content->addChild(std::move(buttons));
++      body.addChild(std::move(content));
++      return;
++    }
++
++    content->addChild(bodyLabel(i18n::tr("settings.security-keys.fido.register-intro"), scale));
++    content->addChild(captionLabel(i18n::tr("settings.security-keys.fido.pin-hint"), scale));
++    content->addChild(
++        ui::input({
++            .value = pin,
++            .placeholder = i18n::tr("settings.security-keys.fido.pin-placeholder"),
++            .fontSize = Style::fontSizeBody * scale,
++            .controlHeight = Style::controlHeight * scale,
++            .passwordMode = true,
++            .onChange = [&pin](const std::string& value) { pin = value; },
++            .onSubmit =
++                [&manager, &pin](const std::string& value) {
++                  pin = value;
++                  manager.startRegister(pin);
++                },
++        })
++    );
++    if (manager.registerResult() == false) {
++      addStatus(*content, manager.fidoStatus(), true, scale);
++    }
++    auto buttons = buttonRow(scale);
++    buttons->addChild(actionButton(
++        i18n::tr("settings.security-keys.fido.register"), "key", true, ButtonVariant::Primary, scale,
++        [&manager, &pin]() { manager.startRegister(pin); }
++    ));
++    buttons->addChild(
++        actionButton(i18n::tr("settings.security-hardware.cancel"), {}, true, ButtonVariant::Default, scale, close)
++    );
++    content->addChild(std::move(buttons));
++    body.addChild(std::move(content));
++  }
++
++  void
++  buildGpgCardBlock(Flex& block, SecurityKeyManager& manager, const SecurityHardwareActions& actions, float scale) {
++    if (!manager.loaded()) {
++      manager.refresh();
++    }
++    const auto& card = manager.card();
++    const bool busy = manager.gpgBusy();
++
++    if (!card.has_value()) {
++      block.addChild(bodyLabel(
++          i18n::tr(busy ? "settings.security-hardware.loading" : "settings.security-keys.gpg.no-card"), scale,
++          ColorRole::OnSurfaceVariant
++      ));
++      auto buttons = buttonRow(scale);
++      buttons->addChild(actionButton(
++          i18n::tr("settings.security-hardware.refresh"), "refresh", !busy, ButtonVariant::Default, scale,
++          [&manager]() { manager.refresh(); }
++      ));
++      block.addChild(std::move(buttons));
++      return;
++    }
++
++    std::string cardName = card->vendor.empty() ? card->reader : card->vendor;
++    if (!card->serial.empty()) {
++      cardName += " · " + i18n::tr("settings.security-keys.gpg.serial", "serial", card->serial);
++    }
++    addInfoRow(block, i18n::tr("settings.security-keys.gpg.card"), cardName, scale);
++    if (!card->holder.empty()) {
++      addInfoRow(block, i18n::tr("settings.security-keys.gpg.holder"), card->holder, scale);
++    }
++    if (!card->signatureFingerprint.empty()) {
++      addInfoRow(block, i18n::tr("settings.security-keys.gpg.fingerprint"), card->signatureFingerprint, scale);
++    }
++    if (!card->url.empty()) {
++      addInfoRow(block, i18n::tr("settings.security-keys.gpg.url"), card->url, scale);
++    }
++
++    std::string stateText;
++    switch (manager.keyState()) {
++    case SecurityKeyManager::KeyState::Ready:
++      stateText = i18n::tr("settings.security-keys.gpg.state.ready");
++      break;
++    case SecurityKeyManager::KeyState::PublicOnly:
++      stateText = i18n::tr("settings.security-keys.gpg.state.public-only");
++      break;
++    case SecurityKeyManager::KeyState::Missing:
++      stateText = i18n::tr("settings.security-keys.gpg.state.missing");
++      break;
++    case SecurityKeyManager::KeyState::Unknown:
++      stateText = i18n::tr("settings.security-keys.gpg.state.no-key");
++      break;
++    }
++    addInfoRow(block, i18n::tr("settings.security-keys.gpg.state.label"), stateText, scale);
++    const bool hasPublicKey = manager.keyState() == SecurityKeyManager::KeyState::Ready
++        || manager.keyState() == SecurityKeyManager::KeyState::PublicOnly;
++    if (hasPublicKey) {
++      addInfoRow(
++          block, i18n::tr("settings.security-keys.gpg.trust.label"),
++          i18n::tr(
++              manager.ultimatelyTrusted() ? "settings.security-keys.gpg.trust.ultimate"
++                                          : "settings.security-keys.gpg.trust.not-ultimate"
++          ),
++          scale
++      );
++    }
++
++    addStatus(block, manager.gpgStatus(), manager.gpgStatusIsError(), scale);
++
++    const bool hasKeyOnCard = !card->fingerprints.empty();
++    auto buttons = buttonRow(scale);
++    if (manager.keyState() != SecurityKeyManager::KeyState::Ready) {
++      buttons->addChild(actionButton(
++          i18n::tr("settings.security-keys.gpg.import"), "download", !busy && hasKeyOnCard, ButtonVariant::Primary,
++          scale, [&manager, offline = actions.offline]() { manager.importPublicKey(offline); }
++      ));
++    }
++    buttons->addChild(actionButton(
++        i18n::tr("settings.security-keys.gpg.import-file"), "file-import", !busy && hasKeyOnCard,
++        ButtonVariant::Default, scale, actions.browseGpgPublicKey
++    ));
++    if (hasPublicKey && !manager.ultimatelyTrusted()) {
++      buttons->addChild(actionButton(
++          i18n::tr("settings.security-keys.gpg.trust-button"), "user-check", !busy, ButtonVariant::Default, scale,
++          [&manager]() { manager.trustKey(); }
++      ));
++    }
++    buttons->addChild(iconButton("refresh", i18n::tr("settings.security-hardware.refresh"), !busy, scale, [&manager]() {
++      manager.refresh();
++    }));
++    block.addChild(std::move(buttons));
++  }
++
++} // namespace settings
+diff --git a/src/shell/settings/settings_security_hardware.h b/src/shell/settings/settings_security_hardware.h
+new file mode 100644
+index 000000000..9c567b83b
+--- /dev/null
++++ b/src/shell/settings/settings_security_hardware.h
+@@ -0,0 +1,46 @@
++#pragma once
++
++#include <cstddef>
++#include <functional>
++#include <optional>
++#include <string>
++
++class Flex;
++class FingerprintManager;
++class SecurityKeyManager;
++
++namespace settings {
++
++  // Transient UI state of the Security page blocks that must survive content rebuilds.
++  struct SecurityHardwareUiState {
++    std::string pendingFingerDelete;
++    std::optional<std::size_t> pendingCredentialRemove;
++  };
++
++  struct SecurityHardwareActions {
++    std::function<void()> requestRebuild;
++    std::function<void()> openFingerprintEnrollSheet;
++    std::function<void()> openSecurityKeyRegisterSheet;
++    std::function<void()> browseGpgPublicKey;
++    bool offline = false;
++  };
++
++  void buildFingerprintBlock(
++      Flex& block, FingerprintManager& manager, SecurityHardwareUiState& state, const SecurityHardwareActions& actions,
++      float scale
++  );
++  // Sheet body: finger picker, then the enrollment progress.
++  void
++  buildFingerprintEnrollSheet(Flex& body, FingerprintManager& manager, const std::function<void()>& close, float scale);
++
++  void buildFido2Block(
++      Flex& block, SecurityKeyManager& manager, SecurityHardwareUiState& state, const SecurityHardwareActions& actions,
++      float scale
++  );
++  void buildFido2RegisterSheet(
++      Flex& body, SecurityKeyManager& manager, std::string& pin, const std::function<void()>& close, float scale
++  );
++
++  void buildGpgCardBlock(Flex& block, SecurityKeyManager& manager, const SecurityHardwareActions& actions, float scale);
++
++} // namespace settings
+diff --git a/src/shell/settings/settings_window.cpp b/src/shell/settings/settings_window.cpp
+index 0789fabee..7e247bdb5 100644
+--- a/src/shell/settings/settings_window.cpp
++++ b/src/shell/settings/settings_window.cpp
+@@ -16,6 +16,8 @@
+ #include "render/render_context.h"
+ #include "render/text/font_weight_catalog.h"
+ #include "scripting/plugin_registry.h"
++#include "security/fingerprint_manager.h"
++#include "security/security_key_manager.h"
+ #include "shell/settings/settings_content_plugins.h"
+ #include "shell/settings/settings_dialog_presenter.h"
+ #include "shell/tooltip/tooltip_manager.h"
+@@ -167,7 +169,11 @@ namespace {
+ 
+ SettingsWindow::SettingsWindow() = default;
+ 
+-SettingsWindow::~SettingsWindow() { destroyWindow(); }
++SettingsWindow::~SettingsWindow() {
++  destroyWindow();
++  // The managers outlive this window; drop the callbacks that point back at it.
++  setSecurityHardware(nullptr, nullptr);
++}
+ 
+ void SettingsWindow::initialize(
+     WaylandConnection& wayland, ConfigService* config, RenderContext* renderContext, DependencyService* dependencies,
+@@ -395,6 +401,14 @@ void SettingsWindow::open(std::string context) {
+     return;
+   }
+ 
++  // Pick up readers and keys plugged in since the last time the page was shown.
++  if (m_fingerprints != nullptr && m_fingerprints->loaded()) {
++    m_fingerprints->refresh();
++  }
++  if (m_securityKeys != nullptr && m_securityKeys->loaded()) {
++    m_securityKeys->refresh();
++  }
++
+   if (m_dependencies != nullptr) {
+     m_dependencies->rescan();
+   }
+@@ -560,6 +574,7 @@ void SettingsWindow::dismissOpenSelectDropdown() {
+ }
+ 
+ void SettingsWindow::destroyWindow() {
++  stopSecurityHardware();
+   m_modalHost.closeAll();
+   m_configExportDialogModal.reset();
+   m_editorSheetModal.reset();
+diff --git a/src/shell/settings/settings_window.h b/src/shell/settings/settings_window.h
+index fc4743552..63645e50a 100644
+--- a/src/shell/settings/settings_window.h
++++ b/src/shell/settings/settings_window.h
+@@ -11,6 +11,7 @@
+ #include "shell/settings/settings_control_factory.h"
+ #include "shell/settings/settings_modal_host.h"
+ #include "shell/settings/settings_registry.h"
++#include "shell/settings/settings_security_hardware.h"
+ #include "shell/settings/settings_sheet_modal.h"
+ #include "shell/settings/widget_add_popup.h"
+ #include "ui/controls/context_menu_popup.h"
+@@ -42,12 +43,14 @@ class CompositorPlatform;
+ class ColorPickerDialogPresenter;
+ class DependencyService;
+ class FileDialogPresenter;
++class FingerprintManager;
+ class Flex;
+ class GlyphPickerDialogPresenter;
+ class IdleManager;
+ class Input;
+ class Label;
+ class RenderContext;
++class SecurityKeyManager;
+ class ThumbnailService;
+ class UPowerService;
+ class WaylandConnection;
+@@ -119,6 +122,8 @@ public:
+   }
+   void setPluginManager(scripting::PluginManager* manager) { m_pluginManager = manager; }
+   void setSyncGreeterAppearance(std::function<void()> callback) { m_syncGreeterAppearance = std::move(callback); }
++  // Fingerprint and security key blocks on the Security page; either may be null.
++  void setSecurityHardware(FingerprintManager* fingerprints, SecurityKeyManager* securityKeys);
+   void setResetLauncherUsage(std::function<void()> callback) { m_resetLauncherUsage = std::move(callback); }
+   void setResetScreenTime(std::function<void()> callback) { m_resetScreenTime = std::move(callback); }
+   void setResetEncryptedStorage(std::function<void()> callback) { m_resetEncryptedStorage = std::move(callback); }
+@@ -213,6 +218,12 @@ private:
+   void openPluginSourceCreateEditor(std::optional<PluginSourceConfig> existing = std::nullopt);
+   void openPluginSettingsEditor(std::string pluginId);
+   void openPluginStore();
++  void insertSecurityHardwareEntries(const Config& cfg);
++  void openFingerprintEnrollSheet();
++  void openSecurityKeyRegisterSheet();
++  void browseGpgPublicKey();
++  void stopSecurityHardware();
++  [[nodiscard]] settings::SecurityHardwareActions securityHardwareActions(const Config& cfg);
+   void openCommunityTemplateStore();
+   void openPaletteInspector();
+   void openBarWidgetEditorSheet(
+@@ -388,4 +399,8 @@ private:
+   std::function<void()> m_resetScreenTime;
+   std::function<void()> m_resetEncryptedStorage;
+   std::function<void()> m_saveWallpaperPaletteAsCustom;
++  FingerprintManager* m_fingerprints = nullptr;
++  SecurityKeyManager* m_securityKeys = nullptr;
++  settings::SecurityHardwareUiState m_securityHardwareState;
++  std::string m_securityKeyPin;
+ };
+diff --git a/src/shell/settings/settings_window_scene.cpp b/src/shell/settings/settings_window_scene.cpp
+index 72b299712..0f7c361eb 100644
+--- a/src/shell/settings/settings_window_scene.cpp
++++ b/src/shell/settings/settings_window_scene.cpp
+@@ -1804,6 +1804,8 @@ void SettingsWindow::refreshSettingsRegistry(const Config& cfg) {
+     insertStorageRecovery(settings::SettingsSection::Shell, "clipboard");
+   }
+ 
++  insertSecurityHardwareEntries(cfg);
++
+   if (m_syncGreeterAppearance && env.greeterSyncAvailable) {
+     auto it = std::ranges::find_if(m_settingsRegistry, [](const settings::SettingEntry& e) {
+       return e.section == settings::SettingsSection::Security
+diff --git a/src/shell/settings/settings_window_security.cpp b/src/shell/settings/settings_window_security.cpp
+new file mode 100644
+index 000000000..f93f2fd0b
+--- /dev/null
++++ b/src/shell/settings/settings_window_security.cpp
+@@ -0,0 +1,254 @@
++#include "config/config_types.h"
++#include "i18n/i18n.h"
++#include "security/fingerprint_manager.h"
++#include "security/security_key_manager.h"
++#include "shell/settings/settings_security_hardware.h"
++#include "shell/settings/settings_window.h"
++#include "ui/controls/flex.h"
++#include "ui/dialogs/file_dialog.h"
++
++#include <algorithm>
++#include <filesystem>
++#include <optional>
++#include <utility>
++
++void SettingsWindow::setSecurityHardware(FingerprintManager* fingerprints, SecurityKeyManager* securityKeys) {
++  if (m_fingerprints != nullptr && m_fingerprints != fingerprints) {
++    m_fingerprints->setChangedCallback({});
++  }
++  if (m_securityKeys != nullptr && m_securityKeys != securityKeys) {
++    m_securityKeys->setChangedCallback({});
++  }
++  m_fingerprints = fingerprints;
++  m_securityKeys = securityKeys;
++  // Both managers report every state change; redraw the page and any open enroll/register sheet.
++  const auto onChanged = [this]() {
++    if (isOpen()) {
++      requestContentRebuild(/*refreshRegistry=*/false, /*refreshFilterRow=*/false, /*rebuildEditorSheet=*/true);
++    }
++  };
++  if (m_fingerprints != nullptr) {
++    m_fingerprints->setChangedCallback(onChanged);
++  }
++  if (m_securityKeys != nullptr) {
++    m_securityKeys->setChangedCallback(onChanged);
++  }
++}
++
++settings::SecurityHardwareActions SettingsWindow::securityHardwareActions(const Config& cfg) {
++  return settings::SecurityHardwareActions{
++      .requestRebuild = [this]() { requestContentRebuild(); },
++      .openFingerprintEnrollSheet = [this]() { openFingerprintEnrollSheet(); },
++      .openSecurityKeyRegisterSheet = [this]() { openSecurityKeyRegisterSheet(); },
++      .browseGpgPublicKey = [this]() { browseGpgPublicKey(); },
++      .offline = cfg.shell.offlineMode,
++  };
++}
++
++void SettingsWindow::insertSecurityHardwareEntries(const Config& cfg) {
++  std::vector<settings::SettingEntry> entries;
++
++  if (m_fingerprints != nullptr && m_fingerprints->serviceAvailable()) {
++    entries.push_back(
++        settings::SettingEntry{
++            .section = settings::SettingsSection::Security,
++            .group = "fingerprint",
++            .title = i18n::tr("settings.fingerprint.label"),
++            .subtitle = i18n::tr("settings.fingerprint.description"),
++            .path = {},
++            .control =
++                settings::CustomBlockSetting{
++                    .build =
++                        [this, actions = securityHardwareActions(cfg)](Flex& block) {
++                          if (m_fingerprints != nullptr) {
++                            settings::buildFingerprintBlock(
++                                block, *m_fingerprints, m_securityHardwareState, actions, uiScale()
++                            );
++                          }
++                        },
++                },
++            .searchText = "fingerprint reader enroll biometric fprintd digital leitor biometria",
++        }
++    );
++  }
++
++  if (m_securityKeys != nullptr && SecurityKeyManager::fido2ToolsAvailable()) {
++    entries.push_back(
++        settings::SettingEntry{
++            .section = settings::SettingsSection::Security,
++            .group = "security-keys",
++            .title = i18n::tr("settings.security-keys.fido.label"),
++            .subtitle = i18n::tr("settings.security-keys.fido.description"),
++            .path = {},
++            .control =
++                settings::CustomBlockSetting{
++                    .build =
++                        [this, actions = securityHardwareActions(cfg)](Flex& block) {
++                          if (m_securityKeys != nullptr) {
++                            settings::buildFido2Block(
++                                block, *m_securityKeys, m_securityHardwareState, actions, uiScale()
++                            );
++                          }
++                        },
++                },
++            .searchText = "security key yubikey fido2 u2f pam_u2f register token chave",
++        }
++    );
++  }
++
++  if (m_securityKeys != nullptr && SecurityKeyManager::gpgAvailable()) {
++    entries.push_back(
++        settings::SettingEntry{
++            .section = settings::SettingsSection::Security,
++            .group = "security-keys",
++            .title = i18n::tr("settings.security-keys.gpg.label"),
++            .subtitle = i18n::tr("settings.security-keys.gpg.description"),
++            .path = {},
++            .control =
++                settings::CustomBlockSetting{
++                    .build =
++                        [this, actions = securityHardwareActions(cfg)](Flex& block) {
++                          if (m_securityKeys != nullptr) {
++                            settings::buildGpgCardBlock(block, *m_securityKeys, actions, uiScale());
++                          }
++                        },
++                },
++            .searchText = "gpg gnupg openpgp smartcard card yubikey public key import stub trust",
++        }
++    );
++  }
++
++  if (entries.empty()) {
++    return;
++  }
++
++  // Right after the authentication group, ahead of the lock screen settings.
++  auto it = std::ranges::find_if(m_settingsRegistry, [](const settings::SettingEntry& e) {
++    return e.section == settings::SettingsSection::Security && e.group == "lock-screen";
++  });
++  if (it == m_settingsRegistry.end()) {
++    const auto last = std::ranges::find_last_if(m_settingsRegistry, [](const settings::SettingEntry& e) {
++      return e.section == settings::SettingsSection::Security;
++    });
++    it = last.empty() ? m_settingsRegistry.end() : std::next(last.begin());
++  }
++  m_settingsRegistry.insert(it, std::make_move_iterator(entries.begin()), std::make_move_iterator(entries.end()));
++}
++
++void SettingsWindow::openFingerprintEnrollSheet() {
++  if (m_fingerprints == nullptr || m_fingerprints->busy()) {
++    return;
++  }
++  if (m_editorSheetModal != nullptr && m_editorSheetModal->isOpen()) {
++    m_editorSheetModal->close();
++  }
++  if (m_editorSheetModal == nullptr) {
++    m_editorSheetModal = std::make_unique<settings::SettingsSheetModal>();
++    m_editorSheetModal->initialize(m_modalHost, [this]() { dismissOpenSelectDropdown(); });
++  }
++  m_fingerprints->resetEnrollment();
++
++  const auto close = [this]() {
++    if (m_editorSheetModal != nullptr) {
++      m_editorSheetModal->close();
++    }
++  };
++  const float scale = uiScale();
++  m_editorSheetModal->open(
++      settings::SettingsSheetRequest{
++          .sheetTitle = i18n::tr("settings.fingerprint.enroll-title"),
++          .populateSheetBody =
++              [this, close, scale](Flex& body) {
++                if (m_fingerprints != nullptr) {
++                  settings::buildFingerprintEnrollSheet(body, *m_fingerprints, close, scale);
++                }
++              },
++          .scale = scale,
++          .minWidth = 480.0F,
++          .maxWidth = 640.0F,
++          .onClosed =
++              [this]() {
++                if (m_fingerprints != nullptr) {
++                  if (m_fingerprints->mode() == FingerprintManager::Mode::Enrolling) {
++                    m_fingerprints->cancel();
++                  }
++                  m_fingerprints->resetEnrollment();
++                }
++                requestContentRebuild();
++              },
++      }
++  );
++}
++
++void SettingsWindow::openSecurityKeyRegisterSheet() {
++  if (m_securityKeys == nullptr || m_securityKeys->registering()) {
++    return;
++  }
++  if (m_editorSheetModal != nullptr && m_editorSheetModal->isOpen()) {
++    m_editorSheetModal->close();
++  }
++  if (m_editorSheetModal == nullptr) {
++    m_editorSheetModal = std::make_unique<settings::SettingsSheetModal>();
++    m_editorSheetModal->initialize(m_modalHost, [this]() { dismissOpenSelectDropdown(); });
++  }
++  m_securityKeys->clearRegisterResult();
++  m_securityKeyPin.clear();
++
++  const auto close = [this]() {
++    if (m_editorSheetModal != nullptr) {
++      m_editorSheetModal->close();
++    }
++  };
++  const float scale = uiScale();
++  m_editorSheetModal->open(
++      settings::SettingsSheetRequest{
++          .sheetTitle = i18n::tr("settings.security-keys.fido.register-title"),
++          .populateSheetBody =
++              [this, close, scale](Flex& body) {
++                if (m_securityKeys != nullptr) {
++                  settings::buildFido2RegisterSheet(body, *m_securityKeys, m_securityKeyPin, close, scale);
++                }
++              },
++          .scale = scale,
++          .minWidth = 480.0F,
++          .maxWidth = 640.0F,
++          .onClosed =
++              [this]() {
++                // Never keep the PIN around once the sheet is gone.
++                std::ranges::fill(m_securityKeyPin, '\0');
++                m_securityKeyPin.clear();
++                if (m_securityKeys != nullptr) {
++                  m_securityKeys->cancelRegister();
++                }
++                requestContentRebuild();
++              },
++      }
++  );
++}
++
++void SettingsWindow::browseGpgPublicKey() {
++  if (m_securityKeys == nullptr) {
++    return;
++  }
++  FileDialogOptions options;
++  options.mode = FileDialogMode::Open;
++  options.title = i18n::tr("settings.security-keys.gpg.import-file-title");
++  options.extensions = {".asc", ".gpg", ".pub", ".key"};
++  (void)FileDialog::open(std::move(options), [this](std::optional<std::filesystem::path> result) {
++    if (result.has_value() && m_securityKeys != nullptr) {
++      m_securityKeys->importPublicKeyFromFile(*result);
++    }
++  });
++}
++
++void SettingsWindow::stopSecurityHardware() {
++  if (m_fingerprints != nullptr) {
++    m_fingerprints->cancel();
++    m_fingerprints->resetEnrollment();
++  }
++  if (m_securityKeys != nullptr) {
++    m_securityKeys->stopTest();
++    m_securityKeys->cancelRegister();
++  }
++  m_securityHardwareState = {};
++}
+diff --git a/tests/process_test.cpp b/tests/process_test.cpp
+index d72cced5a..ec076000f 100644
+--- a/tests/process_test.cpp
++++ b/tests/process_test.cpp
+@@ -141,6 +141,20 @@ namespace {
+     return ok;
+   }
+ 
++  bool syncFeedsStdinData() {
++    process::RunOptions options;
++    options.stdinData = "1234\nsecond line\n";
++    const auto result = process::runSync({"/bin/sh", "-c", "read -r first; printf '%s' \"$first\""}, options);
++    bool ok = expect(result.exitCode == 0, "stdin data command failed");
++    ok = expect(result.out == "1234", "stdin data was not visible in child") && ok;
++
++    // A child that never reads its stdin must not break the run (nor raise SIGPIPE here).
++    options.stdinData = std::string(4096, 'x');
++    const auto ignored = process::runSync(std::vector<std::string>{"true"}, options);
++    ok = expect(ignored.exitCode == 0, "child ignoring stdin data failed") && ok;
++    return ok;
++  }
++
+   bool stringCommandsSupportShellComposition() {
+     const auto result = process::runSync("printf first && printf second");
+     bool ok = expect(result.exitCode == 0, "composed shell command failed");
+@@ -249,6 +263,7 @@ int main() {
+   ok = capturedAsyncDeliversCallbacksAndResult() && ok;
+   ok = capturedAsyncDeliversCompletionOnly() && ok;
+   ok = syncAppliesEnvOverrides() && ok;
++  ok = syncFeedsStdinData() && ok;
+   ok = stringCommandsSupportShellComposition() && ok;
+   ok = detachedAsyncInheritsLaunchEnvironment() && ok;
+   ok = detachedMissingBinaryReturnsFalse() && ok;

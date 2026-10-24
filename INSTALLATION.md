@@ -91,7 +91,8 @@ Depois da confirmação, o script:
 7. copia a configuração para `/persist/etc/nixos` e roda `nixos-install`;
 8. deixa todos os usuários sem senha e expirados, aplica a senha do root
    escolhida no formulário, grava `/persist/etc/shadow` e registra a
-   YubiKey para `pam_u2f` (`/persist/etc/u2f-mappings`), se estiver conectada.
+   YubiKey para `pam_u2f` (`~/.config/Yubico/u2f_keys` de cada usuário do
+   grupo wheel), se estiver conectada.
 
 Modo não interativo (sem `gum`; sem `--luks-password-file`, o disko pede a
 senha do LUKS no terminal):
@@ -236,4 +237,7 @@ senha. `sudo`, `run0` e os pedidos do polkit tentam, nesta ordem, a digital
 conectada) e a senha. Na tela de bloqueio, a digital fica ativa o tempo todo;
 Enter com o campo vazio pede o toque na YubiKey. Detalhes em
 `modules/nixos/security/pam-policy.nix`; cadastre a YubiKey com
-`just yubikey-register` (`/persist/etc/u2f-mappings`).
+`just yubikey-register` ou em Configurações › Segurança › Chaves FIDO2 / U2F
+(`~/.config/Yubico/u2f_keys`). As digitais se cadastram em Configurações ›
+Segurança › Leitor de Impressão Digital. Quem vem do authfile central antigo
+(`/persist/etc/u2f-mappings`) roda `just yubikey-migrate` antes do `switch`.

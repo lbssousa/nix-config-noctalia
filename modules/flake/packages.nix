@@ -36,8 +36,8 @@ let
       # (eram 4). Ver security/pam-policy.nix. Patch local, sem PR upstream.
       # Pinentry do GnuPG e ssh-askpass desenhados pela shell, no estilo do painel
       # do polkit: os clientes noctalia-pinentry e noctalia-askpass falam Assuan
-      # com a Noctalia ([shell] pinentry / ssh_askpass). Patch local, gerado do
-      # branch feat/secret-prompts de ~/Projetos/lbssousa/noctalia; sem PR upstream.
+      # com a Noctalia ([shell] pinentry / ssh_askpass). Patch local, sem PR
+      # upstream; fonte no branch feat/secret-prompts do fork lbssousa/noctalia.
       # Destaque no painel do polkit enquanto o PAM espera a digital ou o toque
       # na chave de segurança: ícone grande (impressão digital ou chave) com título e
       # descrição traduzidos, no lugar da mensagem crua do pam_fprintd/pam_u2f.
@@ -61,6 +61,18 @@ let
       # eventos desconhecidos, desconectando imediatamente o cliente. A Noctalia
       # pedia "outputs" (que não existe no Umbriel), impedindo a inscrição nos
       # eventos de "windows" e quebrando a ocultação inteligente da dock.
+      # Categorias "Impressão Digital" e "Chaves de Segurança" na página Segurança
+      # das Configurações: escolher o leitor (quando há mais de um), cadastrar,
+      # testar e excluir digitais pelo D-Bus do fprintd; registrar, testar e
+      # remover chaves FIDO2/U2F (pamu2fcfg, em ~/.config/Yubico/u2f_keys, o
+      # authfile padrão do pam_u2f, ver security/yubikey.nix); e importar a chave
+      # pública GPG do cartão OpenPGP (URL do cartão, keyserver ou arquivo), criar
+      # os stubs e marcar confiança absoluta.
+      #
+      # Os patches da Noctalia saem do fork lbssousa/noctalia: o branch
+      # base/nix-config-v5.3.0 é a tag v5.3.0 mais os patches acima, um commit
+      # cada, e este último é `git diff base/nix-config-v5.3.0..feat/security-hardware`
+      # (feat/security-hardware @ 487140a93).
       # Os templates dos aplicativos de terminal (emuladores e starship) são
       # remapeados de `.default` para `.dark`: assim eles usam sempre a variante
       # escura da paleta ativa, mesmo com [theme].mode = "auto". Os demais
@@ -80,6 +92,7 @@ let
               ../packages/patches/noctalia-lock-auth-sequence.patch
               ../packages/patches/noctalia-polkit-use-password.patch
               ../packages/patches/noctalia-umbriel-subscribe-without-outputs.patch
+              ../packages/patches/noctalia-security-hardware.patch
             ];
           });
         in
