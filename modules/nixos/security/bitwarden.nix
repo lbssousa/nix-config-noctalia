@@ -8,6 +8,13 @@
 # polkitd lê de /run/current-system/sw; a autenticação segue a pilha PAM
 # "polkit-1" (digital, chave de segurança ou senha).
 #
+# O app só oferece o desbloqueio se achar um Secret Service (oo7, no Rust).
+# O ashpd que ele embute trata GTK_USE_PORTAL=1 (nixos/desktop/file-manager.nix)
+# como sandbox, e aí o oo7 tenta o portal Secret, que recusa o Electron (não
+# consegue abrir /proc/<pid>/root): sem segredos, o app esconde a biometria. O
+# bitwarden fica num wrapper sem essa variável; o Electron usa o portal de
+# arquivos por conta própria.
+#
 # Native messaging com a extensão do Firefox (nixos/desktop/firefox.nix): o
 # manifesto com.8bit.bitwarden vai para o diretório do sistema do wrapper do
 # Firefox (MOZ_SYSTEM_DIR) e aponta para o desktop_proxy do pacote, que
@@ -21,6 +28,15 @@
   flake.modules.nixos.bitwarden =
     { pkgs, ... }:
     let
+      bitwarden-desktop = pkgs.symlinkJoin {
+        name = "bitwarden-desktop-${pkgs.bitwarden-desktop.version}";
+        paths = [ pkgs.bitwarden-desktop ];
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/bitwarden --unset GTK_USE_PORTAL
+        '';
+      };
+
       nativeMessagingHost = pkgs.writeTextFile {
         name = "bitwarden-native-messaging-host";
         destination = "/lib/mozilla/native-messaging-hosts/com.8bit.bitwarden.json";
@@ -34,9 +50,9 @@
       };
     in
     {
-      environment.systemPackages = with pkgs; [
+      environment.systemPackages = [
         bitwarden-desktop
-        bitwarden-cli
+        pkgs.bitwarden-cli
       ];
 
       programs.firefox.nativeMessagingHosts.packages = [ nativeMessagingHost ];
