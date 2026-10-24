@@ -162,7 +162,7 @@ just validate      # nixfmt + statix + deadnix + flake check
 
 O `just switch` roda o `nixos-rebuild --elevate run0`: o flake (incluindo o input
 `git+ssh` do `nix-secrets`) é avaliado pelo próprio usuário, que alcança o
-GitHub pelo `ssh-agent` da sessão — nada precisa ser repassado ao root.
+GitHub pelo agente SSH do Bitwarden (`SSH_AUTH_SOCK`) — nada precisa ser repassado ao root.
 
 A chave residente da YubiKey só é usada no ambiente live (`import-ssh-yubikey.sh`).
 No sistema instalado, guarde no Bitwarden (item do tipo **Chave SSH**) uma

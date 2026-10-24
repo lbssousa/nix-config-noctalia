@@ -21,9 +21,6 @@
 # conversa com o app em execução. O app ainda grava a própria cópia em
 # ~/.mozilla/native-messaging-hosts quando essa pasta existe; as duas levam ao
 # mesmo app.
-#
-# O ssh-agent do sistema fica para os usuários sem o Bitwarden: quem o tem
-# ligado aponta o SSH_AUTH_SOCK para o agente dele.
 {
   flake.modules.nixos.bitwarden =
     { pkgs, ... }:
@@ -57,7 +54,8 @@
 
       programs.firefox.nativeMessagingHosts.packages = [ nativeMessagingHost ];
 
-      # Agente SSH por usuário (systemd --user, em $XDG_RUNTIME_DIR/ssh-agent).
-      programs.ssh.startAgent = true;
+      # Sem ssh-agent do sistema: o agente SSH é o do próprio Bitwarden
+      # (home/security/bitwarden.nix).
+      programs.ssh.startAgent = false;
     };
 }

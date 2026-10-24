@@ -2,14 +2,12 @@
 # agente SSH, autostart na bandeja e preferências do app. O app e o `bw` são
 # do sistema (nixos/security/bitwarden.nix).
 #
-# Agente SSH: o app escuta em ~/.bitwarden-ssh-agent.sock. O SSH_AUTH_SOCK vai
-# para o environment.d (20-bitwarden-ssh-agent.conf, depois do
-# 10-home-manager.conf que aponta para o ssh-agent do sistema), lido pelo
-# systemd --user no início da sessão: o Umbriel, a Noctalia e tudo o que eles
-# abrem já o herdam, mesmo antes de o Bitwarden subir. Com o cofre travado,
-# o próprio app pede o desbloqueio quando o ssh pede uma chave. Shells fora da
-# sessão gráfica (TTY, login por SSH) ficam com o ssh-agent do sistema ou o
-# agente repassado.
+# Agente SSH: o app escuta em ~/.bitwarden-ssh-agent.sock. O SSH_AUTH_SOCK é
+# exportado nos shells (home.sessionVariables) e no environment.d do
+# systemd --user (systemd.user.sessionVariables, 10-home-manager.conf): o
+# Umbriel, a Noctalia, os terminais e tudo o que eles abrem já o herdam, mesmo
+# antes de o Bitwarden subir. Com o cofre travado, o próprio app pede o
+# desbloqueio quando o ssh pede uma chave.
 #
 # Preferências: o app guarda tudo (inclusive o cofre criptografado) em
 # ~/.config/Bitwarden/data.json, que ele reescreve inteiro enquanto roda. As
@@ -196,6 +194,7 @@
 
         home = {
           packages = [ applySettings ];
+          sessionVariables.SSH_AUTH_SOCK = sock;
 
           activation = {
             bitwardenSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -211,25 +210,18 @@
           };
         };
 
-        xdg = {
-          configFile = {
-            "environment.d/20-bitwarden-ssh-agent.conf".text = ''
-              SSH_AUTH_SOCK=${sock}
+        systemd.user.sessionVariables.SSH_AUTH_SOCK = sock;
+
+        xdg = lib.mkIf cfg.autostart {
+          configFile."systemd/user/app-com.bitwarden.desktop@autostart.service.d/50-wait-for-desktop.conf".text =
+            ''
+              [Service]
+              ExecStartPre=${lib.getExe autostartWait}
+              ExecStartPre=${lib.getExe applySettings}
+              TimeoutStartSec=90
             '';
 
-            "systemd/user/app-com.bitwarden.desktop@autostart.service.d/50-wait-for-desktop.conf" =
-              lib.mkIf cfg.autostart
-                {
-                  text = ''
-                    [Service]
-                    ExecStartPre=${lib.getExe autostartWait}
-                    ExecStartPre=${lib.getExe applySettings}
-                    TimeoutStartSec=90
-                  '';
-                };
-          };
-
-          autostart = lib.mkIf cfg.autostart {
+          autostart = {
             enable = true;
             entries = [ "${autostartEntry}/share/applications/com.bitwarden.desktop.desktop" ];
           };

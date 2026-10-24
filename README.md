@@ -13,8 +13,7 @@ no lugar de Flatpaks. Sucessor do [nix-config](https://github.com/lbssousa/nix-c
   quem tem `my.bitwarden.enable` (por ora, o `abutre`), o agente SSH do app
   fica no `SSH_AUTH_SOCK` da sessão (ex.: a chave do GitHub/`nix-secrets`), o
   app sobe na bandeja com a sessão e as preferências dele são declaradas no
-  Nix; desbloqueio pelo polkit (digital). Os demais usuários ficam com o
-  `ssh-agent` do sistema.
+  Nix; desbloqueio pelo polkit (digital). Não há `ssh-agent` do sistema.
 
 Instalação: [INSTALLATION.md](INSTALLATION.md).
 
@@ -68,7 +67,7 @@ lugar para ajustes locais do próprio usuário, que o Nix nunca apaga:
 | herdr | o próprio `~/.config/herdr/config.toml` (gravável) | `programs.herdr.mutableSettings` |
 | apps padrão (PDF, pastas, navegador) | `~/.config/mimeapps.list` / `xdg-mime default` | defaults via `XDG_CONFIG_DIRS` |
 | Firefox (web apps) | o próprio Firefox; os web apps declarados voltam a ter URL e container | `firefox-webapps` (home/desktop/firefox.nix) |
-| agente SSH | `~/.config/environment.d/*.conf` posterior ou `IdentityAgent` em `~/.ssh/config.d/` | `SSH_AUTH_SOCK` do `ssh-agent` via `environment.d` |
+| agente SSH | `~/.config/environment.d/*.conf` posterior ou `IdentityAgent` em `~/.ssh/config.d/` | `SSH_AUTH_SOCK` do Bitwarden (`home/security/bitwarden.nix`) |
 
 Overrides **declarativos** por usuário ficam em `modules/users/<nome>.nix`
 (`home = { … }`); os módulos base usam `lib.mkDefault`, então esse arquivo vence.
