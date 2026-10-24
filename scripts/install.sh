@@ -1247,14 +1247,26 @@ fi
 # 8b. Register the YubiKey for U2F authentication (pamu2fcfg)
 # ---------------------------------------------------------------------------
 # The system uses pam_u2f as the sole authentication method for
-# sudo/run0/pkexec (no password fallback). Without the
-# /persist/etc/u2f-mappings file, it will be impossible to escalate
+# sudo/run0/pkexec (no password fallback). pam_u2f reads each user's
+# ~/.config/Yubico/u2f_keys; without it, it will be impossible to escalate
 # privileges after boot.
 
 echo
 info "==> Step 8b: Register the YubiKey for U2F authentication (pamu2fcfg)"
 
-_U2F_AUTHFILE="/mnt/persist/etc/u2f-mappings"
+# ~/.config/Yubico/u2f_keys of a user of the installed system, owned by them.
+# Prints the file path; returns non-zero when the user or home is unknown.
+_u2f_prepare_authfile() {
+  local user="$1" entry uid gid home dir
+  entry="$(grep "^${user}:" /mnt/etc/passwd 2>/dev/null)" || return 1
+  uid="$(cut -d: -f3 <<< "$entry")"
+  gid="$(cut -d: -f4 <<< "$entry")"
+  home="$(cut -d: -f6 <<< "$entry")"
+  [[ -n "$home" ]] || return 1
+  dir="/mnt${home}"
+  install -d -o "$uid" -g "$gid" -m 700 "$dir" "$dir/.config" "$dir/.config/Yubico"
+  echo "$dir/.config/Yubico/u2f_keys"
+}
 
 # Check whether the installed system configures pam_u2f for sudo
 _U2F_CONFIGURED=false
@@ -1283,45 +1295,39 @@ else
     # Check whether the YubiKey is connected (vendor ID 1050 = Yubico)
     if ! lsusb 2>/dev/null | grep -qi "yubico"; then
       warn "YubiKey not detected (lsusb found no Yubico device)."
-      warn "Without the $( basename "$_U2F_AUTHFILE" ) file, sudo/run0/pkexec will be denied after boot."
+      warn "Without ~/.config/Yubico/u2f_keys, sudo/run0/pkexec will be denied after boot."
       warn "See INSTALLATION.md → 'sudo/run0 lockout' for recovery."
     else
       info "YubiKey detected. Starting registration for each wheel user..."
-      mkdir -p "$(dirname "$_U2F_AUTHFILE")"
-      _u2f_first=true
+      _u2f_registered=0
 
       for _wu in "${_WHEEL_USERS_U2F[@]}"; do
         _wu="${_wu// /}"  # remove leftover spaces from the split
         [[ -z "$_wu" ]] && continue
 
+        if ! _u2f_file="$(_u2f_prepare_authfile "$_wu")"; then
+          warn "User '$_wu' has no home on the installed system. Skipping."
+          continue
+        fi
+
         echo
         info "Registering user '$_wu' — touch the YubiKey when its LED blinks."
 
-        if [[ "$_u2f_first" == "true" ]]; then
-          if _run_pamu2fcfg -u "$_wu" > "$_U2F_AUTHFILE"; then
-            success "YubiKey registered for '$_wu'."
-            _u2f_first=false
-          else
-            warn "Failed to register the YubiKey for '$_wu'. Try manually:"
-            warn "  pamu2fcfg -u $_wu > /mnt/persist/etc/u2f-mappings"
-          fi
+        if _run_pamu2fcfg -u "$_wu" > "$_u2f_file.tmp"; then
+          mv "$_u2f_file.tmp" "$_u2f_file"
+          chown --reference="$(dirname "$_u2f_file")" "$_u2f_file"
+          chmod 600 "$_u2f_file"
+          success "YubiKey registered for '$_wu' (${_u2f_file#/mnt})."
+          _u2f_registered=$((_u2f_registered + 1))
         else
-          if _run_pamu2fcfg -u "$_wu" >> "$_U2F_AUTHFILE"; then
-            success "YubiKey registered for '$_wu'."
-          else
-            warn "Failed to register the YubiKey for '$_wu'. Try manually:"
-            warn "  pamu2fcfg -u $_wu >> /mnt/persist/etc/u2f-mappings"
-          fi
+          rm -f "$_u2f_file.tmp"
+          warn "Failed to register the YubiKey for '$_wu'. After boot, run as '$_wu':"
+          warn "  just yubikey-register   (or Settings › Security › FIDO2 / U2F Keys)"
         fi
       done
 
-      if [[ -f "$_U2F_AUTHFILE" && -s "$_U2F_AUTHFILE" ]]; then
-        success "File $( basename "$_U2F_AUTHFILE" ) created:"
-        while IFS= read -r _u2f_line; do
-          info "  ${_u2f_line%%:*}: [credential registered]"
-        done < "$_U2F_AUTHFILE"
-      else
-        warn "WARNING: $_U2F_AUTHFILE was not created or is empty."
+      if [[ $_u2f_registered -eq 0 ]]; then
+        warn "WARNING: no YubiKey was registered."
         warn "sudo, run0 and pkexec will be denied after boot."
         warn "See INSTALLATION.md → 'sudo/run0 lockout' for recovery."
       fi
@@ -1387,27 +1393,23 @@ else
   echo -e "        ${CYAN}just switch        # activation copies the personal key automatically${RESET}"
 fi
 echo
-if [[ "$_U2F_CONFIGURED" == "true" ]] && [[ ! -s "$_U2F_AUTHFILE" ]]; then
+if [[ "$_U2F_CONFIGURED" == "true" ]] && [[ "${_u2f_registered:-0}" -eq 0 ]]; then
   echo -e "  ${YELLOW}${BOLD}⚠  WARNING: YubiKey not registered (step 8b incomplete).${RESET}"
   echo -e "  ${YELLOW}   sudo, run0 and pkexec will use a password until it's registered.${RESET}"
   echo -e "  ${YELLOW}   Register the YubiKey BEFORE unmounting (with the YubiKey inserted):${RESET}"
   echo
   if [[ ${#_WHEEL_USERS_U2F[@]} -gt 0 ]]; then
-    _u2f_cmd_first=true
     for _wu in "${_WHEEL_USERS_U2F[@]}"; do
       _wu="${_wu// /}"
       [[ -z "$_wu" ]] && continue
-      if [[ "$_u2f_cmd_first" == "true" ]]; then
-        echo -e "    ${CYAN}pamu2fcfg -u $_wu > /mnt/persist/etc/u2f-mappings${RESET}"
-        _u2f_cmd_first=false
-      else
-        echo -e "    ${CYAN}pamu2fcfg -u $_wu >> /mnt/persist/etc/u2f-mappings${RESET}"
-      fi
+      _wu_home="$(grep "^${_wu}:" /mnt/etc/passwd 2>/dev/null | cut -d: -f6)"
+      echo -e "    ${CYAN}pamu2fcfg -u $_wu > /mnt${_wu_home:-/home/$_wu}/.config/Yubico/u2f_keys${RESET}"
     done
+    echo -e "    ${CYAN}# then chown the file to the user and chmod 600${RESET}"
   else
-    echo -e "    ${CYAN}pamu2fcfg -u <user> > /mnt/persist/etc/u2f-mappings${RESET}"
-    echo -e "    ${CYAN}pamu2fcfg -u <other-user> >> /mnt/persist/etc/u2f-mappings${RESET}"
+    echo -e "    ${CYAN}pamu2fcfg -u <user> > /mnt/home/<user>/.config/Yubico/u2f_keys${RESET}"
   fi
+  echo -e "  ${YELLOW}   Or, after boot: just yubikey-register (or Settings › Security › FIDO2 / U2F Keys).${RESET}"
   echo
   echo -e "  ${YELLOW}   See INSTALLATION.md → 'Step 10' for complete instructions.${RESET}"
   echo

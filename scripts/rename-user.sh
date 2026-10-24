@@ -5,7 +5,8 @@
 #   1. Renames the system account (usermod / groupmod)
 #   2. Moves the home directory (/home/<old> → /home/<new>)
 #   3. Renames and updates modules/users/<old>.nix (my.users.<old> → <new>)
-#   4. Updates files persisted in /persist (password flags, u2f-mappings)
+#   4. Updates the user name inside persisted files (password flags,
+#      ~/.config/Yubico/u2f_keys)
 #   5. Stages all changes in git
 #   6. Offers to run 'nixos-rebuild switch' at the end (Home Manager is a
 #      NixOS module — this one command applies both)
@@ -106,9 +107,9 @@ echo    "    • usermod -l / groupmod -n"
 echo    "  Nix configuration"
 [[ -f "$REPO_ROOT/modules/users/${OLD_NAME}.nix" ]] && \
     echo "    • modules/users/${OLD_NAME}.nix → modules/users/${NEW_NAME}.nix"
-echo    "  /persist"
-[[ -f "/persist/etc/u2f-mappings" ]] && grep -q "^${OLD_NAME}:" /persist/etc/u2f-mappings && \
-    echo "    • u2f-mappings: entry '${OLD_NAME}' updated"
+echo    "  Persisted files"
+[[ -f "/home/${OLD_NAME}/.config/Yubico/u2f_keys" ]] && grep -q "^${OLD_NAME}:" "/home/${OLD_NAME}/.config/Yubico/u2f_keys" && \
+    echo "    • u2f_keys: entry '${OLD_NAME}' updated"
 echo
 
 confirm "Confirm the rename?" || exit 1
@@ -146,10 +147,11 @@ fi
 
 info "Updating persisted files..."
 
-U2F_FILE="/persist/etc/u2f-mappings"
+# pam_u2f's per-user authfile moved with the home; its line starts with the user name.
+U2F_FILE="$NEW_HOME/.config/Yubico/u2f_keys"
 if [[ -f "$U2F_FILE" ]] && grep -q "^${OLD_NAME}:" "$U2F_FILE"; then
     sed -i "s/^${OLD_NAME}:/${NEW_NAME}:/" "$U2F_FILE"
-    success "u2f-mappings: entry '${OLD_NAME}' → '${NEW_NAME}'"
+    success "u2f_keys: entry '${OLD_NAME}' → '${NEW_NAME}'"
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
