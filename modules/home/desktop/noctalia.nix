@@ -142,9 +142,8 @@
             source = lib.mkDefault "builtin";
             builtin = lib.mkDefault "Nord";
             mode = lib.mkDefault "auto";
-            # Superfícies da própria shell sempre escuras; o modo acima (auto)
-            # continua valendo para os templates das outras aplicações.
-            shell_mode = lib.mkDefault "dark";
+            # Superfícies da própria shell acompanham o modo acima (auto).
+            shell_mode = lib.mkDefault "follow";
             # Cores das outras aplicações acompanham a paleta da shell. Os
             # aplicativos de terminal (emuladores e starship) são a exceção:
             # usam sempre a variante escura, conforme o remapeamento dos
@@ -168,37 +167,36 @@
           # entram na barra só por estarem habilitados. Cada lista substitui a
           # padrão inteira, por isso os widgets nativos estão repetidos aqui.
           # Emoji, calculadora e temas ficam de fora: já têm atalho no Umbriel
-          # (Mod+Ctrl+E, launcher, Mod+Shift+Ctrl+Space).
+          # (Mod+Ctrl+E, launcher, Mod+Shift+Ctrl+Space). Sem launcher,
+          # wallpaper e central de controle na barra.
           bar.default = {
             # Ícones, texto e espessura da barra ("Escala do Conteúdo").
             scale = lib.mkDefault 1.15;
             background_opacity = lib.mkDefault 0.75;
-            # Flutuante: 4 px da borda de cima e 80 px de cada lateral da tela.
+            # Flutuante: 4 px da borda de cima e 120 px de cada lateral da tela.
             margin_edge = lib.mkDefault 4;
-            margin_ends = lib.mkDefault 80;
+            margin_ends = lib.mkDefault 120;
             start = lib.mkDefault [
-              "launcher"
-              "wallpaper"
+              "noctalia/umbriel-companion:bar"
               "workspaces"
               "spacer-start"
               "media"
             ];
-            # Central de controle à esquerda do relógio; área de transferência
-            # e notificações à direita ("group:inbox"), com um respiro de cada
-            # lado. O relógio é ancorado no centro da barra (anchor = true).
+            # À direita do relógio, depois de um respiro: área de transferência
+            # e notificações ("group:inbox"), impressoras e status do NixOS. O
+            # relógio é ancorado no centro da barra (anchor = true).
             center = lib.mkDefault [
-              "control-center"
-              "spacer-clock-left"
               "clock"
               "spacer-clock-right"
               "group:inbox"
+              "andrewdems/printers:printer"
+              "mindnbytes/nix-status:status"
             ];
+            # "usage": limites dos planos de IA (headroom; widget.usage abaixo).
             end = lib.mkDefault [
               "tray"
               "spacer-tray"
-              "felipeartur/ai-usagebar:bar"
-              "andrewdems/printers:printer"
-              "mindnbytes/nix-status:status"
+              "usage"
               "group:toggles"
               "group:system"
               "session"
@@ -224,7 +222,6 @@
               {
                 id = "toggles";
                 members = [
-                  "noctalia/umbriel-companion:bar"
                   "nightlight"
                   "caffeine"
                 ];
@@ -247,9 +244,9 @@
             # Espaçadores da barra, um por posição (os ids repetidos nas listas
             # seriam o mesmo widget).
             spacer-start.type = "spacer";
-            spacer-clock-left.type = "spacer";
             spacer-clock-right.type = "spacer";
             spacer-tray.type = "spacer";
+            usage.type = "ayagmar/headroom:usage";
           };
 
           # Atalhos padrão da central de controle mais os blocos dos plugins.
@@ -281,6 +278,9 @@
             reserve_space = lib.mkDefault false;
             # Flutuante: afastada da borda de baixo da tela.
             margin_edge = lib.mkDefault 8;
+            # Botão do launcher no fim da dock e pontos nos apps abertos.
+            launcher_position = lib.mkDefault "end";
+            show_dots = lib.mkDefault true;
             pinned = lib.mkDefault [
               "firefox"
               "com.mitchellh.ghostty"
