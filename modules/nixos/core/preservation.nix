@@ -36,9 +36,12 @@ in
       preserveAt."/persist" = {
         directories = [
           # Symlinks: lidos por stat() comum.
+          # No initrd: o stage 2 cria /etc/nixos como diretório vazio se ele
+          # ainda não for um symlink, e o "L" do tmpfiles não o substitui.
           {
             directory = "/etc/nixos";
             how = "symlink";
+            inInitrd = true;
           }
           {
             directory = "/etc/NetworkManager/system-connections";

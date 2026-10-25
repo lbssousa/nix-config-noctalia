@@ -32,6 +32,13 @@ _rebuild action host='' *args:
   case "{{action}}" in
     switch|boot)
       flake="{{mirror}}"
+      if [[ ! -f "{{mirror}}/flake.nix" || ! -d "{{mirror}}/.git" ]]; then
+        echo "error: {{mirror}} is not a git mirror of this configuration yet. Create it with:" >&2
+        echo "  run0 git clone https://github.com/lbssousa/nix-config-noctalia.git /persist/etc/nixos" >&2
+        echo "or, to bootstrap without it, rebuild once from this directory:" >&2
+        echo "  nixos-rebuild {{action}} --elevate run0 --flake \"{{flake_root}}#${host}\"" >&2
+        exit 1
+      fi
       if [[ "$(realpath "{{flake_root}}")" != "$(realpath "{{mirror}}")" ]] \
         && { [[ "$(git -C "{{flake_root}}" rev-parse HEAD)" != "$(git -C "{{mirror}}" rev-parse HEAD)" ]] \
           || [[ -n "$(git -C "{{flake_root}}" status --porcelain)" ]]; }; then
