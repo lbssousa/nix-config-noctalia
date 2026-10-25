@@ -31,8 +31,7 @@
         nrd = "nixos-rebuild dry-activate --flake /etc/nixos";
         nrB = "nixos-rebuild build --flake /etc/nixos";
         nrr = "nixos-rebuild switch --sudo --rollback";
-        nru = "nix flake update --flake /etc/nixos && nixos-rebuild switch --sudo --flake /etc/nixos";
-        nss = "just sync && nixos-rebuild switch --sudo --flake /etc/nixos";
+        nru = "just sync && nixos-rebuild switch --sudo --flake /etc/nixos";
         nfc = "nix flake check /etc/nixos";
         nfs = "nix flake show /etc/nixos";
         ngl = "nixos-rebuild list-generations";
