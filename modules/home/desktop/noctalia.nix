@@ -237,6 +237,8 @@
             };
             network.show_label = lib.mkDefault false;
             volume.show_label = lib.mkDefault false;
+            # Bateria some da barra quando a carga está completa.
+            battery.hide_when_full = lib.mkDefault true;
             # Espaçadores da barra, um por posição (os ids repetidos nas listas
             # seriam o mesmo widget).
             spacer-start.type = "spacer";
