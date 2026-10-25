@@ -42,7 +42,6 @@
             settings = {
               user.name = inputs.nix-secrets.abutre.gitName;
               user.email = inputs.nix-secrets.abutre.gitEmail;
-              safe.directory = [ "/etc/nixos" ];
             };
           };
         };

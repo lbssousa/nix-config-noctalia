@@ -52,8 +52,16 @@
 
       networking.networkmanager.enable = true;
 
+      # /etc/nixos pertence a um usuário comum e é lido também pelo root.
+      programs.git = {
+        enable = true;
+        config.safe.directory = [
+          "/etc/nixos"
+          "/persist/etc/nixos"
+        ];
+      };
+
       environment.systemPackages = with pkgs; [
-        git
         git-crypt
         gh
         glab

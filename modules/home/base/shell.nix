@@ -23,9 +23,20 @@
         dkc = "podman-compose";
         # O nixos-rebuild avalia o flake como o próprio usuário (que alcança o
         # nix-secrets pelo agente SSH do Bitwarden) e só a ativação usa sudo.
+        # /etc/nixos é um espelho git: `nsync` o atualiza antes de reconstruir.
+        nsync = "just sync";
         nrs = "nixos-rebuild switch --sudo --flake /etc/nixos";
         nrb = "nixos-rebuild boot --sudo --flake /etc/nixos";
+        nrt = "nixos-rebuild test --sudo --flake /etc/nixos";
+        nrd = "nixos-rebuild dry-activate --flake /etc/nixos";
+        nrB = "nixos-rebuild build --flake /etc/nixos";
+        nrr = "nixos-rebuild switch --sudo --rollback";
         nru = "nix flake update --flake /etc/nixos && nixos-rebuild switch --sudo --flake /etc/nixos";
+        nss = "just sync && nixos-rebuild switch --sudo --flake /etc/nixos";
+        nfc = "nix flake check /etc/nixos";
+        nfs = "nix flake show /etc/nixos";
+        ngl = "nixos-rebuild list-generations";
+        ngc = "sudo nix-collect-garbage --delete-older-than 30d";
       };
     in
     {

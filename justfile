@@ -112,6 +112,21 @@ update *inputs:
     git push
   fi
 
+# Atualiza o espelho git em flake_root (fast-forward apenas). Os commits são
+# feitos no clone de trabalho e chegam aqui pelo remoto.
+[group("maintenance")]
+sync:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cd "{{flake_root}}"
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "error: {{flake_root}} has local changes; it must stay a pure mirror" >&2
+    exit 1
+  fi
+  # Arquivos novos herdam o grupo (wheel) e ficam graváveis por ele.
+  git -c core.sharedRepository=group pull --ff-only
+  git log --oneline -1
+
 [group("maintenance")]
 gc period='30d':
   #!/usr/bin/env bash

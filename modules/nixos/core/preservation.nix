@@ -88,8 +88,9 @@ in
     };
 
     systemd.tmpfiles.rules = [
-      # O config do sistema é editável pelo grupo wheel.
-      "z /persist/etc/nixos 0775 root wheel - -"
+      # Espelho git do config (somente `git pull --ff-only`): criado se faltar,
+      # setgid para que os arquivos herdem o grupo wheel.
+      "d /persist/etc/nixos 2775 root wheel - -"
       # libdbus (não dbus-broker) lê este caminho, efêmero com / em tmpfs.
       "d  /var/lib/dbus 0755 root root - -"
       "L+ /var/lib/dbus/machine-id - - - - /etc/machine-id"
