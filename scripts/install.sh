@@ -13,7 +13,8 @@
 #   5.  Adds the new files to the git index (git add)
 #   6a. Creates the sbctl Secure Boot keys (all hosts use Secure Boot)
 #   6b. Copies the sops-nix system age key to /persist
-#   7.  Installs NixOS
+#   7.  Commits the generated files, clones the configuration to the
+#       root-owned git mirror /persist/etc/nixos and installs NixOS
 #   7b. (--age-keys-from-vault) Copies each user's personal age key
 #   8.  Expires every user's empty initial password (set on first login)
 #   8b. Registers the YubiKey for U2F authentication (pamu2fcfg)
@@ -384,7 +385,8 @@ This script automates the steps described in INSTALLATION.md:
   5.  Adds the new files to the git index (git add)
   6a. Creates the sbctl Secure Boot keys (all hosts use Secure Boot)
   6b. Copies the sops-nix system age key to /persist
-  7.  Installs NixOS
+  7.  Commits the generated files, clones the configuration to the
+      root-owned git mirror /persist/etc/nixos and installs NixOS
   7b. (--age-keys-from-vault) Copies each user's personal age key
   8.  Expires every user's empty initial password and optionally sets root's
   8b. Registers the YubiKey for U2F authentication (pamu2fcfg)
@@ -1052,45 +1054,48 @@ fi
 echo
 info "==> Step 7: Install NixOS"
 
-# Copy the configuration to /persist/etc/nixos. "/" is a tmpfs: anything
-# written to /mnt/etc/nixos itself would be gone on the first boot, when
-# preservation turns /etc/nixos into a symlink to /persist/etc/nixos. The
+# The configuration lives at /persist/etc/nixos: "/" is a tmpfs, and on the
+# first boot preservation turns /etc/nixos into a symlink to it. The
 # /mnt/etc/nixos symlink below only serves nixos-install.
-mkdir -p /mnt/persist/etc/nixos /mnt/etc
-# rsync is preferable but may not be available; use cp as a fallback
-if command -v rsync >/dev/null 2>&1; then
-  rsync -a --delete "$CONFIG_DIR/" /mnt/persist/etc/nixos/
-else
-  cp -r "$CONFIG_DIR/." /mnt/persist/etc/nixos/
-fi
-[[ -L /mnt/etc/nixos ]] || { rm -rf /mnt/etc/nixos; ln -s ../persist/etc/nixos /mnt/etc/nixos; }
-success "Configuration copied to /mnt/persist/etc/nixos (linked at /mnt/etc/nixos)."
-
-# Re-index user files, configuration and the private layer at /mnt/etc/nixos
-# to make sure Nix sees them when evaluating the copied flake.
 #
-# Why this is necessary:
-#   rsync copies the .git/ directory (including the index) from the source
-#   repo, but the copied git index may contain entries with object hashes
-#   pointing to the local live CD's store — not to the files under
-#   /mnt/etc/nixos. Redoing git add at the destination ensures the index
-#   at /mnt/etc/nixos reflects the LOCAL files, making them visible to
-#   Nix's flake evaluator (which uses the git index to determine which
-#   files to include in the flake source).
-for _i in "${!USERS_LOGIN[@]}"; do
-  _ufile_rel="modules/users/${USERS_LOGIN[$_i]}.nix"
-  if [[ -f "/mnt/etc/nixos/$_ufile_rel" ]]; then
-    git -C /mnt/etc/nixos add "$_ufile_rel" 2>/dev/null || true
-    success "File $_ufile_rel re-indexed at /mnt/etc/nixos."
-  else
-    warn "File $_ufile_rel not found at /mnt/etc/nixos after rsync!"
-  fi
-done
+# It is a git mirror owned by root that only fast-forwards (`just sync`). The
+# host and user files staged above are committed here first, so the mirror
+# gets them as a regular commit; `just publish-mirror`, run later in the
+# working clone, pushes that commit with the same hash. Unstaged changes are
+# not part of the clone (nor of the installed system).
+_install_commit=false
+if ! git -C "$CONFIG_DIR" diff --cached --quiet; then
+  _install_commit=true
+  _new_users="${USERS_LOGIN[*]}"
+  git -C "$CONFIG_DIR" -c user.name=nixos-install -c user.email="root@$HOST" \
+    commit --quiet --no-verify --no-gpg-sign \
+    -m "install: $HOST${_new_users:+ (users: ${_new_users// /, })}"
+  success "Generated host and user files committed: $(git -C "$CONFIG_DIR" log --oneline -1)"
+fi
+if [[ -n "$(git -C "$CONFIG_DIR" status --porcelain --untracked-files=no)" ]]; then
+  warn "Uncommitted changes in $CONFIG_DIR are left out of the installed configuration:"
+  git -C "$CONFIG_DIR" status --short --untracked-files=no
+fi
 
-# Re-index the host files (the disk device may have changed in step 2)
-git -C /mnt/etc/nixos add \
-  "modules/hosts/$HOST/default.nix" \
-  "modules/hosts/$HOST/_hardware-configuration.nix" 2>/dev/null || true
+# The mirror fetches over HTTPS: no credentials, and root never needs a key.
+_origin_url="$(git -C "$CONFIG_DIR" remote get-url origin 2>/dev/null || true)"
+case "$_origin_url" in
+  git@github.com:*) _origin_url="https://github.com/${_origin_url#git@github.com:}" ;;
+  ssh://git@github.com/*) _origin_url="https://github.com/${_origin_url#ssh://git@github.com/}" ;;
+esac
+
+rm -rf /mnt/persist/etc/nixos
+mkdir -p /mnt/persist/etc /mnt/etc
+git clone --quiet --no-hardlinks "$CONFIG_DIR" /mnt/persist/etc/nixos
+if [[ -n "$_origin_url" ]]; then
+  git -C /mnt/persist/etc/nixos remote set-url origin "$_origin_url"
+else
+  warn "$CONFIG_DIR has no origin remote; set one in /persist/etc/nixos before 'just sync'."
+fi
+chown -R root:root /mnt/persist/etc/nixos
+chmod 0755 /mnt/persist/etc/nixos
+[[ -L /mnt/etc/nixos ]] || { rm -rf /mnt/etc/nixos; ln -s ../persist/etc/nixos /mnt/etc/nixos; }
+success "Configuration cloned to /mnt/persist/etc/nixos (linked at /mnt/etc/nixos, origin: ${_origin_url:-none})."
 
 info "Running nixos-install..."
 # Passes the binary caches explicitly so nixos-install uses them even if
@@ -1379,6 +1384,11 @@ echo -e "    ${CYAN}sudo umount -R /mnt${RESET}"
 echo -e "    ${CYAN}sudo reboot${RESET}"
 echo
 echo -e "  After the first boot:"
+if [[ "$_install_commit" == "true" ]]; then
+  echo -e "    • Publish the install commit (host/user files) from a working clone of the"
+  echo -e "      repository, so that ${CYAN}just sync${RESET} can fast-forward the mirror again:"
+  echo -e "        ${CYAN}just publish-mirror${RESET}"
+fi
 echo -e "    • Enroll the Secure Boot keys (firmware in Setup Mode): ${CYAN}sudo scripts/setup-secureboot.sh${RESET}"
 echo -e "      (see ${BOLD}INSTALLATION.md${RESET} → 'Secure Boot')"
 echo -e "    • Then enable automatic LUKS unlock via TPM2: ${CYAN}sudo scripts/enroll-tpm2.sh${RESET}"

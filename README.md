@@ -144,6 +144,11 @@ O CI (`.github/workflows/validate.yml`) precisa do secret
 `NIX_SECRETS_SSH_KEY` (deploy key somente leitura do `nix-secrets`).
 `just hooks` ativa o pre-commit (nixfmt, statix, deadnix).
 
+O sistema é reconstruído a partir de `/etc/nixos`, um espelho git do root que só
+recebe fast-forward (`just sync`); as alterações são feitas num clone de
+trabalho e chegam lá pelo remoto. Os comandos e aliases (`nrs`, `nru`, …) estão
+em [INSTALLATION.md › Manutenção](INSTALLATION.md#manutenção).
+
 ## Créditos
 
 - [Omarchy](https://github.com/basecamp/omarchy) (MIT): prompt do starship,

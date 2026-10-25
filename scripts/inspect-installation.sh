@@ -393,9 +393,32 @@ if [[ -d "$ROOT/etc/nixos" ]]; then
   # Check the git index
   if [[ -d "$ROOT/etc/nixos/.git" ]]; then
     ok "git repository found at /etc/nixos"
-    info "git index status:"
-    git -C "$ROOT/etc/nixos" status --short 2>/dev/null | sed 's/^/    /' \
-      || info "    (could not get status)"
+    # /etc/nixos is a root-owned mirror that only fast-forwards (just sync).
+    _owner="$(stat -L -c %U "$ROOT/etc/nixos" 2>/dev/null || true)"
+    if [[ "$_owner" == "root" ]]; then
+      ok "mirror owned by root"
+    else
+      warn "mirror owned by '${_owner:-?}' (expected root)"
+    fi
+    _origin="$(git -C "$ROOT/etc/nixos" remote get-url origin 2>/dev/null || true)"
+    case "$_origin" in
+      https://*) ok "origin over HTTPS: $_origin" ;;
+      "") fail "no origin remote (just sync can't update the mirror)"; ((_issues++)) || true ;;
+      *) warn "origin is not HTTPS ($_origin): root can't fetch without credentials" ;;
+    esac
+    _dirty="$(git -C "$ROOT/etc/nixos" status --porcelain --untracked-files=no 2>/dev/null || true)"
+    if [[ -z "$_dirty" ]]; then
+      ok "mirror has no local changes"
+    else
+      warn "mirror has local changes (just sync will refuse to run):"
+      sed 's/^/    /' <<<"$_dirty"
+    fi
+    # Compares with the last fetched state of the remote (no network access).
+    _ahead="$(git -C "$ROOT/etc/nixos" log --oneline '@{upstream}..HEAD' 2>/dev/null || true)"
+    if [[ -n "$_ahead" ]]; then
+      warn "mirror has local commits; run 'just publish-mirror' in a working clone:"
+      sed 's/^/    /' <<<"$_ahead"
+    fi
     # List staged files (in the index)
     info "Files in the git index (staged):"
     git -C "$ROOT/etc/nixos" ls-files 2>/dev/null | grep -E '^modules/(users|hosts)/' \

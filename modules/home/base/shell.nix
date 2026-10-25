@@ -7,6 +7,9 @@
   flake.modules.homeManager.shell =
     { lib, pkgs, ... }:
     let
+      # Sempre o justfile do espelho: dentro de um projeto com justfile próprio
+      # (o clone de trabalho, por exemplo) o wrapper do just usaria o local.
+      sysJust = "just --justfile /etc/nixos/justfile";
       aliases = {
         ls = "eza";
         ll = "eza -la";
@@ -21,17 +24,17 @@
         lg = "lazygit";
         dk = "podman";
         dkc = "podman-compose";
-        # O nixos-rebuild avalia o flake como o próprio usuário (que alcança o
-        # nix-secrets pelo agente SSH do Bitwarden) e só a ativação usa sudo.
-        # /etc/nixos é um espelho git: `nsync` o atualiza antes de reconstruir.
-        nsync = "just sync";
-        nrs = "nixos-rebuild switch --sudo --flake /etc/nixos";
-        nrb = "nixos-rebuild boot --sudo --flake /etc/nixos";
-        nrt = "nixos-rebuild test --sudo --flake /etc/nixos";
-        nrd = "nixos-rebuild dry-activate --flake /etc/nixos";
-        nrB = "nixos-rebuild build --flake /etc/nixos";
-        nrr = "nixos-rebuild switch --sudo --rollback";
-        nru = "just sync && nixos-rebuild switch --sudo --flake /etc/nixos";
+        # O sistema é reconstruído a partir do espelho /etc/nixos (`nsync` o
+        # atualiza); o flake é avaliado pelo próprio usuário (que alcança o
+        # nix-secrets pelo agente SSH do Bitwarden) e só a ativação usa run0.
+        nsync = "${sysJust} sync";
+        nrs = "${sysJust} switch";
+        nrb = "${sysJust} boot";
+        nrt = "${sysJust} test";
+        nrB = "${sysJust} build";
+        nrd = "${sysJust} diff";
+        nru = "${sysJust} upgrade";
+        nrr = "nixos-rebuild switch --elevate run0 --rollback";
         nfc = "nix flake check /etc/nixos";
         nfs = "nix flake show /etc/nixos";
         ngl = "nixos-rebuild list-generations";

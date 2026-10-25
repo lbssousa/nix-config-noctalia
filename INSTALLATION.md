@@ -88,7 +88,9 @@ Depois da confirmação, o script:
    `modules/users/_template.nix.in`) — o nome completo vem do `nix-secrets`;
 5. cria as chaves do Secure Boot em `/persist/etc/secureboot` (sbctl);
 6. copia a chave age do host para `/persist/etc/sops/age/keys.txt`;
-7. copia a configuração para `/persist/etc/nixos` e roda `nixos-install`;
+7. faz commit dos arquivos gerados (host e usuários), clona a configuração em
+   `/persist/etc/nixos` (espelho git do root, com `origin` em HTTPS) e roda
+   `nixos-install`;
 8. deixa todos os usuários sem senha e expirados, aplica a senha do root
    escolhida no formulário, grava `/persist/etc/shadow` e registra a
    YubiKey para `pam_u2f` (`~/.config/Yubico/u2f_keys` de cada usuário do
@@ -152,14 +154,46 @@ fprintd-verify
 
 ## Manutenção
 
+O sistema é sempre reconstruído a partir de `/etc/nixos` (→ `/persist/etc/nixos`),
+um **espelho git** do root que só avança por fast-forward a partir do remoto
+(HTTPS, sem credenciais). As alterações são feitas num **clone de trabalho**
+(por exemplo `~/Projetos/lbssousa/nix-config-noctalia`), que publica por push:
+
+```text
+clone de trabalho ──commit/push──▶ GitHub ──just sync──▶ /etc/nixos ──just switch──▶ sistema
+```
+
+No clone de trabalho:
+
 ```bash
-just switch        # NixOS + home-manager (avaliação como usuário, ativação com run0)
-just update        # atualiza o flake.lock (e faz commit/push, salvo auto_commit=false)
-just upgrade       # update + switch
-just diff          # pacotes que mudariam
-just gc 14d        # coleta de lixo
+just build / test  # testa a configuração do clone (test não cria geração de boot)
+just diff          # pacotes que mudariam com a configuração do clone
+just update        # atualiza o flake.lock e faz commit/push (salvo auto_commit=false)
+just upgrade       # update + sync + switch
+just publish-mirror  # publica commits feitos no espelho (o da instalação, por exemplo)
 just validate      # nixfmt + statix + deadnix + flake check
 ```
+
+Em qualquer diretório (aliases do fish/bash, sempre com o justfile do espelho):
+
+```bash
+nsync              # just sync: fast-forward do espelho (recusa se estiver sujo ou à frente)
+nrs / nrb / nrt    # just switch / boot / test a partir do espelho
+nrB / nrd          # just build / diff a partir do espelho
+nru                # just upgrade no espelho: sync + switch
+nrr                # volta para a geração anterior
+ngl / ngc          # lista as gerações / coleta de lixo
+```
+
+`just switch` e `just boot` usam o espelho mesmo quando chamados no clone de
+trabalho, e avisam se o clone tem alterações que ainda não chegaram lá. O
+`just update` recusa rodar no espelho.
+
+Logo após a instalação, o espelho tem um commit local com os arquivos do host e
+dos usuários, e o `just sync` recusa até que ele chegue ao remoto. Para isso,
+clone o repositório (por SSH) e rode `just publish-mirror` nele: o commit é
+trazido do espelho com o mesmo hash, os commits locais do clone são reaplicados
+sobre ele, e tudo é enviado por push.
 
 O `just switch` roda o `nixos-rebuild --elevate run0`: o flake (incluindo o input
 `git+ssh` do `nix-secrets`) é avaliado pelo próprio usuário, que alcança o

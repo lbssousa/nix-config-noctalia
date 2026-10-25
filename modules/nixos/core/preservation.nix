@@ -88,9 +88,9 @@ in
     };
 
     systemd.tmpfiles.rules = [
-      # Espelho git do config (somente `git pull --ff-only`): criado se faltar,
-      # setgid para que os arquivos herdem o grupo wheel.
-      "d /persist/etc/nixos 2775 root wheel - -"
+      # Espelho git do config, do root e só com fast-forward (`just sync`); os
+      # usuários apenas o leem e avaliam.
+      "d /persist/etc/nixos 0755 root root - -"
       # libdbus (não dbus-broker) lê este caminho, efêmero com / em tmpfs.
       "d  /var/lib/dbus 0755 root root - -"
       "L+ /var/lib/dbus/machine-id - - - - /etc/machine-id"

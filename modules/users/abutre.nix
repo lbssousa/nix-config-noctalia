@@ -31,7 +31,9 @@
         };
 
         programs = {
-          # Status do NixOS na barra (plugin nix-status) a partir deste flake.
+          # Status do NixOS na barra (plugin nix-status) a partir do clone de
+          # trabalho, não do espelho /etc/nixos: o plugin roda `nix flake
+          # update` no diretório, e o lock só é atualizado (e publicado) aqui.
           noctalia.settings.plugin_settings."mindnbytes/nix-status".flake_dir =
             "${config.xdg.userDirs.extraConfig.PROJECTS}/lbssousa/nix-config-noctalia";
           git = {

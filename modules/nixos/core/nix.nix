@@ -52,7 +52,8 @@
 
       networking.networkmanager.enable = true;
 
-      # /etc/nixos pertence a um usuário comum e é lido também pelo root.
+      # O espelho /etc/nixos pertence ao root e é lido e avaliado pelos
+      # usuários (o git recusa repositórios de outro dono sem isto).
       programs.git = {
         enable = true;
         config.safe.directory = [
