@@ -146,6 +146,17 @@ let
         ln -s ${final.noctalia}/bin/noctalia-askpass $out/bin/noctalia-askpass
       '';
 
+      # Ação window-toggle-fullscreen-in-tile, como o "fullscreenstate 0 2" do
+      # Hyprland: o aplicativo recebe o estado fullscreen (o Firefox esconde a
+      # interface, players escondem os controles), mas fica no espaço do tile,
+      # com gaps, bordas e a barra. O unfullscreen do próprio aplicativo (Esc no
+      # vídeo, F11) sai do modo. Patch local, sem PR upstream; fonte no branch
+      # feat/fullscreen-in-tile do fork lbssousa/umbriel (75557b2f, sobre o 5cea311
+      # do nixpkgs): o patch é `git diff 5cea311..feat/fullscreen-in-tile`.
+      umbriel = prev.umbriel.overrideAttrs (old: {
+        patches = (old.patches or [ ]) ++ [ ../packages/patches/umbriel-fullscreen-in-tile.patch ];
+      });
+
       noctalia-greeter = prev.noctalia-greeter.overrideAttrs (old: {
         patches = (old.patches or [ ]) ++ [
           ../packages/patches/noctalia-greeter-show-real-names.patch
@@ -184,6 +195,7 @@ in
         "noctalia-greeter"
         "pinentry-noctalia"
         "noctalia-askpass"
+        "umbriel"
       ] (n: pkgs'.${n});
     };
 }

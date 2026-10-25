@@ -125,6 +125,8 @@
           "Mod+T" = once "window-toggle-floating";
           "Mod+F" = once "window-toggle-fullscreen";
           "Mod+Alt+F" = once "window-toggle-maximize";
+          # Fullscreen dentro do tile, como o "fullscreenstate 0 2" do Hyprland.
+          "Mod+Ctrl+F" = once "window-toggle-fullscreen-in-tile";
           "Mod+O" = once "window-toggle-pinned";
           # Super+J (alternar o split, no Omarchy) não tem ação equivalente nesta
           # versão do Umbriel.
