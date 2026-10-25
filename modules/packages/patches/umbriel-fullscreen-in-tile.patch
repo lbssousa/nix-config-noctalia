@@ -1,0 +1,434 @@
+diff --git a/docs/user/actions.md b/docs/user/actions.md
+index 1dbb493d..8cd3b684 100644
+--- a/docs/user/actions.md
++++ b/docs/user/actions.md
+@@ -182,6 +182,7 @@ Sizing rules per layout live in [Sizing behavior](layout.md#sizing-behavior).
+ | `window-close:[<window-id>]` | Close the focused window, or the given window |
+ | `window-toggle-floating:[<window-id>]` | Float or tile the focused window, or the given window |
+ | `window-toggle-fullscreen` | Toggle fullscreen or exit a window covering the focus |
++| `window-toggle-fullscreen-in-tile` | Toggle fullscreen inside the window's tile |
+ | `window-toggle-maximize` | Toggle full width for the focused column |
+ | `window-toggle-maximize-to-edges` | Toggle maximize without gaps, struts, or borders |
+ | `window-toggle-pinned` | Pin the focused window above other windows |
+@@ -190,6 +191,15 @@ For Xwayland windows, fullscreen entered with `window-toggle-fullscreen`
+ remains compositor-owned until an Umbriel action exits it. Fullscreen entered
+ by the application remains client-controlled.
+ 
++`window-toggle-fullscreen-in-tile` tells the window it is fullscreen while it
++keeps its tile, or its floating box, with gaps, borders, and panels around it.
++Browsers and players hide their own interface as they would in fullscreen. The
++application's own unfullscreen request (Escape on a video, F11) ends the mode;
++a fullscreen request while in it changes nothing. `window-toggle-fullscreen`
++moves a window in this mode to real fullscreen, and leaving that exits both.
++Running the action on a fullscreen window brings it back to its tile and keeps
++it fullscreen there.
++
+ ## Scratchpad
+ 
+ Scratchpads are global named holding areas that roam between outputs.
+diff --git a/docs/user/ipc.md b/docs/user/ipc.md
+index 5b9d7e70..7bab04d8 100644
+--- a/docs/user/ipc.md
++++ b/docs/user/ipc.md
+@@ -42,6 +42,7 @@ same way geometry reports layout targets:
+ | --- | --- |
+ | `floating` | Outside the tiled layout |
+ | `fullscreen` | Fullscreen |
++| `fullscreen_in_tile` | Told it is fullscreen by `window-toggle-fullscreen-in-tile` while keeping its box; `fullscreen` stays `false` |
+ | `maximized` | Maximized by `window-toggle-maximize` (a full-width column for a tiled window) or by maximize-to-edges |
+ | `maximized_to_edges` | Maximized without gaps, struts, or borders |
+ | `pinned` | Pinned above other windows on every workspace of its output |
+diff --git a/docs/user/layout.md b/docs/user/layout.md
+index 7828fa80..109fe748 100644
+--- a/docs/user/layout.md
++++ b/docs/user/layout.md
+@@ -369,7 +369,8 @@ applications. Move windows to another workspace or use a
+ [scratchpad](scratchpad.md) when they should stay running out of view.
+ 
+ `window-toggle-fullscreen` fills the complete output, ignoring struts and panel
+-exclusive zones.
++exclusive zones. `window-toggle-fullscreen-in-tile` keeps the window in its tile
++and only tells it that it is fullscreen; see [Actions](actions.md#windows).
+ 
+ `window-toggle-maximize` fills the layout area. Tiled columns keep struts and
+ gaps; floating windows fill the output's usable area inside the same margin, and
+diff --git a/src/config/keybind_parse.cpp b/src/config/keybind_parse.cpp
+index 9348c924..a1d47fc0 100644
+--- a/src/config/keybind_parse.cpp
++++ b/src/config/keybind_parse.cpp
+@@ -435,6 +435,8 @@ namespace umbriel {
+          KeybindAction::ToggleFloating, ActionArgKind::OptionalWindowId},
+         {"window-toggle-fullscreen", "", "Toggle fullscreen or exit a window covering the focus",
+          KeybindAction::ToggleFullscreen},
++        {"window-toggle-fullscreen-in-tile", "", "Toggle fullscreen inside the window's tile",
++         KeybindAction::ToggleFullscreenInTile},
+         {"window-toggle-maximize", "", "Toggle full width for the focused column", KeybindAction::ToggleMaximize},
+         {"window-toggle-maximize-to-edges", "", "Toggle maximize without gaps, struts, or borders",
+          KeybindAction::ToggleMaximizeToEdges},
+diff --git a/src/config/keybind_parse.h b/src/config/keybind_parse.h
+index 0851ddb2..af30350d 100644
+--- a/src/config/keybind_parse.h
++++ b/src/config/keybind_parse.h
+@@ -70,6 +70,7 @@ namespace umbriel {
+     ToggleMaximize,
+     ToggleMaximizeToEdges,
+     ToggleFullscreen,
++    ToggleFullscreenInTile,
+     ToggleFloating,
+     TogglePinned,
+     WindowFocusNext,
+diff --git a/src/scene/cheatsheet_rows.cpp b/src/scene/cheatsheet_rows.cpp
+index 9f49909c..f6ebb5c1 100644
+--- a/src/scene/cheatsheet_rows.cpp
++++ b/src/scene/cheatsheet_rows.cpp
+@@ -421,6 +421,7 @@ namespace {
+     case A::ToggleMaximize:
+     case A::ToggleMaximizeToEdges:
+     case A::ToggleFullscreen:
++    case A::ToggleFullscreenInTile:
+     case A::TogglePinned:
+     case A::ColumnToggleTabbed:
+     case A::ColumnSetDisplay:
+diff --git a/src/server/actions.cpp b/src/server/actions.cpp
+index 2b3f7555..d3104950 100644
+--- a/src/server/actions.cpp
++++ b/src/server/actions.cpp
+@@ -1204,6 +1204,22 @@ namespace umbriel {
+       return true;
+     }
+ 
++    bool actionToggleFullscreenInTile(Server& server, const Keybind& /*bind*/, std::string* /*error*/) {
++      View* view = focusedWindow(server);
++      if (view == nullptr || !view->mapped()) {
++        return true;
++      }
++      // Only leaving compositor fullscreen changes the scene; the mode itself keeps the window's box.
++      const bool leavesFullscreen = view->scheduledFullscreen();
++      view->toggleFullscreenInTile();
++      if (view == focusedScratchpadWindow(server)) {
++        server.scratchpadManager()->restorePresentation(view);
++      } else {
++        invalidateHoverFocusAfterSceneChange(server, leavesFullscreen);
++      }
++      return true;
++    }
++
+     bool actionToggleFloating(Server& server, const Keybind& bind, std::string* error) {
+       if (const auto* arg = payloadIf<WindowIdArg>(bind); arg != nullptr && !arg->id.empty()) {
+         View* view = viewByForeignIdentifier(server, arg->id);
+@@ -2079,6 +2095,7 @@ namespace umbriel {
+         &actionToggleMaximize,
+         &actionToggleMaximizeToEdges,
+         &actionToggleFullscreen,
++        &actionToggleFullscreenInTile,
+         &actionToggleFloating,
+         &actionTogglePinned,
+         &actionFocusCycle<1>,
+diff --git a/src/server/ipc_commands.cpp b/src/server/ipc_commands.cpp
+index a8be5974..bf477bb2 100644
+--- a/src/server/ipc_commands.cpp
++++ b/src/server/ipc_commands.cpp
+@@ -601,6 +601,7 @@ namespace umbriel {
+       entry["content_type"] = contentTypeName(v->contentType());
+       entry["floating"] = v->floating();
+       entry["fullscreen"] = v->scheduledFullscreen();
++      entry["fullscreen_in_tile"] = v->fullscreenInTile();
+       entry["maximized"] = v->scheduledMaximized();
+       entry["maximized_to_edges"] = v->maximizedToEdges();
+       entry["pinned"] = v->pinned();
+diff --git a/src/view/view.h b/src/view/view.h
+index 1cad889a..f85a58bf 100644
+--- a/src/view/view.h
++++ b/src/view/view.h
+@@ -73,9 +73,12 @@ namespace umbriel {
+     [[nodiscard]] const char* title() const;
+     [[nodiscard]] const char* appId() const;
+     // Role state. For xdg toplevels `scheduled` is what the next configure carries and `current` what the client
+-    // acknowledged; an X11 window has no acknowledgement, so both read the state last sent to it.
++    // acknowledged; an X11 window has no acknowledgement, so both read the state last sent to it. Fullscreen in its
++    // tile is not fullscreen to the compositor: the client is told it is, so these report false for it.
+     [[nodiscard]] bool scheduledFullscreen() const;
+     [[nodiscard]] bool currentFullscreen() const;
++    // The client believes it is fullscreen while the compositor keeps it in its tile or floating box.
++    [[nodiscard]] bool fullscreenInTile() const { return m_fullscreenInTile; }
+     [[nodiscard]] bool scheduledMaximized() const;
+     [[nodiscard]] bool currentMaximized() const;
+     [[nodiscard]] bool scheduledActivated() const;
+@@ -357,6 +360,9 @@ namespace umbriel {
+     void applyFullscreenLayout(bool animate = false);
+     // Compositor-driven fullscreen toggle (keybind); client requests use handleRequestFullscreen.
+     void toggleFullscreen();
++    // Compositor-driven toggle that tells the client it is fullscreen but keeps its box (keybind). A fullscreen window
++    // leaves fullscreen and stays fullscreen in its tile.
++    void toggleFullscreenInTile();
+     void applyDeferredUnfullscreen();
+     void setMaximizedToEdges(bool maximized, bool animate = true);
+     void toggleMaximizedToEdges();
+@@ -413,6 +419,8 @@ namespace umbriel {
+     // Role mechanism behind the opening and configure paths.
+     [[nodiscard]] bool requestedFullscreen() const;
+     [[nodiscard]] bool requestedMaximized() const;
++    // The fullscreen state the client was sent, including fullscreen in its tile.
++    [[nodiscard]] bool clientFullscreen() const;
+     // Send a size configure and return its serial; X11 configures carry none and return 0.
+     uint32_t configureSize(int width, int height);
+     // Take a size the client chose as the scheduled one, without sending a configure.
+@@ -507,6 +515,7 @@ namespace umbriel {
+     [[nodiscard]] bool openingParented() const;
+     void handleSetParent();
+     void setFullscreen(bool fullscreen, FullscreenExitLayout exitLayout = FullscreenExitLayout::Immediate);
++    void setFullscreenInTile(bool fullscreen);
+     void handleSetTitle();
+     void handleSetAppId();
+     void handleForeignActivate();
+@@ -876,6 +885,9 @@ namespace umbriel {
+     // An X11 window entered through the compositor toggle stays fullscreen until another compositor action releases
+     // it. This prevents Wine from immediately undoing the explicit user action with a contradictory EWMH request.
+     bool m_xCompositorFullscreen = false;
++    // Set while the client is sent fullscreen but keeps its layout box. Cleared by compositor fullscreen, by the
++    // toggle, and by the client's own unfullscreen request.
++    bool m_fullscreenInTile = false;
+     bool m_onActiveWorkspace = false;
+     bool m_inScratchpad = false;
+     bool m_urgent = false;
+diff --git a/src/view/view_role.cpp b/src/view/view_role.cpp
+index bd0c1b60..f9ef0387 100644
+--- a/src/view/view_role.cpp
++++ b/src/view/view_role.cpp
+@@ -25,11 +25,15 @@ namespace umbriel {
+   const char* View::appId() const { return m_toplevel != nullptr ? m_toplevel->app_id : m_xsurface->class_; }
+ 
+   bool View::scheduledFullscreen() const {
+-    return m_toplevel != nullptr ? m_toplevel->scheduled.fullscreen : m_xState.fullscreen;
++    return !m_fullscreenInTile && (m_toplevel != nullptr ? m_toplevel->scheduled.fullscreen : m_xState.fullscreen);
+   }
+ 
+   bool View::currentFullscreen() const {
+-    return m_toplevel != nullptr ? m_toplevel->current.fullscreen : m_xState.fullscreen;
++    return !m_fullscreenInTile && (m_toplevel != nullptr ? m_toplevel->current.fullscreen : m_xState.fullscreen);
++  }
++
++  bool View::clientFullscreen() const {
++    return m_toplevel != nullptr ? m_toplevel->scheduled.fullscreen : m_xState.fullscreen;
+   }
+ 
+   bool View::scheduledMaximized() const {
+diff --git a/src/view/view_state.cpp b/src/view/view_state.cpp
+index 7e38bf1c..3092974b 100644
+--- a/src/view/view_state.cpp
++++ b/src/view/view_state.cpp
+@@ -341,6 +341,16 @@ namespace umbriel {
+     );
+ 
+     const bool requested = requestedFullscreen();
++    if (m_fullscreenInTile) {
++      // The window keeps its box: the client's unfullscreen ends the mode, and a repeated fullscreen request is only
++      // acknowledged.
++      if (requested) {
++        reassertRoleState();
++      } else {
++        setFullscreenInTile(false);
++      }
++      return;
++    }
+     if (!requested && scheduledFullscreen() && m_xCompositorFullscreen) {
+       kLog.debug("request_fullscreen denied for compositor-owned X11 '{}'", appId() != nullptr ? appId() : "?");
+       reassertRoleState();
+@@ -400,6 +410,34 @@ namespace umbriel {
+     setFullscreen(fullscreen);
+   }
+ 
++  void View::toggleFullscreenInTile() {
++    if (!roleInitialized()) {
++      return;
++    }
++    if (scheduledFullscreen()) {
++      // Both state changes land in one configure: the client stays fullscreen and gets its tile size.
++      setFullscreen(false);
++      setFullscreenInTile(true);
++      return;
++    }
++    setFullscreenInTile(!m_fullscreenInTile);
++  }
++
++  void View::setFullscreenInTile(bool fullscreen) {
++    if (fullscreen == m_fullscreenInTile) {
++      return;
++    }
++    kLog.debug(
++        "set_fullscreen_in_tile '{}' [{}] -> {}", appId() != nullptr ? appId() : "?", static_cast<const void*>(this),
++        fullscreen
++    );
++    m_deferredUnfullscreen.clear();
++    m_fullscreenInTile = fullscreen;
++    // Only the client-facing state changes; the configure keeps the size the layout already scheduled.
++    setFullscreenState(fullscreen);
++    updateForeignState();
++  }
++
+   void View::applyDeferredUnfullscreen() {
+     if (!m_deferredUnfullscreen.takeOnActivation() || !roleInitialized()) {
+       return;
+@@ -708,6 +746,14 @@ namespace umbriel {
+   }
+ 
+   void View::setFullscreen(bool fullscreen, FullscreenExitLayout exitLayout) {
++    // Leaving fullscreen in the tile only changes what the client is told; entering compositor fullscreen from it
++    // starts from a box the client already acknowledged as fullscreen.
++    const bool fromInTile = m_fullscreenInTile;
++    if (fromInTile && !fullscreen) {
++      setFullscreenInTile(false);
++      return;
++    }
++    m_fullscreenInTile = false;
+     m_deferredUnfullscreen.clear();
+     const bool refreshHoverFocus = !fullscreen
+         && m_mapped
+@@ -722,7 +768,7 @@ namespace umbriel {
+       setMaximizedToEdges(false, false);
+       m_restoreMaximizedToEdges = true;
+     }
+-    if (fullscreen && !m_tiled && !currentFullscreen()) {
++    if (fullscreen && !m_tiled && (fromInTile || !currentFullscreen())) {
+       const wlr_box& geometry = geometryBox();
+       m_fullscreenRestoreBox = {
+           .x = m_sceneTree->node.x,
+diff --git a/tests/harness/checks/layout/fullscreen_in_tile.sh b/tests/harness/checks/layout/fullscreen_in_tile.sh
+new file mode 100755
+index 00000000..8b4834f8
+--- /dev/null
++++ b/tests/harness/checks/layout/fullscreen_in_tile.sh
+@@ -0,0 +1,133 @@
++#!/usr/bin/env bash
++# window-toggle-fullscreen-in-tile tells the client it is fullscreen while it keeps its tile: the configure carries the
++# fullscreen state at the tile size, and the neighbor keeps its box. The client's own unfullscreen ends the mode, real
++# fullscreen takes over from it, and the action brings a fullscreen window back into its tile still fullscreen.
++set -euo pipefail
++
++readonly OUTPUT_W=1280
++readonly OUTPUT_H=720
++readonly CLIENT="${UMBRIEL_UNMAP_CLIENT:-./build-debug/tests/unmap-client}"
++readonly CONTROL_FIFO="$UMBRIEL_RUNTIME_DIR/fullscreen-in-tile-control"
++readonly CLIENT_LOG="$UMBRIEL_RUNTIME_DIR/fullscreen-in-tile.log"
++
++windows() { "$UMBRIEL" windows --json; }
++
++field_of() {
++  windows | jq -r --arg title "$1" --arg field "$2" '.[] | select(.title == $title) | .[$field]'
++}
++
++box_of() {
++  windows | jq -r --arg title "$1" '.[] | select(.title == $title) | "\(.x),\(.y) \(.w)x\(.h)"'
++}
++
++wait_for_count() {
++  local want=$1
++  for _ in $(seq 60); do
++    [[ $(windows | jq 'length') -eq $want ]] && return 0
++    sleep 0.05
++  done
++  echo "expected $want windows, got: $(windows)"
++  return 1
++}
++
++wait_for_field() {
++  local title=$1 field=$2 expected=$3 actual=
++  for _ in $(seq 80); do
++    actual=$(field_of "$title" "$field")
++    [[ $actual == "$expected" ]] && return 0
++    sleep 0.05
++  done
++  echo "expected '$title' field '$field' to be '$expected', got '$actual': $(windows)"
++  return 1
++}
++
++# The latest configure the client saw, as "<width>x<height> <fullscreen|windowed>".
++wait_for_configured() {
++  local want=$1 configured=
++  for _ in $(seq 80); do
++    configured=$(grep '^configured-state=' "$CLIENT_LOG" | tail -1 || true)
++    [[ ${configured#configured-state=} == "$want" ]] && return 0
++    sleep 0.05
++  done
++  echo "expected latest client configure to be '$want', got '${configured:-none}': $(cat "$CLIENT_LOG")"
++  return 1
++}
++
++cat >> "$UMBRIEL_CONFIG" <<'EOF'
++
++[layout]
++mode = "dwindle"
++
++[animation]
++duration_ms = 1
++curve = "linear"
++EOF
++"$UMBRIEL" msg config-reload > /dev/null
++
++mkfifo "$CONTROL_FIFO"
++exec {control_fd}<>"$CONTROL_FIFO"
++FULLSCREEN_ON_STDIN=1 LOG_CONFIGURES=1 RESIZE_FILL_COLOR=0xFF5577AA "$CLIENT" in-tile-left 400 300 \
++  <&"$control_fd" > "$CLIENT_LOG" 2>&1 &
++wait_for_count 1
++RESIZE_FILL_COLOR=0xFF77AA55 "$CLIENT" in-tile-right 400 300 > /dev/null 2>&1 &
++wait_for_count 2
++"$UMBRIEL" settle
++
++left_id=$(field_of in-tile-left id)
++"$UMBRIEL" msg "window-focus:$left_id" > /dev/null
++wait_for_field in-tile-left active true
++left_box=$(box_of in-tile-left)
++right_box=$(box_of in-tile-right)
++left_size=${left_box#* }
++wait_for_configured "$left_size windowed"
++
++# The mode keeps both tiles where they are and only flips the client's state.
++"$UMBRIEL" msg window-toggle-fullscreen-in-tile > /dev/null
++wait_for_field in-tile-left fullscreen_in_tile true
++wait_for_configured "$left_size fullscreen"
++[[ $(field_of in-tile-left fullscreen) == false ]] || {
++  echo "fullscreen in the tile reported compositor fullscreen: $(windows)"
++  exit 1
++}
++"$UMBRIEL" settle
++[[ $(box_of in-tile-left) == "$left_box" && $(box_of in-tile-right) == "$right_box" ]] || {
++  echo "fullscreen in the tile moved a tile: left $left_box -> $(box_of in-tile-left)," \
++    "right $right_box -> $(box_of in-tile-right)"
++  exit 1
++}
++
++# A fullscreen request while in the mode leaves it in place; the client's unfullscreen ends it.
++printf f >&"$control_fd"
++sleep 0.2 # real time: proves the request changes nothing
++[[ $(field_of in-tile-left fullscreen) == false && $(field_of in-tile-left fullscreen_in_tile) == true ]] || {
++  echo "client fullscreen request left the tile: $(windows)"
++  exit 1
++}
++printf u >&"$control_fd"
++wait_for_field in-tile-left fullscreen_in_tile false
++wait_for_configured "$left_size windowed"
++
++# Real fullscreen takes over from the mode, and the action brings the window back to its tile still fullscreen.
++"$UMBRIEL" msg window-toggle-fullscreen-in-tile > /dev/null
++wait_for_configured "$left_size fullscreen"
++"$UMBRIEL" msg window-toggle-fullscreen > /dev/null
++wait_for_field in-tile-left fullscreen true
++wait_for_field in-tile-left fullscreen_in_tile false
++wait_for_configured "${OUTPUT_W}x${OUTPUT_H} fullscreen"
++"$UMBRIEL" msg window-toggle-fullscreen-in-tile > /dev/null
++wait_for_field in-tile-left fullscreen false
++wait_for_field in-tile-left fullscreen_in_tile true
++wait_for_configured "$left_size fullscreen"
++
++# Leaving real fullscreen entered from the mode exits both.
++"$UMBRIEL" msg window-toggle-fullscreen > /dev/null
++wait_for_field in-tile-left fullscreen true
++"$UMBRIEL" msg window-toggle-fullscreen > /dev/null
++wait_for_field in-tile-left fullscreen false
++wait_for_configured "$left_size windowed"
++[[ $(field_of in-tile-left fullscreen_in_tile) == false ]] || {
++  echo "leaving real fullscreen kept the window fullscreen in its tile: $(windows)"
++  exit 1
++}
++
++echo "fullscreen in the tile keeps the layout box and follows client and compositor fullscreen"
