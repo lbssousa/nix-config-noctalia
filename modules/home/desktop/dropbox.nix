@@ -10,8 +10,7 @@
       ...
     }:
     {
-      options.my.dropbox.enable =
-        lib.mkEnableOption "Dropbox (cliente gráfico na bandeja, iniciado com a sessão)";
+      options.my.dropbox.enable = lib.mkEnableOption "Dropbox (cliente gráfico na bandeja, iniciado com a sessão)";
 
       config = lib.mkIf config.my.dropbox.enable {
         home.packages = [ pkgs.dropbox ];
