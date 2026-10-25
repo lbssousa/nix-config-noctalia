@@ -193,10 +193,13 @@
           }
           # Web apps do Firefox (Taskbar Tabs, classe firefox.webapp-<id>)
           # maximizados como o "fullscreen, 1" do Hyprland: ocupam a área do
-          # layout, com a barra e os gaps, e continuam no tiling.
+          # layout, com a barra e os gaps, e continuam no tiling. Abrem em
+          # fullscreen dentro do tile (como o Mod+Ctrl+F), sem a interface do
+          # Firefox.
           {
             match.app_id = "^firefox\\.webapp-";
             default_maximize = true;
+            default_fullscreen_in_tile = true;
           }
           {
             match.title = "^(Picture-in-Picture|Picture in picture)$";

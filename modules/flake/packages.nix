@@ -150,8 +150,9 @@ let
       # Hyprland: o aplicativo recebe o estado fullscreen (o Firefox esconde a
       # interface, players escondem os controles), mas fica no espaço do tile,
       # com gaps, bordas e a barra. O unfullscreen do próprio aplicativo (Esc no
-      # vídeo, F11) sai do modo. Patch local, sem PR upstream; fonte no branch
-      # feat/fullscreen-in-tile do fork lbssousa/umbriel (75557b2f, sobre o 5cea311
+      # vídeo, F11) sai do modo. A regra default_fullscreen_in_tile abre a janela
+      # nesse modo. Patch local, sem PR upstream; fonte no branch
+      # feat/fullscreen-in-tile do fork lbssousa/umbriel (12f8b9ef, sobre o 5cea311
       # do nixpkgs): o patch é `git diff 5cea311..feat/fullscreen-in-tile`.
       umbriel = prev.umbriel.overrideAttrs (old: {
         patches = (old.patches or [ ]) ++ [ ../packages/patches/umbriel-fullscreen-in-tile.patch ];

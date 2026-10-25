@@ -52,6 +52,58 @@ index 7828fa80..109fe748 100644
  
  `window-toggle-maximize` fills the layout area. Tiled columns keep struts and
  gaps; floating windows fill the output's usable area inside the same margin, and
+diff --git a/docs/user/window-rules.md b/docs/user/window-rules.md
+index ab3721d3..47d4c484 100644
+--- a/docs/user/window-rules.md
++++ b/docs/user/window-rules.md
+@@ -53,6 +53,7 @@ floating or pinned state that it creates.
+ | `default_workspace` | Open on a one-based position or exact workspace name. |
+ | `default_scratchpad` | Store in the implicit or a configured scratchpad. |
+ | `default_fullscreen` | Open fullscreen. |
++| `default_fullscreen_in_tile` | Open told it is fullscreen while keeping its tile, like [`window-toggle-fullscreen-in-tile`](actions.md#windows). `default_fullscreen` wins. |
+ | `default_floating` | Force floating or tiling. |
+ | `default_maximize` | Open maximized within normal layout bounds. |
+ | `default_maximize_to_edges` | Open maximized without gaps, struts, or borders. |
+diff --git a/src/config/config.h b/src/config/config.h
+index 14395f9e..6eedc83b 100644
+--- a/src/config/config.h
++++ b/src/config/config.h
+@@ -417,6 +417,7 @@ namespace umbriel {
+     std::optional<int> defaultScrollingColumnOrder;
+     std::optional<ColumnDisplay> defaultColumnDisplay;
+     std::optional<bool> defaultFullscreen;
++    std::optional<bool> defaultFullscreenInTile;
+     std::optional<bool> defaultMaximizeToEdges;
+     std::optional<bool> defaultMaximize;
+     std::optional<bool> defaultFocused;
+@@ -475,6 +476,7 @@ namespace umbriel {
+           && defaultScrollingColumnOrder == other.defaultScrollingColumnOrder
+           && defaultColumnDisplay == other.defaultColumnDisplay
+           && defaultFullscreen == other.defaultFullscreen
++          && defaultFullscreenInTile == other.defaultFullscreenInTile
+           && defaultMaximizeToEdges == other.defaultMaximizeToEdges
+           && defaultMaximize == other.defaultMaximize
+           && defaultFocused == other.defaultFocused
+@@ -518,6 +520,7 @@ namespace umbriel {
+     std::optional<int> defaultScrollingColumnOrder;
+     std::optional<ColumnDisplay> defaultColumnDisplay;
+     std::optional<bool> defaultFullscreen;
++    std::optional<bool> defaultFullscreenInTile;
+     std::optional<bool> defaultMaximizeToEdges;
+     std::optional<bool> defaultMaximize;
+     std::optional<bool> defaultFocused;
+diff --git a/src/config/fields_rules.cpp b/src/config/fields_rules.cpp
+index 5799e9b5..253e8a56 100644
+--- a/src/config/fields_rules.cpp
++++ b/src/config/fields_rules.cpp
+@@ -194,6 +194,7 @@ namespace umbriel {
+           registry::table<W>("match", self, match, rejectUnlessTable<W>),
+           boolean("default_floating", &W::defaultFloating),
+           boolean("default_fullscreen", &W::defaultFullscreen),
++          boolean("default_fullscreen_in_tile", &W::defaultFullscreenInTile),
+           boolean("default_maximize_to_edges", &W::defaultMaximizeToEdges),
+           boolean("default_maximize", &W::defaultMaximize),
+           boolean("default_focused", &W::defaultFocused),
 diff --git a/src/config/keybind_parse.cpp b/src/config/keybind_parse.cpp
 index 9348c924..a1d47fc0 100644
 --- a/src/config/keybind_parse.cpp
@@ -77,6 +129,20 @@ index 0851ddb2..af30350d 100644
      ToggleFloating,
      TogglePinned,
      WindowFocusNext,
+diff --git a/src/config/resolve.cpp b/src/config/resolve.cpp
+index 02e6ec83..1b39613a 100644
+--- a/src/config/resolve.cpp
++++ b/src/config/resolve.cpp
+@@ -312,6 +312,9 @@ namespace umbriel {
+       if (rule.defaultFullscreen) {
+         resolved.defaultFullscreen = rule.defaultFullscreen;
+       }
++      if (rule.defaultFullscreenInTile) {
++        resolved.defaultFullscreenInTile = rule.defaultFullscreenInTile;
++      }
+       if (rule.defaultMaximizeToEdges) {
+         resolved.defaultMaximizeToEdges = rule.defaultMaximizeToEdges;
+       }
 diff --git a/src/scene/cheatsheet_rows.cpp b/src/scene/cheatsheet_rows.cpp
 index 9f49909c..f6ebb5c1 100644
 --- a/src/scene/cheatsheet_rows.cpp
@@ -191,6 +257,35 @@ index 1cad889a..f85a58bf 100644
      bool m_onActiveWorkspace = false;
      bool m_inScratchpad = false;
      bool m_urgent = false;
+diff --git a/src/view/view_lifecycle.cpp b/src/view/view_lifecycle.cpp
+index 793f3ea0..44fc67af 100644
+--- a/src/view/view_lifecycle.cpp
++++ b/src/view/view_lifecycle.cpp
+@@ -397,6 +397,13 @@ namespace umbriel {
+     if (!assignedScratchpad && rule.defaultFullscreen && *rule.defaultFullscreen) {
+       setFullscreen(true);
+     }
++    // Real fullscreen, from a rule or the client, wins over fullscreen in the tile.
++    if (!assignedScratchpad
++        && rule.defaultFullscreenInTile
++        && *rule.defaultFullscreenInTile
++        && !scheduledFullscreen()) {
++      setFullscreenInTile(true);
++    }
+ 
+     settleOpeningAloneState();
+ 
+@@ -853,6 +860,10 @@ namespace umbriel {
+       const bool tiledEdges = wantTiled || config().appearance.preferNoCsd;
+       setTiledState(tiledEdges ? WLR_EDGE_TOP | WLR_EDGE_RIGHT | WLR_EDGE_BOTTOM | WLR_EDGE_LEFT : 0);
+ 
++      // The first buffer already draws the fullscreen interface; the box below stays the tile's or floating one.
++      setFullscreenInTile(
++          !wantFullscreen && !openingInScratchpad && rule.defaultFullscreenInTile && *rule.defaultFullscreenInTile
++      );
+       if (wantFullscreen) {
+         // An X11 client can request fullscreen before its first buffer. The request event is too early to configure,
+         // but the role preserves it in requested state for us to honor now.
 diff --git a/src/view/view_role.cpp b/src/view/view_role.cpp
 index bd0c1b60..f9ef0387 100644
 --- a/src/view/view_role.cpp
@@ -213,6 +308,26 @@ index bd0c1b60..f9ef0387 100644
    }
  
    bool View::scheduledMaximized() const {
+diff --git a/src/view/view_rules.cpp b/src/view/view_rules.cpp
+index ef6685c4..463bcdd1 100644
+--- a/src/view/view_rules.cpp
++++ b/src/view/view_rules.cpp
+@@ -524,6 +524,15 @@ namespace umbriel {
+       setFullscreen(true);
+     }
+ 
++    if (!inScratchpad
++        && unseenInitialRuleValue(
++            rule.defaultFullscreenInTile, m_initialRuleHistory, &ResolvedWindowRule::defaultFullscreenInTile
++        )
++        && *rule.defaultFullscreenInTile
++        && !scheduledFullscreen()) {
++      setFullscreenInTile(true);
++    }
++
+     if (!inScratchpad
+         && unseenInitialRuleValue(
+             rule.defaultMaximizeToEdges, m_initialRuleHistory, &ResolvedWindowRule::defaultMaximizeToEdges
 diff --git a/src/view/view_state.cpp b/src/view/view_state.cpp
 index 7e38bf1c..3092974b 100644
 --- a/src/view/view_state.cpp
@@ -295,10 +410,10 @@ index 7e38bf1c..3092974b 100644
            .x = m_sceneTree->node.x,
 diff --git a/tests/harness/checks/layout/fullscreen_in_tile.sh b/tests/harness/checks/layout/fullscreen_in_tile.sh
 new file mode 100755
-index 00000000..8b4834f8
+index 00000000..46c1d6b7
 --- /dev/null
 +++ b/tests/harness/checks/layout/fullscreen_in_tile.sh
-@@ -0,0 +1,133 @@
+@@ -0,0 +1,168 @@
 +#!/usr/bin/env bash
 +# window-toggle-fullscreen-in-tile tells the client it is fullscreen while it keeps its tile: the configure carries the
 +# fullscreen state at the tile size, and the neighbor keeps its box. The client's own unfullscreen ends the mode, real
@@ -431,4 +546,39 @@ index 00000000..8b4834f8
 +  exit 1
 +}
 +
-+echo "fullscreen in the tile keeps the layout box and follows client and compositor fullscreen"
++# default_fullscreen_in_tile opens a window in the mode: the configure before its first buffer already carries the
++# fullscreen state, and the window stays in the layout. Real fullscreen from default_fullscreen wins over it.
++readonly RULE_LOG="$UMBRIEL_RUNTIME_DIR/fullscreen-in-tile-rule.log"
++cat >> "$UMBRIEL_CONFIG" <<'EOF'
++
++[[window_rule]]
++match.title = "^in-tile-rule"
++default_fullscreen_in_tile = true
++
++[[window_rule]]
++match.title = "^in-tile-rule-real$"
++default_fullscreen = true
++EOF
++"$UMBRIEL" msg config-reload > /dev/null
++LOG_CONFIGURES=1 "$CLIENT" in-tile-rule 400 300 > "$RULE_LOG" 2>&1 &
++wait_for_count 3
++wait_for_field in-tile-rule fullscreen_in_tile true
++[[ $(field_of in-tile-rule fullscreen) == false ]] || {
++  echo "default_fullscreen_in_tile opened in compositor fullscreen: $(windows)"
++  exit 1
++}
++first_state=$(grep -m1 -E '^(configured-state=|mapped$)' "$RULE_LOG" || true)
++[[ $first_state == configured-state=*" fullscreen" ]] || {
++  echo "default_fullscreen_in_tile did not configure fullscreen before the first buffer: $(cat "$RULE_LOG")"
++  exit 1
++}
++
++"$CLIENT" in-tile-rule-real 400 300 > /dev/null 2>&1 &
++wait_for_count 4
++wait_for_field in-tile-rule-real fullscreen true
++[[ $(field_of in-tile-rule-real fullscreen_in_tile) == false ]] || {
++  echo "default_fullscreen_in_tile overrode default_fullscreen: $(windows)"
++  exit 1
++}
++
++echo "fullscreen in the tile keeps the layout box, follows client and compositor fullscreen, and opens from a rule"
