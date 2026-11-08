@@ -116,7 +116,9 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
   trocados pelos do Nix e as jaulas do bubblewrap enxergando o `/nix/store`.
 - **Apps de usuário nativos:** OnlyOffice, Xournal++, Papers, LocalSend,
   Zoom, OBS, Kdenlive, Pinta, Inkscape e FontForge, como pacotes Nix
-  (`modules/nixos/desktop/apps.nix`).
+  (`modules/nixos/desktop/apps.nix`); o mpv decodifica vídeo por hardware.
+- Do Omarchy 4.5: TCP BBR com fq e o escalonador kyber nos discos
+  (`modules/nixos/core/kernel-tuning.nix`).
 - Agentes de IA para todos: Claude Code, OpenCode e Antigravity CLI (Antigravity IDE no perfil de abutre).
 
 ### Atalhos principais (Super = Mod)
@@ -130,11 +132,20 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 | `Super+Alt+Return` | tmux | `Super+Ctrl+V` | histórico do clipboard |
 | `Super+Ctrl+Return` | herdr | `Super+Ctrl+E` | emojis |
 | `Super+Shift+/` | Bitwarden | `Super+Ctrl+Space` | papéis de parede |
-| `Super+W` | fechar janela | `Super+Shift+Ctrl+Space` | temas |
+| `Super+W` / `Super+Q` | fechar janela | `Super+Shift+Ctrl+Space` / `Super+Ctrl+T` | temas |
 | `Super+T` / `Super+F` | flutuante / tela cheia | `Print` / `Shift+Print` | captura de região / tela |
-| `Super+L` | alternar layout (dwindle/scrolling) | `Alt+Print` | gravação de tela |
-| `Super+1…9` | área de trabalho | `Super+Ctrl+L` | bloquear |
-| `Super+Shift+Y/P/S/X` | YouTube/Photos/Maps/X | `Super+Shift+Alt+G` | WhatsApp |
+| `Super+L` | bloquear | `Alt+Print` | gravação de tela |
+| `Super+Ctrl+L` / `+Alt` | próximo / anterior layout (dwindle → scrolling → stacking) | `Super+Shift+T` | btop |
+| `Super+J` | alternar o split (dwindle) | `Super+Shift+Q` | calculadora |
+| `Super+M` / `Super+Alt+M` | minimizar / restaurar (janela flutuante) | `Super+Ctrl+N` | rede |
+| `Super+S` | scratchpad | `Super+'` | console Quake (shell que desce do topo) |
+| `Super+,` | agir na última notificação | `Super+Ctrl+Alt+,` | não perturbe |
+| `Super+Shift+Ctrl+setas` | janela para outro monitor | `Alt+Space` | ditado (voxtype) |
+| `Super+1…9` | área de trabalho | `Super+Shift+Y/P/S/X` | YouTube/Photos/Maps/X |
+| `Super+Shift+Alt+G` | WhatsApp | `Super+Ctrl+W` | papéis de parede |
+
+Caps Lock vira Esc, e Shift+Caps Lock é o Caps Lock (opção XKB
+`caps:escape_shifted_capslock`, no TTY, no greeter e no Umbriel).
 
 A tabela completa está em `modules/home/desktop/umbriel.nix`.
 

@@ -25,11 +25,13 @@
 
     # O TTY segue o layout XKB do sistema; o Umbriel e o greeter recebem o
     # mesmo layout pelas suas próprias configurações.
+    # Caps Lock: toque → Esc; Shift + Caps Lock → Caps Lock (sem daemon).
     console.useXkbConfig = true;
     services.xserver.xkb = {
       layout = "br";
       variant = "abnt2";
       model = "abnt2";
+      options = "caps:escape_shifted_capslock";
     };
   };
 }

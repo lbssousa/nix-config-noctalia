@@ -20,6 +20,14 @@
       cfg = config.my.umbriel;
 
       noctalia = action: "spawn noctalia msg ${action}";
+      calculator = once (noctalia "panel-toggle samuelskovbakke/calculator-plus:panel");
+      # Trio de layouts do Omarchy (tiling, scrolling, flutuante); a lista ao
+      # contrário volta ao anterior.
+      layouts = [
+        "dwindle"
+        "scrolling"
+        "stacking"
+      ];
       once = action: {
         inherit action;
         repeat = false;
@@ -53,6 +61,8 @@
           keyboard = {
             layout = "br";
             variant = "abnt2";
+            # Caps Lock = Esc, Shift + Caps Lock = Caps Lock (nixos/core/locale.nix).
+            options = "caps:escape_shifted_capslock";
             numlock_toggle = true;
           };
           focus.follows_mouse = true;
@@ -70,6 +80,17 @@
         };
 
         appearance.blur.radius = 3;
+
+        # Scratchpads nomeados: o comum (Mod+S) e o console Quake (Mod+'), que
+        # desce do topo com o desktop escurecido e abre um shell na primeira vez.
+        # Com algum nome definido o "default" implícito deixa de existir.
+        scratchpad = [
+          { name = "scratchpad"; }
+          {
+            name = "console";
+            spawn_when_empty = cfg.consoleCommand;
+          }
+        ];
 
         hot_corners.top_left = {
           enabled = true;
@@ -89,7 +110,9 @@
           "Mod+Shift+N" = once "spawn ${cfg.terminal} -e nvim";
           "Mod+Shift+D" = once "spawn ${cfg.terminal} -e lazydocker";
           "Mod+Shift+Slash" = once "spawn bitwarden";
-          "Mod+Ctrl+T" = once "spawn ${cfg.terminal} -e btop";
+          "Mod+Shift+T" = once "spawn ${cfg.terminal} -e btop";
+          "Mod+Shift+Q" = calculator;
+          "XF86Calculator" = calculator;
 
           # Web apps: Taskbar Tabs do Firefox nos seus containers (home/desktop/firefox.nix)
           "Mod+Shift+Y" = once "spawn webapp youtube";
@@ -108,20 +131,36 @@
           "Mod+Ctrl+E" = once (noctalia "panel-toggle launcher /emo");
           "Mod+Ctrl+V" = once (noctalia "panel-toggle clipboard");
           "Mod+Ctrl+Space" = once (noctalia "panel-toggle wallpaper");
+          "Mod+Ctrl+W" = once (noctalia "panel-toggle wallpaper");
           "Mod+Shift+Ctrl+Space" = once (noctalia "settings-toggle theme");
+          "Mod+Ctrl+T" = once (noctalia "settings-toggle theme");
+          "Mod+Ctrl+N" = once (noctalia "panel-toggle control-center network");
+          "Mod+Ctrl+Alt+F" = once (noctalia "bar-toggle");
           "Mod+L" = once (noctalia "session lock");
-          "Mod+Comma" = noctalia "notification-clear-active";
-          "Mod+Alt+Comma" = noctalia "notification-invoke-latest";
           "Mod+K" = once "cheatsheet-toggle";
+
+          # Notificações (Omarchy 4.5). A Noctalia não dispensa uma só: Mod+Alt+,
+          # dispensa as ativas, como Mod+Shift+,.
+          "Mod+Comma" = once (noctalia "notification-invoke-latest");
+          "Mod+Alt+Comma" = once (noctalia "notification-clear-active");
+          "Mod+Shift+Comma" = once (noctalia "notification-clear-active");
+          "Mod+Ctrl+Comma" = once (noctalia "panel-toggle control-center notifications");
+          "Mod+Shift+Alt+Comma" = once (noctalia "panel-toggle control-center notifications");
+          "Mod+Ctrl+Alt+Comma" = once (noctalia "notification-dnd-toggle");
 
           # Captura de tela
           "Print" = once (noctalia "screenshot-region");
           "Shift+Print" = once (noctalia "screenshot-fullscreen");
+          "Mod+Ctrl+Alt+C" = once (noctalia "screenshot-region");
           "Mod+Print" = once (noctalia "screenshot-annotate");
           "Alt+Print" = once "spawn noctalia msg plugin noctalia/screen_recorder:service all toggle";
 
           # Janelas
           "Mod+W" = once "window-close";
+          "Mod+Q" = once "window-close";
+          # Só janelas flutuantes (layout stacking) minimizam no Umbriel.
+          "Mod+M" = once "window-minimize";
+          "Mod+Alt+M" = once "window-restore-minimized";
           "Mod+T" = once "window-toggle-floating";
           "Mod+F" = once "window-toggle-fullscreen";
           "Mod+Alt+F" = once "window-toggle-maximize";
@@ -129,13 +168,20 @@
           # "fullscreenstate 0 2" do Hyprland.
           "Mod+Ctrl+F" = once "window-toggle-windowed-fullscreen";
           "Mod+O" = once "window-toggle-pinned";
-          # Super+J (alternar o split, no Omarchy) não tem ação equivalente nesta
-          # versão do Umbriel.
-          "Mod+Ctrl+L" = once "workspace-set-layout toggle";
-          "Mod+Left" = "window-focus-left";
-          "Mod+Right" = "window-focus-right";
-          "Mod+Up" = "window-focus-up";
-          "Mod+Down" = "window-focus-down";
+          "Mod+J" = once "layout-toggle-split";
+          # No Omarchy, Super+L alterna o layout e Super+Ctrl+L bloqueia; aqui
+          # é o inverso, e Mod+Ctrl+Alt+L faz o papel do Super+Alt+L (volta).
+          "Mod+Ctrl+L" = once "workspace-set-layout toggle ${lib.concatStringsSep " " layouts}";
+          "Mod+Ctrl+Alt+L" = once "workspace-set-layout toggle ${lib.concatStringsSep " " (lib.reverseList layouts)}";
+          # Na borda, o foco passa para o monitor vizinho.
+          "Mod+Left" = "window-focus-or-output-left";
+          "Mod+Right" = "window-focus-or-output-right";
+          "Mod+Up" = "window-focus-or-output-up";
+          "Mod+Down" = "window-focus-or-output-down";
+          "Mod+Shift+Ctrl+Left" = once "window-move-to-output-left";
+          "Mod+Shift+Ctrl+Right" = once "window-move-to-output-right";
+          "Mod+Shift+Ctrl+Up" = once "window-move-to-output-up";
+          "Mod+Shift+Ctrl+Down" = once "window-move-to-output-down";
           "Mod+Shift+Left" = "window-swap-left";
           "Mod+Shift+Right" = "window-swap-right";
           "Mod+Shift+Up" = "window-swap-up";
@@ -150,13 +196,16 @@
             repeat = false;
           };
 
-          # Áreas de trabalho e scratchpad
+          # Áreas de trabalho e scratchpads. O overview fica no canto superior
+          # esquerdo; o grave (Super+` no Omarchy) não existe no ABNT2, e o
+          # console Quake usa a tecla na mesma posição, o apóstrofo.
           "Mod+Tab" = "workspace-next";
           "Mod+Shift+Tab" = "workspace-previous";
           "Mod+Ctrl+Tab" = "workspace-focus-last";
-          "Mod+S" = "scratchpad-toggle";
-          "Mod+Alt+S" = once "window-move-to-scratchpad";
-          "Mod+Grave" = once "overview-toggle";
+          "Mod+S" = "scratchpad-toggle scratchpad";
+          "Mod+Alt+S" = once "window-move-to-scratchpad scratchpad";
+          "Mod+Apostrophe" = "scratchpad-toggle console";
+          "Mod+Shift+Apostrophe" = once "window-move-to-scratchpad console";
 
           # Mídia, volume e brilho
           "XF86AudioRaiseVolume" = locked (noctalia "volume-up");
@@ -165,6 +214,12 @@
           "XF86AudioMicMute" = locked (noctalia "mic-mute");
           "XF86MonBrightnessUp" = locked (noctalia "brightness-up");
           "XF86MonBrightnessDown" = locked (noctalia "brightness-down");
+          # Luz do teclado; Ctrl + brilho serve nos teclados sem as teclas próprias.
+          "XF86KbdBrightnessUp" = locked (noctalia "keyboard-backlight-up");
+          "XF86KbdBrightnessDown" = locked (noctalia "keyboard-backlight-down");
+          "Ctrl+XF86MonBrightnessUp" = locked (noctalia "keyboard-backlight-up");
+          "Ctrl+XF86MonBrightnessDown" = locked (noctalia "keyboard-backlight-down");
+          "XF86KbdLightOnOff" = locked (noctalia "keyboard-backlight-toggle");
           "XF86AudioPlay" = locked (noctalia "media play-pause");
           "XF86AudioPause" = locked (noctalia "media play-pause");
           "XF86AudioNext" = locked (noctalia "media next");
@@ -172,6 +227,7 @@
 
           # Ditado (voxtype)
           "Mod+Ctrl+X" = once "spawn voxtype record toggle";
+          "Alt+Space" = once "spawn voxtype record toggle";
         }
         // workspaceBinds;
 
@@ -201,6 +257,21 @@
             match.app_id = "^firefox\\.webapp-";
             default_maximize = true;
             default_windowed_fullscreen = true;
+          }
+          # Console Quake: centralizado, colado no topo, metade da tela.
+          {
+            match.app_id = "^dev\\.lbssousa\\.console$";
+            default_scratchpad = "console";
+            default_floating = true;
+            default_floating_size = {
+              width = 0.5;
+              height = 0.5;
+            };
+            default_position = {
+              x = 0;
+              y = 0;
+              anchor = "top";
+            };
           }
           {
             match.title = "^(Picture-in-Picture|Picture in picture)$";
@@ -232,6 +303,11 @@
           type = lib.types.str;
           default = "ghostty";
           description = "Terminal aberto por Super+Return.";
+        };
+        consoleCommand = lib.mkOption {
+          type = lib.types.str;
+          default = "ghostty --class=dev.lbssousa.console";
+          description = "Comando do console Quake (Mod+'); a janela precisa do app id dev.lbssousa.console.";
         };
         extraSettings = lib.mkOption {
           inherit (toml) type;

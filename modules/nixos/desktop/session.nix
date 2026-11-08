@@ -18,6 +18,8 @@
         settings = {
           keyboard.layout = "br";
           keyboard.variant = "abnt2";
+          # Caps Lock = Esc, Shift + Caps Lock = Caps Lock (core/locale.nix).
+          keyboard.options = "caps:escape_shifted_capslock";
           # Patch do PR noctalia-greeter#131 (ver modules/flake/packages.nix):
           # mostra o nome completo (AccountsService RealName/GECOS).
           appearance.show_real_names = true;

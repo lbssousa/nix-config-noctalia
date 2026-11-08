@@ -25,7 +25,6 @@
           loader.limine.secureBoot.enable = lib.mkForce false;
         };
         swapDevices = lib.mkForce [ ];
-        services.kanata.enable = lib.mkForce false;
       };
     };
 }

@@ -13,6 +13,7 @@ in
       m.boot
       m.locale
       m.swap
+      m.kernel-tuning
       m.preservation
       m.sops
       m.users
@@ -41,7 +42,6 @@ in
       # periféricos e rede
       m.printing
       m.wifi-home
-      m.kanata
       # desenvolvimento
       m.podman
       m.nix-ld
