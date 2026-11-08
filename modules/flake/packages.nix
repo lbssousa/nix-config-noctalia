@@ -17,7 +17,7 @@ let
       libfprint-goodix = call ../packages/_libfprint-goodix/package.nix;
       fprintd-goodix = call ../packages/_fprintd-goodix/package.nix;
       yubikey-gpg-import = call ../packages/_yubikey-gpg-import/package.nix;
-      strata = call ../packages/_strata/package.nix;
+      flea = call ../packages/_flea/package.nix;
       # Auxiliares dos plugins próprios da Noctalia (repositórios em flake.nix).
       noctalia-secret-prompts = call "${inputs.noctalia-secret-prompts}/nix/package.nix";
       noctalia-security-hw = call "${inputs.noctalia-security-hardware}/nix/package.nix";
@@ -193,7 +193,7 @@ in
         "libfprint-goodix"
         "fprintd-goodix"
         "yubikey-gpg-import"
-        "strata"
+        "flea"
         "noctalia-secret-prompts"
         "noctalia-security-hw"
         "greetd"

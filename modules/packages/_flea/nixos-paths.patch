@@ -1,0 +1,375 @@
+diff --git c/crates/flea-gui/src/g2/pl2/mount_process.rs w/crates/flea-gui/src/g2/pl2/mount_process.rs
+index 3834c4f..3ed1b7b 100644
+--- c/crates/flea-gui/src/g2/pl2/mount_process.rs
++++ w/crates/flea-gui/src/g2/pl2/mount_process.rs
+@@ -29,7 +29,7 @@ impl Mounts {
+                 "--".into(),
+                 "35".into(),
+                 if self.auth_binary.is_empty() {
+-                    "/usr/lib/flea/flea-gio-auth".into()
++                    "@out@/lib/flea/flea-gio-auth".into()
+                 } else {
+                     self.auth_binary.clone()
+                 },
+diff --git c/crates/flea-gui/src/g2/pv1/decode.rs w/crates/flea-gui/src/g2/pv1/decode.rs
+index 9fe7a20..f878c47 100644
+--- c/crates/flea-gui/src/g2/pv1/decode.rs
++++ w/crates/flea-gui/src/g2/pv1/decode.rs
+@@ -9,7 +9,7 @@ use std::io::Cursor;
+ use std::sync::{Arc, Mutex, OnceLock};
+ 
+ /// The soname libheif 1.x ships; a box without it shows AVIF as a file that could not be read.
+-pub const LIBHEIF: &str = "libheif.so.1";
++pub const LIBHEIF: &str = "@libheif@/lib/libheif.so.1";
+ 
+ // heif_colorspace_RGB, heif_chroma_interleaved_RGBA and heif_channel_interleaved from libheif's heif.h.
+ const COLORSPACE_RGB: c_int = 1;
+diff --git c/crates/flea-gui/src/g2/pv2/poppler.rs w/crates/flea-gui/src/g2/pv2/poppler.rs
+index 97b25a7..1cbf5d0 100644
+--- c/crates/flea-gui/src/g2/pv2/poppler.rs
++++ w/crates/flea-gui/src/g2/pv2/poppler.rs
+@@ -85,10 +85,10 @@ unsafe fn symbol<T: Copy>(handle: *mut c_void, name: &CStr) -> Result<T, String>
+ }
+ 
+ unsafe fn load() -> Result<Api, String> {
+-    let poppler = library(c"libpoppler-glib.so.8")?;
+-    let gobject = library(c"libgobject-2.0.so.0")?;
+-    let glib = library(c"libglib-2.0.so.0")?;
+-    let cairo = library(c"libcairo.so.2")?;
++    let poppler = library(c"@poppler@/lib/libpoppler-glib.so.8")?;
++    let gobject = library(c"@glib@/lib/libgobject-2.0.so.0")?;
++    let glib = library(c"@glib@/lib/libglib-2.0.so.0")?;
++    let cairo = library(c"@cairo@/lib/libcairo.so.2")?;
+     Ok(Api {
+         new_from_fd: symbol(poppler, c"poppler_document_new_from_fd")?,
+         pages: symbol(poppler, c"poppler_document_get_n_pages")?,
+diff --git c/crates/flea-gui/src/g2/pv3/helper/mpv_api.rs w/crates/flea-gui/src/g2/pv3/helper/mpv_api.rs
+index b9bf67e..701a2fa 100644
+--- c/crates/flea-gui/src/g2/pv3/helper/mpv_api.rs
++++ w/crates/flea-gui/src/g2/pv3/helper/mpv_api.rs
+@@ -82,7 +82,7 @@ pub struct Api {
+ 
+ impl Api {
+     pub fn load() -> Result<Self, String> {
+-        let library = Library::open("libmpv.so.2")?;
++        let library = Library::open("@mpv@/lib/libmpv.so.2")?;
+         Ok(symbols!(library, Api {
+             create: unsafe extern "C" fn() -> Handle = "mpv_create",
+             initialize: unsafe extern "C" fn(Handle) -> c_int = "mpv_initialize",
+diff --git c/crates/flea-gui/src/g2/pv3/mpris.rs w/crates/flea-gui/src/g2/pv3/mpris.rs
+index 5f6e6fe..70249a6 100644
+--- c/crates/flea-gui/src/g2/pv3/mpris.rs
++++ w/crates/flea-gui/src/g2/pv3/mpris.rs
+@@ -7,7 +7,7 @@ use std::process::{Command, Stdio};
+ use std::sync::mpsc;
+ 
+ /// The helper an installed Flea ships, unless the environment names another.
+-pub const HELPER: &str = "/usr/lib/flea/flea-mpris";
++pub const HELPER: &str = "@out@/lib/flea/flea-mpris";
+ pub const HELPER_ENV: &str = "FLEA_MPRIS";
+ 
+ pub fn program(value: Option<OsString>) -> PathBuf {
+diff --git c/crates/flea-gui/src/g2/pv3/sandbox.rs w/crates/flea-gui/src/g2/pv3/sandbox.rs
+index 282a0b3..5ab05d1 100644
+--- c/crates/flea-gui/src/g2/pv3/sandbox.rs
++++ w/crates/flea-gui/src/g2/pv3/sandbox.rs
+@@ -64,6 +64,13 @@ pub fn arguments(
+         "--ro-bind",
+         "/etc",
+         "/etc",
++        // NixOS: mpv and the libraries it loads live in the store.
++        "--ro-bind",
++        "/nix/store",
++        "/nix/store",
++        "--ro-bind-try",
++        "/run/current-system/sw",
++        "/run/current-system/sw",
+         // fontconfig finds its cache instead of logging an error per font dir; -try skips a box without one.
+         "--ro-bind-try",
+         "/var/cache/fontconfig",
+diff --git c/src/backend/aliases.rs w/src/backend/aliases.rs
+index 4f5db74..efd9c70 100644
+--- c/src/backend/aliases.rs
++++ w/src/backend/aliases.rs
+@@ -4,7 +4,7 @@ pub struct Aliases {
+     to_canonical: HashMap<String, String>,
+ }
+ 
+-const ALIASES: &str = "/usr/share/mime/aliases";
++const ALIASES: &str = "/run/current-system/sw/share/mime/aliases";
+ 
+ impl Aliases {
+     pub fn load() -> Aliases {
+diff --git c/src/backend/appicon.rs w/src/backend/appicon.rs
+index f03e976..a1389b4 100644
+--- c/src/backend/appicon.rs
++++ w/src/backend/appicon.rs
+@@ -16,7 +16,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
+ use std::time::{Duration, Instant};
+ 
+ // The 7zip optdepend; the jail binds /usr read-only, so this path resolves inside it.
+-pub(crate) const TOOL: &str = "/usr/bin/7z";
++pub(crate) const TOOL: &str = "@p7zip@/bin/7z";
+ // exec[0] of the internal spec: never run, only read by is_route.
+ const ROUTE: &str = "appimage-icon";
+ pub(crate) const MIMES: [&str; 2] = ["application/vnd.appimage", "application/x-iso9660-appimage"];
+@@ -171,7 +171,7 @@ fn is_svg(bytes: &[u8]) -> bool {
+ fn icon(tool: &[String], runner: Runner, image: &Path, work: &mut Work, deadline: Instant) -> Result<PathBuf, Stop> {
+     let list = work.dir.join("list.txt");
+     // 7z lists on stdout and the jail discards it, so the shell redirects it into the work folder.
+-    let mut inner: Vec<String> = ["/usr/bin/sh", "-c", r#"out=$1; shift; exec "$@" >"$out""#, "sh"].map(String::from).to_vec();
++    let mut inner: Vec<String> = ["@bash@/bin/sh", "-c", r#"out=$1; shift; exec "$@" >"$out""#, "sh"].map(String::from).to_vec();
+     inner.push(list.to_string_lossy().to_string());
+     inner.extend_from_slice(tool);
+     inner.extend(["l", "-slt", "--"].map(String::from));
+diff --git c/src/backend/compare.rs w/src/backend/compare.rs
+index f5cfaff..65c9f1b 100644
+--- c/src/backend/compare.rs
++++ w/src/backend/compare.rs
+@@ -17,7 +17,7 @@ const NUL_WINDOW: u64 = 8192;
+ const PATCH_CAP: u64 = 8 * 1_048_576;
+ // The archive reader's deadline also bounds one small text diff.
+ const DIFF_WAIT: Duration = Duration::from_millis(crate::backend::archivelist::ARCHIVE_READ_MS);
+-const DIFF: &str = "/usr/bin/diff";
++const DIFF: &str = "@diffutils@/bin/diff";
+ 
+ pub struct Ask {
+     token: usize,
+diff --git c/src/backend/flashhelper.rs w/src/backend/flashhelper.rs
+index 126f3e0..b5d9610 100644
+--- c/src/backend/flashhelper.rs
++++ w/src/backend/flashhelper.rs
+@@ -5,7 +5,7 @@ use std::os::raw::c_int;
+ use std::time::{Duration, Instant};
+ 
+ // The packaged helper beside flea-gio-auth; FLEA_UDISKS overrides it, which is also the test seam.
+-const HELPER_PATH: &str = "/usr/lib/flea/flea-udisks";
++const HELPER_PATH: &str = "@out@/lib/flea/flea-udisks";
+ // A drives or eject answer waits this long.
+ const HELPER_TIMEOUT: Duration = Duration::from_secs(30);
+ // The open leg waits on the user's own prompt, so it waits longer, and then ends the helper.
+diff --git c/src/backend/gitprobe.rs w/src/backend/gitprobe.rs
+index f181e93..7129841 100644
+--- c/src/backend/gitprobe.rs
++++ w/src/backend/gitprobe.rs
+@@ -103,7 +103,7 @@ fn small_file(path: &Path) -> Result<Vec<u8>, String> {
+ 
+ pub fn argv(repo: &Repository) -> Vec<String> {
+     let inner: Vec<String> = [
+-        "/usr/bin/git",
++        "@git@/bin/git",
+         "-c",
+         "core.fsmonitor=false",
+         "-c",
+diff --git c/src/backend/icons.rs w/src/backend/icons.rs
+index 3b9daf9..04d33e1 100644
+--- c/src/backend/icons.rs
++++ w/src/backend/icons.rs
+@@ -4,7 +4,7 @@ pub struct Names {
+     generic: HashMap<String, String>,
+ }
+ 
+-const GENERIC_ICONS: &str = "/usr/share/mime/generic-icons";
++const GENERIC_ICONS: &str = "/run/current-system/sw/share/mime/generic-icons";
+ const FOLDER: &str = "folder";
+ const UNKNOWN: &str = "text-x-generic";
+ // The icon naming spec's generic file, for the application types generic-icons does not list.
+diff --git c/src/backend/kind.rs w/src/backend/kind.rs
+index df77101..fb4fa81 100644
+--- c/src/backend/kind.rs
++++ w/src/backend/kind.rs
+@@ -5,7 +5,7 @@ use std::path::PathBuf;
+ mod comments;
+ use comments::Comments;
+ 
+-const MIME_ROOT: &str = "/usr/share/mime";
++const MIME_ROOT: &str = "/run/current-system/sw/share/mime";
+ 
+ // A per-process, per-type cache, so every type is read from disk at most once, see docs/protocol.md "rows".
+ pub struct Kinds {
+diff --git c/src/backend/mime.rs w/src/backend/mime.rs
+index 9c65dba..b62f28a 100644
+--- c/src/backend/mime.rs
++++ w/src/backend/mime.rs
+@@ -9,7 +9,7 @@ pub struct Db {
+     by_name: HashMap<String, (u32, String)>,
+ }
+ 
+-const GLOBS2: &str = "/usr/share/mime/globs2";
++const GLOBS2: &str = "/run/current-system/sw/share/mime/globs2";
+ 
+ impl Db {
+     pub fn load() -> Db {
+diff --git c/src/backend/pluginpreview_sandbox.rs w/src/backend/pluginpreview_sandbox.rs
+index 59eb314..36eda31 100644
+--- c/src/backend/pluginpreview_sandbox.rs
++++ w/src/backend/pluginpreview_sandbox.rs
+@@ -19,7 +19,7 @@ pub(in crate::backend) fn argv(
+         sandbox::BWRAP.into(),
+     ];
+     a.extend(sandbox::BWRAP_FLAGS.iter().map(|f| f.to_string()));
+-    a.extend(["--setenv", "PATH", "/usr/bin", "--setenv", "HOME", "/tmp"].map(String::from));
++    a.extend(["--setenv", "PATH", "/run/current-system/sw/bin:/usr/bin", "--setenv", "HOME", "/tmp"].map(String::from));
+     let folder = folder.to_string_lossy().into_owned();
+     a.extend(["--ro-bind".into(), folder.clone(), folder.clone()]);
+     if let Some(input) = input {
+diff --git c/src/backend/sandbox.rs w/src/backend/sandbox.rs
+index 9c1d053..22e1b57 100644
+--- c/src/backend/sandbox.rs
++++ w/src/backend/sandbox.rs
+@@ -37,6 +37,13 @@ pub(crate) const BWRAP_FLAGS: &[&str] = &[
+     "--ro-bind",
+     "/etc",
+     "/etc",
++    // NixOS: the tools and the libraries they load live in the store, and the system profile links them.
++    "--ro-bind",
++    "/nix/store",
++    "/nix/store",
++    "--ro-bind-try",
++    "/run/current-system/sw",
++    "/run/current-system/sw",
+     "--symlink",
+     "usr/lib",
+     "/lib",
+diff --git c/src/backend/thumbbind.rs w/src/backend/thumbbind.rs
+index 5df3734..538d503 100644
+--- c/src/backend/thumbbind.rs
++++ w/src/backend/thumbbind.rs
+@@ -4,9 +4,9 @@ use std::os::unix::fs::MetadataExt;
+ use std::path::{Component, Path, PathBuf};
+ 
+ // The jail mounts /usr and /etc and links these four names into usr, so a program under any of them is in reach already.
+-const JAIL_ROOTS: [&str; 6] = ["/usr", "/etc", "/bin", "/sbin", "/lib", "/lib64"];
++const JAIL_ROOTS: [&str; 8] = ["/usr", "/etc", "/bin", "/sbin", "/lib", "/lib64", "/nix/store", "/run/current-system/sw"];
+ // Only these two are real mounts, so a link that leaves them has to bind its own target.
+-const MOUNTED: [&str; 2] = ["/usr", "/etc"];
++const MOUNTED: [&str; 4] = ["/usr", "/etc", "/nix/store", "/run/current-system/sw"];
+ // The jail mounts these itself, and a bind must never shadow them.
+ const KERNEL: [&str; 3] = ["/proc", "/dev", "/sys"];
+ const ANY_EXECUTE_BIT: u32 = 0o111;
+diff --git c/src/backend/thumbworker.rs w/src/backend/thumbworker.rs
+index 4a315f1..c4bcd1e 100644
+--- c/src/backend/thumbworker.rs
++++ w/src/backend/thumbworker.rs
+@@ -20,7 +20,7 @@ pub const NOT_STARTED: u8 = b'N';
+ // A request is the thumbnail size as four little-endian bytes and then the film-strip flag.
+ pub const REQUEST_BYTES: usize = 5;
+ // The ffmpegthumbnailer 2.x soname, the same library /usr/bin/ffmpegthumbnailer links.
+-pub const SONAME: &CStr = c"libffmpegthumbnailer.so.4";
++pub const SONAME: &CStr = c"@ffmpegthumbnailer@/lib/libffmpegthumbnailer.so.4";
+ // The child keeps the two job files here, so the path libav is handed is a constant.
+ const INPUT_FD: RawFd = 3;
+ const OUTPUT_FD: RawFd = 4;
+diff --git c/src/figurehelper.rs w/src/figurehelper.rs
+index 26b4ebf..9334728 100644
+--- c/src/figurehelper.rs
++++ w/src/figurehelper.rs
+@@ -8,7 +8,7 @@ use std::os::unix::process::CommandExt;
+ use std::path::{Path, PathBuf};
+ 
+ // Arch's extra/quickjs-ng, the only engine the vendored bundles run under.
+-const SYSTEM_QJS: &str = "/usr/bin/qjs";
++const SYSTEM_QJS: &str = "@quickjs@/bin/qjs";
+ // A test hook, and only a test hook: an absolute path to a qjs binary.
+ const QJS_ENV: &str = "FLEA_QJS";
+ // The helper lazy-loads vendor bundles and imports the shared post-processing module from the UI js directory.
+@@ -38,7 +38,7 @@ pub(crate) fn qjs_path() -> PathBuf {
+ 
+ // True when the jail's read-only /usr already covers the binary.
+ pub(crate) fn under_usr(path: &Path) -> bool {
+-    path.starts_with("/usr/")
++    path.starts_with("/usr/") || path.starts_with("/nix/store/")
+ }
+ 
+ // The full argv: prlimit caps, the jail flags, the read-only binds, then qjs, the helper and its flags.
+diff --git c/src/gui/legacy_identity.rs w/src/gui/legacy_identity.rs
+index a8a7023..1488488 100644
+--- c/src/gui/legacy_identity.rs
++++ w/src/gui/legacy_identity.rs
+@@ -134,7 +134,7 @@ pub(super) fn find(runtime: &Path) -> Result<Vec<Instance>, String> {
+             .iter()
+             .find_map(|s| s.strip_prefix(b"FLEA_UI=" as &[u8]))
+             .filter(|s| !s.is_empty())
+-            .unwrap_or(b"/usr/share/flea/ui");
++            .unwrap_or(b"@out@/share/flea/ui");
+         let mut entry = ui.to_vec();
+         entry.extend_from_slice(b"/boot/shell.qml");
+         let backend = env
+diff --git c/src/i18n/mod.rs w/src/i18n/mod.rs
+index 2156c78..da96fcf 100644
+--- c/src/i18n/mod.rs
++++ w/src/i18n/mod.rs
+@@ -29,7 +29,7 @@ fn catalog_dirs(override_dir: Option<PathBuf>, exe: Option<&Path>, source: &Path
+     if let Some(prefix) = exe.and_then(Path::parent).and_then(Path::parent) {
+         catalogs.push(prefix.join("share/flea/i18n"));
+     }
+-    catalogs.extend([PathBuf::from("/usr/share/flea/i18n"), PathBuf::from("/usr/local/share/flea/i18n")]);
++    catalogs.extend([PathBuf::from("@out@/share/flea/i18n"), PathBuf::from("/usr/local/share/flea/i18n")]);
+     if debug || exe.is_some_and(|path| path.starts_with(source.join("target"))) {
+         catalogs.push(source.join("i18n"));
+     }
+diff --git c/src/paths.rs w/src/paths.rs
+index c36b278..437ca14 100644
+--- c/src/paths.rs
++++ w/src/paths.rs
+@@ -37,7 +37,7 @@ pub fn ui_dir() -> Option<PathBuf> {
+             return Some(p);
+         }
+     }
+-    let packaged = PathBuf::from("/usr/share/flea/ui");
++    let packaged = PathBuf::from("@out@/share/flea/ui");
+     if packaged.join(ENTRY).is_file() {
+         return Some(packaged);
+     }
+diff --git c/src/shelfplugin.rs w/src/shelfplugin.rs
+index 545fe9d..78e3d85 100644
+--- c/src/shelfplugin.rs
++++ w/src/shelfplugin.rs
+@@ -28,7 +28,7 @@ pub fn source() -> Option<PathBuf> {
+             return Some(p);
+         }
+     }
+-    let packaged = PathBuf::from("/usr/share/flea/shelf");
++    let packaged = PathBuf::from("@out@/share/flea/shelf");
+     if packaged.join("manifest.json").is_file() {
+         return Some(packaged);
+     }
+diff --git c/src/ui_logic_pl2/bridge.rs w/src/ui_logic_pl2/bridge.rs
+index e2dcbe2..e2e5070 100644
+--- c/src/ui_logic_pl2/bridge.rs
++++ w/src/ui_logic_pl2/bridge.rs
+@@ -30,7 +30,7 @@ pub fn needs_bridge(path: &str, root: &str) -> bool {
+ pub fn fuse_argv(binary: &str, dir: &str) -> Vec<String> {
+     vec![
+         if binary.is_empty() {
+-            "/usr/lib/gvfsd-fuse".into()
++            "@gvfs@/libexec/gvfsd-fuse".into()
+         } else {
+             binary.into()
+         },
+diff --git c/tools/flea-filemanager1 w/tools/flea-filemanager1
+index cf710e4..4ddb46e 100755
+--- c/tools/flea-filemanager1
++++ w/tools/flea-filemanager1
+@@ -66,7 +66,7 @@ def flea_binary():
+     dev = os.path.join(os.path.dirname(here), "target", "release", "flea")
+     if os.access(dev, os.X_OK):
+         return dev
+-    return "/usr/bin/flea"
++    return "@out@/bin/flea"
+ 
+ 
+ # The URIs come from another application, so each one is proved before it becomes a path. Measured
+diff --git c/tools/flea-portal w/tools/flea-portal
+index cc54949..a954e52 100755
+--- c/tools/flea-portal
++++ w/tools/flea-portal
+@@ -89,7 +89,7 @@ def flea_binary():
+     dev = os.path.join(os.path.dirname(here), "target", "release", "flea")
+     if os.access(dev, os.X_OK):
+         return dev
+-    return "/usr/bin/flea"
++    return "@out@/bin/flea"
+ 
+ 
+ def text_option(options, key):

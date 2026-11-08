@@ -1,12 +1,12 @@
 # Nautilus como gerenciador de arquivos padrão de todos os usuários: pastas
 # (inode/directory), "Mostrar na pasta" (org.freedesktop.FileManager1) e o
-# diálogo "Abrir arquivo..." / "Salvar como...". O Strata (packages/_strata)
-# também fica instalado; quem o escolhe (my.fileManager, home/desktop/strata.nix)
+# diálogo "Abrir arquivo..." / "Salvar como...". O Flea (packages/_flea)
+# também fica instalado; quem o escolhe (my.fileManager, home/desktop/flea.nix)
 # passa a usá-lo nas três coisas.
 #
 # O diálogo é o portal FileChooser: o Nautilus o implementa por trás do
-# xdg-desktop-portal-gnome, e o Strata tem o próprio backend
-# (org.freedesktop.impl.portal.desktop.strata). Os apps só usam o portal
+# xdg-desktop-portal-gnome, e o Flea tem o próprio backend
+# (org.freedesktop.impl.portal.desktop.flea). Os apps só usam o portal
 # quando pedido: GTK_USE_PORTAL no GTK3, GDK_DEBUG=portals no GTK4 e o tema
 # xdgdesktopportal no Qt (OBS...); sem ele, o Qt abre o próprio
 # diálogo. O Firefox (nixos/desktop/firefox.nix), o Chromium e o Electron já o
@@ -20,7 +20,7 @@
       environment.systemPackages = with pkgs; [
         nautilus
         sushi
-        strata
+        flea
       ];
 
       # Miniaturas, lixeira, montagem de dispositivos e locais de rede.
@@ -32,7 +32,7 @@
       xdg.portal = {
         extraPortals = [
           pkgs.xdg-desktop-portal-gnome
-          pkgs.strata
+          pkgs.flea
         ];
         config.umbriel."org.freedesktop.impl.portal.FileChooser" = [ "gnome" ];
       };

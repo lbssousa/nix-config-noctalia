@@ -109,11 +109,11 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
   sua empresa (`webapp <id>`): WhatsApp (Facebook), Teams (Microsoft),
   YouTube e Google Maps/Photos/Messages/Contacts (Google), Discord e X
   (Twitter).
-- **Nautilus** é o gerenciador de arquivos padrão, e o **Strata** o do `abutre`
+- **Nautilus** é o gerenciador de arquivos padrão, e o **Flea** o do `abutre`
   (`my.fileManager`): pastas, "Mostrar na pasta" (`org.freedesktop.FileManager1`)
-  e o diálogo de abrir/salvar (portal FileChooser), também nos apps Qt. O Strata
-  é compilado do código-fonte (`modules/packages/_strata`), com as prévias no
-  bubblewrap e o atualizador embutido desligado.
+  e o diálogo de abrir/salvar (portal FileChooser), também nos apps Qt. O Flea
+  é compilado do código-fonte (`modules/packages/_flea`), com os caminhos FHS
+  trocados pelos do Nix e as jaulas do bubblewrap enxergando o `/nix/store`.
 - **Apps de usuário nativos:** OnlyOffice, Xournal++, Papers, LocalSend,
   Zoom, OBS, Kdenlive, Pinta, Inkscape e FontForge, como pacotes Nix
   (`modules/nixos/desktop/apps.nix`).
@@ -125,7 +125,7 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 |---|---|---|---|
 | `Super+Return` | terminal (ghostty) | `Super` (sozinho) | launcher |
 | `Super+Shift+B` | Firefox | `Super+Alt+Space` | central de controle |
-| `Super+Shift+F` | arquivos (Nautilus/Strata) | `Super+Escape` | menu de sessão |
+| `Super+Shift+F` | arquivos (Nautilus/Flea) | `Super+Escape` | menu de sessão |
 | `Super+Shift+N` | neovim | `Super+K` | cheatsheet de atalhos |
 | `Super+Alt+Return` | tmux | `Super+Ctrl+V` | histórico do clipboard |
 | `Super+Ctrl+Return` | herdr | `Super+Ctrl+E` | emojis |
