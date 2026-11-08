@@ -416,7 +416,7 @@ if [[ -d "$ROOT/etc/nixos" ]]; then
     # Compares with the last fetched state of the remote (no network access).
     _ahead="$(git -C "$ROOT/etc/nixos" log --oneline '@{upstream}..HEAD' 2>/dev/null || true)"
     if [[ -n "$_ahead" ]]; then
-      warn "mirror has local commits; run 'just publish-mirror' in a working clone:"
+      warn "mirror has commits not on its remote: 'just publish-mirror' (in a working clone) pushes its own; 'just sync' drops those replaced by a forced push:"
       sed 's/^/    /' <<<"$_ahead"
     fi
     # List staged files (in the index)

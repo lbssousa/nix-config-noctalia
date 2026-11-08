@@ -161,35 +161,86 @@ sync:
     exit 1
   fi
   "${as_owner[@]}" git -C "$m" fetch --quiet origin
-  if [[ "$(git -C "$m" rev-list --count '@{upstream}..HEAD')" -gt 0 ]]; then
+  mirror_commits() { "{{just_executable()}}" --justfile "{{justfile_file}}" mirror="$m" _mirror-commits "$1"; }
+  mapfile -t own < <(mirror_commits local)
+  if (( ${#own[@]} )); then
     echo "error: $m has commits that are not on its remote:" >&2
-    git -C "$m" log --oneline '@{upstream}..HEAD' >&2
+    git -C "$m" log --oneline --no-walk=unsorted "${own[@]}" >&2
     echo "Run 'just publish-mirror' in the working clone to push them." >&2
     exit 1
   fi
-  "${as_owner[@]}" git -C "$m" merge --ff-only --quiet '@{upstream}'
+  mapfile -t obsolete < <(mirror_commits obsolete)
+  if (( ${#obsolete[@]} )); then
+    # A forced push replaced them; the remote has the history to keep.
+    echo "The remote history was rewritten; dropping from $m:"
+    git -C "$m" log --oneline --no-walk=unsorted "${obsolete[@]}"
+    "${as_owner[@]}" git -C "$m" reset --hard --quiet '@{upstream}'
+  else
+    "${as_owner[@]}" git -C "$m" merge --ff-only --quiet '@{upstream}'
+  fi
   git -C "$m" log --oneline -1
 
+# The mirror's commits that are not on its remote (as last fetched), oldest
+# first, of one kind:
+#   local    - made in the mirror (install.sh's), pushed by `just publish-mirror`;
+#   obsolete - published and then replaced by a forced push (an amend or a
+#              rebase in the working clone), dropped by `just sync`.
+# A commit is obsolete when the remote-tracking branch once reached it (its
+# reflog) or when the remote has the same change (git cherry): an amend that
+# only signs the commit, or a local commit that publish-mirror replayed onto a
+# rewritten history.
+[private]
+_mirror-commits kind:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  m="{{mirror}}"
+  upstream="$(git -C "$m" rev-parse --symbolic-full-name '@{upstream}')"
+  mapfile -t seen < <(git -C "$m" reflog show --format=%H "$upstream" -- 2>/dev/null || true)
+  declare -A unseen=() changed=()
+  while read -r c; do unseen[$c]=1; done \
+    < <(git -C "$m" rev-list HEAD --not "$upstream" "${seen[@]}")
+  while read -r mark c; do [[ "$mark" == "+" ]] && changed[$c]=1; done \
+    < <(git -C "$m" cherry "$upstream" HEAD)
+  while read -r c; do
+    if [[ -n "${unseen[$c]:-}" && -n "${changed[$c]:-}" ]]; then kind=local; else kind=obsolete; fi
+    [[ "$kind" == "{{kind}}" ]] && echo "$c"
+  done < <(git -C "$m" rev-list --reverse HEAD --not "$upstream")
+  true
+
 # The mirror's own commits (the one install.sh makes for the generated user
-# and host files) keep their hashes, so the next `just sync` fast-forwards.
+# and host files) keep their hashes, so the next `just sync` fast-forwards;
+# on a history the remote rewrote they are replayed here instead, and the
+# next `just sync` drops the originals.
 # Pushes the mirror's local commits from the working clone.
 [group("maintenance")]
 publish-mirror:
   #!/usr/bin/env bash
   set -euo pipefail
-  if [[ "$(realpath "{{flake_root}}")" == "$(realpath "{{mirror}}")" ]]; then
-    echo "error: run this in the working clone, not in {{mirror}}" >&2
+  m="{{mirror}}"
+  if [[ "$(realpath "{{flake_root}}")" == "$(realpath "$m")" ]]; then
+    echo "error: run this in the working clone, not in $m" >&2
     exit 1
   fi
   cd "{{flake_root}}"
-  git fetch --quiet "{{mirror}}" HEAD
-  if git merge-base --is-ancestor FETCH_HEAD HEAD; then
-    echo "Nothing to publish: the mirror has no commits missing here."
+  # The mirror's view of the remote decides which of its commits are its own.
+  as_owner=()
+  [[ -O "$m" ]] || as_owner=(run0)
+  "${as_owner[@]}" git -C "$m" fetch --quiet origin
+  mirror_commits() { "{{just_executable()}}" --justfile "{{justfile_file}}" mirror="$m" _mirror-commits "$1"; }
+  mapfile -t own < <(mirror_commits local)
+  if (( ${#own[@]} == 0 )); then
+    echo "Nothing to publish: the mirror has no commits of its own."
+    if [[ -n "$(mirror_commits obsolete)" ]]; then
+      echo "Its commits replaced by a forced push are dropped by 'just sync'."
+    fi
     exit 0
   fi
-  git log --oneline HEAD..FETCH_HEAD
+  git fetch --quiet "$m" HEAD
+  git log --oneline --no-walk=unsorted "${own[@]}"
+  if [[ -n "$(mirror_commits obsolete)" ]]; then
+    git cherry-pick "${own[@]}"
   # Local commits are replayed on top of the mirror's, never the other way.
-  if git merge-base --is-ancestor HEAD FETCH_HEAD; then
+  elif git merge-base --is-ancestor HEAD FETCH_HEAD; then
     git merge --ff-only --quiet FETCH_HEAD
   else
     git rebase FETCH_HEAD

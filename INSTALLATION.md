@@ -177,7 +177,7 @@ just validate      # nixfmt + statix + deadnix + flake check
 Em qualquer diretório (aliases do fish/bash, sempre com o justfile do espelho):
 
 ```bash
-nsync              # just sync: fast-forward do espelho (recusa se estiver sujo ou à frente)
+nsync              # just sync: fast-forward do espelho (recusa se estiver sujo ou com commits próprios)
 nrs / nrb / nrt    # just switch / boot / test a partir do espelho
 nrB / nrd          # just build / diff a partir do espelho
 nru                # just upgrade no espelho: sync + switch
@@ -194,6 +194,13 @@ dos usuários, e o `just sync` recusa até que ele chegue ao remoto. Para isso,
 clone o repositório (por SSH) e rode `just publish-mirror` nele: o commit é
 trazido do espelho com o mesmo hash, os commits locais do clone são reaplicados
 sobre ele, e tudo é enviado por push.
+
+Depois de um push forçado no clone de trabalho (um `commit --amend` para
+assinar, um rebase), os commits que o espelho já tinha recebido somem do
+remoto. O `just sync` reconhece esses commits, porque o ramo remoto já passou
+por eles ou porque o remoto tem a mesma alteração, e os descarta, levando o
+espelho ao remoto. Só os commits feitos no próprio espelho continuam exigindo o
+`just publish-mirror`, que, nesse caso, os reaplica no clone em vez de manter o hash.
 
 O `just switch` roda o `nixos-rebuild --elevate run0`: o flake (incluindo o input
 `git+ssh` do `nix-secrets`) é avaliado pelo próprio usuário, que alcança o
