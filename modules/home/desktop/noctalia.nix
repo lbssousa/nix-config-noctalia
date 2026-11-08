@@ -304,11 +304,18 @@
                 location = "${inputs.noctalia-plugins-community}";
                 enabled = true;
               }
-              # Plugins deste repositório (_noctalia-plugins).
+              # Plugins próprios (github.com/lbssousa/noctalia-secret-prompts e
+              # noctalia-security-hardware), fixados no flake.lock.
               {
-                name = "nix-local";
+                name = "nix-secret-prompts";
                 kind = "path";
-                location = "${./_noctalia-plugins}";
+                location = "${inputs.noctalia-secret-prompts}";
+                enabled = true;
+              }
+              {
+                name = "nix-security-hardware";
+                kind = "path";
+                location = "${inputs.noctalia-security-hardware}";
                 enabled = true;
               }
             ];

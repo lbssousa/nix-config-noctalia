@@ -83,9 +83,9 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
   `umbriel-monitor-control`, `printers`, `headroom` (limites do Claude Code, do
   Codex e do Antigravity), `opencode-companion` e `herdr` (os três de IA
   juntos num grupo de cápsula na barra).
-- **Plugins próprios** da Noctalia (`modules/home/desktop/_noctalia-plugins`):
-  `secret-prompts` (pinentry do GnuPG e `SSH_ASKPASS` num painel da shell, com
-  os clientes `noctalia-pinentry`/`noctalia-askpass`) e `security-hardware`
+- **Plugins próprios** da Noctalia, em repositórios separados e fixados no `flake.lock`:
+  [`secret-prompts`](https://github.com/lbssousa/noctalia-secret-prompts) (pinentry do GnuPG e `SSH_ASKPASS` num painel da shell, com
+  os clientes `noctalia-pinentry`/`noctalia-askpass`) e [`security-hardware`](https://github.com/lbssousa/noctalia-security-hardware)
   (cadastro de digitais, chaves FIDO2/U2F e a chave GPG do cartão, num botão
   do centro de controle).
 - **Templates de tema** da Noctalia recolorem ghostty, kitty, foot, GTK, Qt,

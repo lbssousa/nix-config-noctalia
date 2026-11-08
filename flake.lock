@@ -182,6 +182,38 @@
         "type": "github"
       }
     },
+    "noctalia-secret-prompts": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1794138429,
+        "narHash": "sha256-Fd+hy0n6dYhN90YnSQZtJKK8WC/kr0M51W1Ri+FTGv4=",
+        "owner": "lbssousa",
+        "repo": "noctalia-secret-prompts",
+        "rev": "d8806fece801206c49925343e0c644eefad5db26",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lbssousa",
+        "repo": "noctalia-secret-prompts",
+        "type": "github"
+      }
+    },
+    "noctalia-security-hardware": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1794138436,
+        "narHash": "sha256-XxB0e08O4cTkofHaofuEDOkXV6YIQLAAMEnmofv+U6U=",
+        "owner": "lbssousa",
+        "repo": "noctalia-security-hardware",
+        "rev": "565d1d10aaa92192220ddcd99382ff5db5b03ab8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lbssousa",
+        "repo": "noctalia-security-hardware",
+        "type": "github"
+      }
+    },
     "preservation": {
       "locked": {
         "lastModified": 1792953443,
@@ -208,6 +240,8 @@
         "nixvim": "nixvim",
         "noctalia-plugins-community": "noctalia-plugins-community",
         "noctalia-plugins-official": "noctalia-plugins-official",
+        "noctalia-secret-prompts": "noctalia-secret-prompts",
+        "noctalia-security-hardware": "noctalia-security-hardware",
         "preservation": "preservation",
         "sops-nix": "sops-nix"
       }

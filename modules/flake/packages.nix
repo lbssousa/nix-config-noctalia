@@ -1,6 +1,11 @@
 # Pacotes próprios (modules/packages/_*/package.nix), expostos como
 # packages.<system>.<nome> e pelo overlay aplicado a todos os hosts.
-{ config, lib, ... }:
+{
+  config,
+  inputs,
+  lib,
+  ...
+}:
 let
   overlay =
     final: prev:
@@ -13,8 +18,9 @@ let
       fprintd-goodix = call ../packages/_fprintd-goodix/package.nix;
       yubikey-gpg-import = call ../packages/_yubikey-gpg-import/package.nix;
       strata = call ../packages/_strata/package.nix;
-      noctalia-secret-prompts = call ../packages/_noctalia-secret-prompts/package.nix;
-      noctalia-security-hw = call ../packages/_noctalia-security-hw/package.nix;
+      # Auxiliares dos plugins próprios da Noctalia (repositórios em flake.nix).
+      noctalia-secret-prompts = call "${inputs.noctalia-secret-prompts}/nix/package.nix";
+      noctalia-security-hw = call "${inputs.noctalia-security-hardware}/nix/package.nix";
 
       # Senha expirada (pam_acct_mgmt: NEW_AUTHTOK_REQD) no login gráfico.
       # O greetd 0.10.3 só falhava; o patch chama pam_chauthtok na mesma
@@ -63,9 +69,9 @@ let
       # Pinentry/askpass e a configuração de digitais e chaves de segurança não são
       # mais patches: os mantenedores não aceitam segredos no core (PR #4951) e
       # mandam controles de hardware para plugins (SCOPE.md). Viraram os plugins
-      # lbssousa/secret-prompts e lbssousa/security-hardware
-      # (home/desktop/_noctalia-plugins), com os auxiliares noctalia-secret-prompts
-      # e noctalia-security-hw.
+      # lbssousa/secret-prompts e lbssousa/security-hardware (repositórios
+      # github.com/lbssousa/noctalia-secret-prompts e noctalia-security-hardware),
+      # com os auxiliares noctalia-secret-prompts e noctalia-security-hw.
       #
       # Os patches saem do fork lbssousa/noctalia: o branch base/nix-config-v5.4.1
       # é a tag v5.4.1 mais os patches acima, um commit cada.
