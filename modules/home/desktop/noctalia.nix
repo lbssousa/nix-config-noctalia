@@ -119,15 +119,15 @@
             started = "${wallpaperPairSync}";
           };
 
+          # Tela de bloqueio no serviço PAM próprio (security/pam-policy.nix),
+          # para o "login" ficar só com a senha. Chave do PR #4132 (patch em
+          # flake/packages.nix).
+          lockscreen.pam_service = lib.mkDefault "noctalia-lock";
+
           shell = {
             font_family = lib.mkDefault "Adwaita Sans";
             clipboard_enabled = lib.mkDefault true;
             polkit_agent = lib.mkDefault true;
-            # Pinentry do GnuPG e SSH_ASKPASS no mesmo painel do polkit
-            # (nixos/security/secret-prompts.nix aponta o gpg-agent e o
-            # SSH_ASKPASS para eles, para todos os usuários).
-            pinentry = lib.mkDefault true;
-            ssh_askpass = lib.mkDefault true;
             # A config vem do Nix: o assistente de primeiro uso só atrapalharia.
             setup_wizard_enabled = lib.mkDefault false;
             telemetry_enabled = lib.mkDefault false;
@@ -259,6 +259,7 @@
               "noctalia/screen_recorder:toggle"
               "alexander/screen-toolkit:toggle"
               "muhammadessam/umbriel-monitor-control:display"
+              "lbssousa/security-hardware:shortcut"
             ]
           );
 
@@ -303,6 +304,13 @@
                 location = "${inputs.noctalia-plugins-community}";
                 enabled = true;
               }
+              # Plugins deste repositório (_noctalia-plugins).
+              {
+                name = "nix-local";
+                kind = "path";
+                location = "${./_noctalia-plugins}";
+                enabled = true;
+              }
             ];
             enabled = lib.mkDefault [
               # Oficiais
@@ -320,6 +328,13 @@
               "knyrps/nix-search"
               "muhammadessam/umbriel-monitor-control"
               "andrewdems/printers"
+              # Pinentry do GnuPG e SSH_ASKPASS num painel da shell
+              # (nixos/security/secret-prompts.nix aponta o gpg-agent e o
+              # SSH_ASKPASS para os clientes, para todos os usuários).
+              "lbssousa/secret-prompts"
+              # Digitais, chaves FIDO2/U2F e a chave GPG do cartão (botão no
+              # centro de controle).
+              "lbssousa/security-hardware"
               # Agentes de IA e terminal
               # Limites dos planos do Claude Code, do Codex e do Antigravity
               "ayagmar/headroom"
@@ -332,6 +347,7 @@
 
           # Logos coloridos pela paleta da shell no status do NixOS.
           plugin_settings."mindnbytes/nix-status".use_themed_logos = lib.mkDefault true;
+          plugin_settings."lbssousa/security-hardware".helper = lib.getExe pkgs.noctalia-security-hw;
         };
       };
     };

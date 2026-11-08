@@ -1,0 +1,74 @@
+# https://github.com/noctalia-dev/noctalia/pull/4132 (liamwh, head e60eafb5f)
+diff --git a/example.toml b/example.toml
+index cec1227d7..e6c9c983a 100644
+--- a/example.toml
++++ b/example.toml
+@@ -262,6 +262,8 @@ blur_intensity          = 0.5         # lock screen background blur (0.0 = none,
+ tint_intensity          = 0.3         # surface-color tint over the lock screen background
+ # wallpaper             = ""          # optional image path for the lock screen; empty uses the desktop wallpaper
+ # monitors              = ["DP-1"]    # connectors that show the lock screen; empty shows all monitors, others stay black
++# pam_service            = "login"     # PAM service to authenticate against; override when the distro's login
++                                       # stack blocks on modules a lock screen can't satisfy (e.g. pam_fprintd)
+ 
+ # ── System Monitor ────────────────────────────────────────────────────────────
+ 
+diff --git a/src/config/config_types.h b/src/config/config_types.h
+index 881cecf26..6895bcd42 100644
+--- a/src/config/config_types.h
++++ b/src/config/config_types.h
+@@ -598,6 +598,10 @@ struct LockscreenConfig {
+   int gracePeriodSeconds = 0;
+   bool fingerprint = true;
+   bool allowEmptyPassword = false;
++  // PAM service (under /etc/pam.d/) the lock screen authenticates against.
++  // "login" suits most distros; a custom service avoids distro stacks that
++  // block on modules the lock screen cannot satisfy (e.g. pam_fprintd).
++  std::string pamService = "login";
+   bool blurredDesktop = false;
+   std::vector<LockscreenTransition> transitions = {LockscreenTransition::Fade,    LockscreenTransition::Wipe,
+                                                    LockscreenTransition::Disc,    LockscreenTransition::Stripes,
+diff --git a/src/config/schema/config_schema.cpp b/src/config/schema/config_schema.cpp
+index 65af38c93..41882819f 100644
+--- a/src/config/schema/config_schema.cpp
++++ b/src/config/schema/config_schema.cpp
+@@ -134,6 +134,7 @@ namespace noctalia::config::schema {
+         field(&LockscreenConfig::gracePeriodSeconds, "grace_period_seconds", Range<std::int64_t>{0, 60}),
+         field(&LockscreenConfig::fingerprint, "fingerprint"),
+         field(&LockscreenConfig::allowEmptyPassword, "allow_empty_password"),
++        field(&LockscreenConfig::pamService, "pam_service"),
+         field(&LockscreenConfig::blurredDesktop, "blurred_desktop"),
+         enumArrayField(
+             &LockscreenConfig::transitions, "transition", kLockscreenTransitions, std::optional<LockscreenTransition>{}
+diff --git a/src/shell/lockscreen/lock_screen.cpp b/src/shell/lockscreen/lock_screen.cpp
+index afe02bea1..bdd0f90ba 100644
+--- a/src/shell/lockscreen/lock_screen.cpp
++++ b/src/shell/lockscreen/lock_screen.cpp
+@@ -1474,10 +1474,12 @@ void LockScreen::tryAuthenticate() {
+   updatePromptOnSurfaces();
+ 
+   const PamAuthenticator authenticator = m_authenticator;
+-  // Authenticate against the "login" stack. If fingerprint is enabled, strip
+-  // pam_fprintd from it: noctalia drives the reader itself over D-Bus and the
+-  // two can't share the sensor. See docs/fingerprint.md.
+-  const std::string pamService = "login";
++  // Authenticate against the configured PAM stack ([lockscreen].pam_service,
++  // "login" by default). Noctalia drives the fingerprint reader itself over
++  // D-Bus when fingerprint is enabled, so a stack whose pam_fprintd would
++  // block the password conversation is better replaced by a custom service.
++  const std::string pamService =
++      m_configService != nullptr ? m_configService->config().lockscreen.pamService : std::string("login");
+   const std::string pamLanguage(i18n::Service::instance().language());
+   const std::string pamStartFailure = i18n::tr("auth.pam.start-failed");
+   std::thread([this, generation, password = std::move(password), authenticator, pamService, pamLanguage,
+diff --git a/tests/config_schema_roundtrip_test.cpp b/tests/config_schema_roundtrip_test.cpp
+index 3d2594a53..6e87eccda 100644
+--- a/tests/config_schema_roundtrip_test.cpp
++++ b/tests/config_schema_roundtrip_test.cpp
+@@ -374,6 +374,7 @@ location = "https://example.invalid/bad"
+     c.lockscreen = LockscreenConfig{
+         .lockBeforeSuspend = false,
+         .gracePeriodSeconds = 3,
++        .pamService = "noctalia",
+         .blurredDesktop = true,
+         .transitions = {LockscreenTransition::Disc, LockscreenTransition::Zoom},
+         .transitionDurationMs = 900.0F,

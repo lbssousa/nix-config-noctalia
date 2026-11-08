@@ -1,8 +1,8 @@
 diff --git a/assets/translations/en.json b/assets/translations/en.json
-index 0727187..9ca147f 100644
+index 8620b275e..90eb24075 100644
 --- a/assets/translations/en.json
 +++ b/assets/translations/en.json
-@@ -875,8 +875,8 @@
+@@ -922,8 +922,8 @@
      "password-cleared": "Password cleared",
      "password-placeholder": "Password",
      "ready": "Type your password and press Enter.",
@@ -12,7 +12,7 @@ index 0727187..9ca147f 100644
      "waiting": "Waiting for lock confirmation…"
    },
    "notifications": {
-@@ -2499,7 +2499,7 @@
+@@ -2583,7 +2583,7 @@
          },
          "security-key": {
            "label": "Security Key Unlock",
@@ -22,20 +22,18 @@ index 0727187..9ca147f 100644
          "tint-intensity": {
            "description": "Surface-color tint over the lock screen background",
 diff --git a/assets/translations/pt-BR.json b/assets/translations/pt-BR.json
-index 62dd208..07efb8b 100644
+index b6d226f24..b125ccdae 100644
 --- a/assets/translations/pt-BR.json
 +++ b/assets/translations/pt-BR.json
-@@ -874,8 +874,8 @@
-     "password-cleared": "Senha apagada",
-     "password-placeholder": "Senha",
+@@ -924,6 +924,7 @@
      "ready": "Digite sua senha e pressione Enter.",
--    "security-key-touch": "Toque na sua chave de segurança",
-     "unlocked": "Desbloqueado",
+     "security-key-touch": "Toque na sua chave de segurança",
+     "unlocked": "Destrancado",
 +    "use-password": "Usar senha",
-     "waiting": "Aguardando confirmação de bloqueio…"
+     "waiting": "Aguardando confirmação de tranca…"
    },
    "notifications": {
-@@ -2470,7 +2470,7 @@
+@@ -2580,7 +2581,7 @@
          },
          "security-key": {
            "label": "Desbloquear com Chave de Segurança",
@@ -45,22 +43,22 @@ index 62dd208..07efb8b 100644
          "tint-intensity": {
            "description": "Base de cor da superfície sobre o fundo da tela de bloqueio",
 diff --git a/docs/user/configuration/shell.mdx b/docs/user/configuration/shell.mdx
-index 39a60d7..1b9d119 100644
+index 264356a4c..89e478b6a 100644
 --- a/docs/user/configuration/shell.mdx
 +++ b/docs/user/configuration/shell.mdx
-@@ -501,8 +501,8 @@ monitors              = []        # connectors that show the lock screen; empty
- | `enabled` | bool | `true` | Master switch for session lock, logind integration, and lock actions. |
- | `lock_before_suspend` | bool | `true` | When `true`, hold a logind sleep-delay inhibitor and lock on `PrepareForSleep` before suspend/hibernate (including lid-close sleep). Set `false` to allow external suspend without locking; explicit **Lock and Suspend** actions still lock first. |
- | `grace_period_seconds` | int | `0` | Passwordless unlock window right after locking. Strictly opt-in: with the default `0`, every unlock requires authentication. When set to a value in `1`–`60`, any keypress or mouse movement of more than 5 px unlocks without a password for that many seconds after the lock starts, including idle-triggered locks; time spent suspended counts toward expiry. The window is always revoked when the session sleeps: locks engaged by `PrepareForSleep` or **Lock and Suspend** never offer passwordless unlock, and a resume clears whatever was left. |
--| `fingerprint` | bool | `true` | When `true`, fingerprint (PAM) authentication is offered on the lock screen alongside the password field. Set `false` to require password entry only. |
+@@ -573,8 +573,8 @@ monitors              = []        # connectors that show the lock screen; empty
+ | `enabled`              | bool   | `true`      | Master switch for session lock, logind integration, and lock actions.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+ | `lock_before_suspend`  | bool   | `true`      | When `true`, hold a logind sleep-delay inhibitor and lock on `PrepareForSleep` before suspend/hibernate (including lid-close sleep). Set `false` to allow external suspend without locking; explicit **Lock and Suspend** actions still lock first.                                                                                                                                                                                                                                                                                                        |
+ | `grace_period_seconds` | int    | `0`         | Passwordless unlock window right after locking. Strictly opt-in: with the default `0`, every unlock requires authentication. When set to a value in `1`–`60`, any keypress or mouse movement of more than 5 px unlocks without a password for that many seconds after the lock starts, including idle-triggered locks; time spent suspended counts toward expiry. The window is always revoked when the session sleeps: locks engaged by `PrepareForSleep` or **Lock and Suspend** never offer passwordless unlock, and a resume clears whatever was left. |
+-| `fingerprint`          | bool   | `true`      | When `true`, fingerprint (PAM) authentication is offered on the lock screen alongside the password field. Set `false` to require password entry only.                                                                                                                                                                                                                                                                                                                                                                                                      |
 -| `security_key` | bool | `true` | When `true`, the lock screen waits for a touch on a FIDO2 security key alongside the password field and the fingerprint reader, with no Enter needed. It runs the `noctalia-lock-u2f` PAM service (typically `auth sufficient pam_u2f.so` and nothing else) whenever a hidraw device appears; without that service, or without an enrolled key plugged in, it stays idle. |
 +| `fingerprint` | bool | `true` | When `true`, the lock screen asks for a fingerprint first, with a large cue in place of the password field and a **Use password** button. After 3 unmatched scans, 30 s without a scan, or with no usable reader, it moves on to the security key (or the password). Set `false` to skip this step. |
 +| `security_key` | bool | `true` | When `true`, the lock screen asks for a touch on a FIDO2 security key after the fingerprint step, with the same cue and button. It runs the `noctalia-lock-u2f` PAM service (typically `auth sufficient pam_u2f.so` and nothing else); with no enrolled key plugged in, or once the touch times out, it moves on to the password. While the password step waits with an empty field, plugging in an enrolled key brings the touch prompt back. |
- | `allow_empty_password` | bool | `false` | When `true`, Enter can submit an empty password (needed for some security-key PAM stacks). When `false`, empty submits are ignored to avoid accidental `pam_faillock` lockouts from wake keys. |
- | `blurred_desktop` | bool | `false` | Capture each output before lock and use it as the lock screen background. |
- | `transition` | array | all effects | Pool of lock/unlock effects: `fade`, `wipe`, `disc`, `stripes`, `zoom`, and `honeycomb`. One is selected from the configured pool; an empty array disables transitions. |
+ | `allow_empty_password` | bool   | `false`     | When `true`, Enter can submit an empty password (needed for some security-key PAM stacks). When `false`, empty submits are ignored to avoid accidental `pam_faillock` lockouts from wake keys.                                                                                                                                                                                                                                                                                                                                                             |
+ | `blurred_desktop`      | bool   | `false`     | Capture each output before lock and use it as the lock screen background.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+ | `transition`           | array  | all effects | Pool of lock/unlock effects: `fade`, `wipe`, `disc`, `stripes`, `zoom`, `honeycomb`, `vortex`, `pixel`, `diamond`, `golden`, and `melt`. One is selected from the configured pool; an empty array disables transitions.                                                                                                                                                                                                                                                                                                                                    |
 diff --git a/src/auth/fingerprint_authenticator.cpp b/src/auth/fingerprint_authenticator.cpp
-index 4c8db14..adeb530 100644
+index e360ae16d..3707a9ad0 100644
 --- a/src/auth/fingerprint_authenticator.cpp
 +++ b/src/auth/fingerprint_authenticator.cpp
 @@ -30,6 +30,10 @@ namespace {
@@ -111,7 +109,7 @@ index 4c8db14..adeb530 100644
  void FingerprintAuthenticator::start() {
    if (m_active) {
      return;
-@@ -183,6 +199,10 @@ void FingerprintAuthenticator::claimDevice() {
+@@ -187,6 +203,10 @@ void FingerprintAuthenticator::claimDevice() {
          if (e.has_value()) {
            kLog.info("could not claim fingerprint device: {}", e->what());
            m_verifying = false;
@@ -122,7 +120,7 @@ index 4c8db14..adeb530 100644
            return;
          }
          kLog.info("claimed fingerprint device");
-@@ -201,6 +221,7 @@ void FingerprintAuthenticator::startVerify(bool isRetry) {
+@@ -205,6 +225,7 @@ void FingerprintAuthenticator::startVerify(bool isRetry) {
    if (m_device == nullptr) {
      if (!createDeviceProxy()) {
        m_verifying = false;
@@ -130,7 +128,7 @@ index 4c8db14..adeb530 100644
        return;
      }
  
-@@ -230,7 +251,11 @@ void FingerprintAuthenticator::startVerify(bool isRetry) {
+@@ -234,7 +255,11 @@ void FingerprintAuthenticator::startVerify(bool isRetry) {
              });
              return;
            }
@@ -142,7 +140,7 @@ index 4c8db14..adeb530 100644
            return;
          }
          kLog.debug("fingerprint verification started");
-@@ -300,6 +325,7 @@ void FingerprintAuthenticator::handleVerifyStatus(const std::string& result, boo
+@@ -304,6 +329,7 @@ void FingerprintAuthenticator::handleVerifyStatus(const std::string& result, boo
      ownsRestart = true;
      if (m_retries >= kMaxRetries) {
        emitStatus(i18n::tr("auth.fingerprint.too-many-attempts"), true);
@@ -150,7 +148,7 @@ index 4c8db14..adeb530 100644
      } else {
        emitStatus(i18n::tr("auth.fingerprint.no-match"), true);
        // rearm after a short delay
-@@ -326,12 +352,14 @@ void FingerprintAuthenticator::handleVerifyStatus(const std::string& result, boo
+@@ -330,12 +356,14 @@ void FingerprintAuthenticator::handleVerifyStatus(const std::string& result, boo
      stopVerify();
      m_abort = true;
      emitStatus(i18n::tr("auth.fingerprint.disconnected"), true);
@@ -164,8 +162,8 @@ index 4c8db14..adeb530 100644
 +      emitUnavailable();
      } else {
        emitStatus(i18n::tr("auth.fingerprint.error"), true);
-       m_retryTimer.start(kRetryDelay, [this]() { startVerify(true); });
-@@ -357,3 +385,28 @@ void FingerprintAuthenticator::emitStatus(const std::string& message, bool isErr
+       m_retryTimer.start(kRetryDelay, [this] { startVerify(true); });
+@@ -361,3 +389,28 @@ void FingerprintAuthenticator::emitStatus(const std::string& message, bool isErr
      m_onStatus(message, isError);
    }
  }
@@ -195,7 +193,7 @@ index 4c8db14..adeb530 100644
 +  return true;
 +}
 diff --git a/src/auth/fingerprint_authenticator.h b/src/auth/fingerprint_authenticator.h
-index a17eb58..60bc409 100644
+index a17eb5805..60bc40972 100644
 --- a/src/auth/fingerprint_authenticator.h
 +++ b/src/auth/fingerprint_authenticator.h
 @@ -2,6 +2,7 @@
@@ -257,7 +255,7 @@ index a17eb58..60bc409 100644
 +  int m_resumeRetries = 0;
  };
 diff --git a/src/auth/security_key_authenticator.cpp b/src/auth/security_key_authenticator.cpp
-index 98de14f..eb8ff0d 100644
+index 98de14fb1..eb8ff0d15 100644
 --- a/src/auth/security_key_authenticator.cpp
 +++ b/src/auth/security_key_authenticator.cpp
 @@ -19,13 +19,8 @@ namespace {
@@ -395,7 +393,7 @@ index 98de14f..eb8ff0d 100644
      }
    }
 diff --git a/src/auth/security_key_authenticator.h b/src/auth/security_key_authenticator.h
-index ec1f17f..a81c1bd 100644
+index ec1f17f81..a81c1bd83 100644
 --- a/src/auth/security_key_authenticator.h
 +++ b/src/auth/security_key_authenticator.h
 @@ -1,19 +1,21 @@
@@ -457,10 +455,10 @@ index ec1f17f..a81c1bd 100644
    int m_cancelFd = -1;
    // Replaced on every start(); results from an older run are dropped.
 diff --git a/src/shell/lockscreen/lock_screen.cpp b/src/shell/lockscreen/lock_screen.cpp
-index 24ac22d..aaa74e5 100644
+index 6363dfaf8..ad584d289 100644
 --- a/src/shell/lockscreen/lock_screen.cpp
 +++ b/src/shell/lockscreen/lock_screen.cpp
-@@ -34,6 +34,11 @@ namespace {
+@@ -36,6 +36,11 @@ namespace {
  
    constexpr Logger kLog("lockscreen");
  
@@ -472,7 +470,7 @@ index 24ac22d..aaa74e5 100644
    // CLOCK_BOOTTIME counts suspend time but is monotonic, so realtime adjustments
    // can never push an expired grace deadline back into the future.
    std::int64_t bootTimeMillis() {
-@@ -117,6 +122,7 @@ bool LockScreen::initialize(
+@@ -133,6 +138,7 @@ bool LockScreen::initialize(
      m_fingerprint->setStatusCallback([this](const std::string& message, bool isError) {
        handleFingerprintStatus(message, isError);
      });
@@ -480,7 +478,7 @@ index 24ac22d..aaa74e5 100644
    }
    m_securityKey = std::make_unique<SecurityKeyAuthenticator>();
    m_securityKey->setAuthenticatedCallback([this]() {
-@@ -125,9 +131,16 @@ bool LockScreen::initialize(
+@@ -141,9 +147,16 @@ bool LockScreen::initialize(
      updatePromptOnSurfaces();
      unlock();
    });
@@ -500,7 +498,7 @@ index 24ac22d..aaa74e5 100644
    });
    return true;
  }
-@@ -272,6 +285,8 @@ void LockScreen::unlock() {
+@@ -288,6 +301,8 @@ void LockScreen::unlock() {
    invalidatePendingAuthentication();
    stopFingerprint();
    stopSecurityKey();
@@ -509,7 +507,7 @@ index 24ac22d..aaa74e5 100644
  
    if (m_locked) {
      m_unlocking = true;
-@@ -321,6 +336,7 @@ void LockScreen::finishUnlock() {
+@@ -337,6 +352,7 @@ void LockScreen::finishUnlock() {
  
    m_lockPending = false;
    m_locked = false;
@@ -517,7 +515,7 @@ index 24ac22d..aaa74e5 100644
    clearSensitiveString(m_password);
    m_status.clear();
    m_statusIsError = false;
-@@ -545,6 +561,15 @@ void LockScreen::onKeyboardEvent(const KeyboardEvent& event) {
+@@ -561,6 +577,15 @@ void LockScreen::onKeyboardEvent(const KeyboardEvent& event) {
      return;
    }
  
@@ -533,7 +531,7 @@ index 24ac22d..aaa74e5 100644
    // The password field always owns plain printable keys; Space is a Validate
    // chord but must type a space, not submit (passwords may contain spaces).
    if (!isPlainPrintableKey(event.utf32, event.modifiers, event.preedit)
-@@ -600,6 +625,10 @@ void LockScreen::onSystemResumed() {
+@@ -652,6 +677,10 @@ void LockScreen::onSystemResumed() {
    resetGracePeriod();
    cancelPendingAfterLocked();
    cancelOutputPowerOff();
@@ -544,7 +542,7 @@ index 24ac22d..aaa74e5 100644
  }
  
  bool LockScreen::isSessionLocked() const noexcept { return m_locked; }
-@@ -846,10 +875,8 @@ void LockScreen::handleLocked(void* data, ext_session_lock_v1* /*lock*/) {
+@@ -902,10 +931,8 @@ void LockScreen::handleLocked(void* data, ext_session_lock_v1* /*lock*/) {
  
    self->armSleepReadyTimeout();
  
@@ -556,7 +554,7 @@ index 24ac22d..aaa74e5 100644
    kLog.info("session is locked");
    if (self->m_onSessionLocked) {
      self->m_onSessionLocked();
-@@ -870,6 +897,9 @@ void LockScreen::handleFinished(void* data, ext_session_lock_v1* /*lock*/) {
+@@ -926,6 +953,9 @@ void LockScreen::handleFinished(void* data, ext_session_lock_v1* /*lock*/) {
    self->invalidatePendingAuthentication();
    self->stopFingerprint();
    self->stopSecurityKey();
@@ -566,8 +564,8 @@ index 24ac22d..aaa74e5 100644
  
    if (self->m_lock != nullptr) {
      if (self->m_locked) {
-@@ -1252,7 +1282,13 @@ void LockScreen::createInstance(const WaylandOutput& output) {
-   surface->setOnCycleLayout([this]() { cycleKeyboardLayout(); });
+@@ -1334,7 +1364,13 @@ void LockScreen::createInstance(const WaylandOutput& output) {
+   surface->setOnCycleLayout([this] { cycleKeyboardLayout(); });
    surface->setOnPasswordChanged([this](const std::string& value) { handlePasswordEdited(value); });
    surface->setLoginBoxServices(m_sessionActions, m_mpris, m_weather, m_httpClient);
 +  surface->setOnUsePassword([this]() {
@@ -580,7 +578,7 @@ index 24ac22d..aaa74e5 100644
    applyIndicatorsToSurface(*surface);
  
    surface->setBlackout(!isInteractiveOutput(output));
-@@ -1310,6 +1346,7 @@ void LockScreen::clearInstances() { m_instances.clear(); }
+@@ -1392,6 +1428,7 @@ void LockScreen::clearInstances() { m_instances.clear(); }
  void LockScreen::updatePromptOnSurfaces() {
    for (auto& instance : m_instances) {
      instance.surface->setPromptState(m_user, m_password, m_status, m_statusIsError, m_authenticating);
@@ -588,7 +586,7 @@ index 24ac22d..aaa74e5 100644
    }
  }
  
-@@ -1381,7 +1418,7 @@ void LockScreen::handlePasswordEdited(const std::string& value) {
+@@ -1463,7 +1500,7 @@ void LockScreen::handlePasswordEdited(const std::string& value) {
  }
  
  void LockScreen::tryAuthenticate() {
@@ -597,7 +595,7 @@ index 24ac22d..aaa74e5 100644
      return;
    }
    if (m_password.empty()) {
-@@ -1440,18 +1477,6 @@ void LockScreen::handleAuthResult(std::uint64_t generation, PamAuthenticator::Re
+@@ -1523,18 +1560,6 @@ void LockScreen::handleAuthResult(std::uint64_t generation, const PamAuthenticat
    m_status = result.message.empty() ? i18n::tr("lockscreen.authentication-failed") : result.message;
    m_statusIsError = true;
    updatePromptOnSurfaces();
@@ -616,21 +614,27 @@ index 24ac22d..aaa74e5 100644
  }
  
  void LockScreen::stopFingerprint() {
-@@ -1460,33 +1485,94 @@ void LockScreen::stopFingerprint() {
+@@ -1543,33 +1568,94 @@ void LockScreen::stopFingerprint() {
    }
  }
  
 -void LockScreen::startSecurityKey() {
 -  if (m_securityKey == nullptr) {
 -    return;
-+void LockScreen::stopSecurityKey() {
-+  if (m_securityKey != nullptr) {
-+    m_securityKey->stop();
-   }
+-  }
 -  if (m_configService != nullptr && !m_configService->config().lockscreen.securityKey) {
 -    return;
-+}
-+
+-  }
+-  // Keeps running while a typed password is checked: they don't share a device.
+-  m_securityKey->start();
+-}
+-
+ void LockScreen::stopSecurityKey() {
+   if (m_securityKey != nullptr) {
+     m_securityKey->stop();
+   }
+ }
+ 
 +bool LockScreen::fingerprintEnabled() const {
 +  return m_fingerprint != nullptr
 +      && (m_configService == nullptr || m_configService->config().lockscreen.fingerprint);
@@ -648,14 +652,9 @@ index 24ac22d..aaa74e5 100644
 +    enterAuthStage(AuthCue::SecurityKey);
 +  } else {
 +    enterAuthStage(AuthCue::None);
-   }
--  // Keeps running while a typed password is checked: they don't share a device.
--  m_securityKey->start();
- }
- 
--void LockScreen::stopSecurityKey() {
--  if (m_securityKey != nullptr) {
--    m_securityKey->stop();
++  }
++}
++
 +void LockScreen::enterAuthStage(AuthCue stage, bool keyAlreadyCued) {
 +  ++m_authStageGeneration;
 +  m_authStage = stage;
@@ -689,9 +688,9 @@ index 24ac22d..aaa74e5 100644
 +      m_securityKey->start(true);
 +    }
 +    break;
-   }
- }
- 
++  }
++}
++
 +void LockScreen::advanceAuthStage(AuthCue from) {
 +  const std::weak_ptr<void> guard = m_aliveGuard;
 +  const std::uint64_t generation = m_authStageGeneration;
@@ -728,7 +727,7 @@ index 24ac22d..aaa74e5 100644
    updatePromptOnSurfaces();
  }
 diff --git a/src/shell/lockscreen/lock_screen.h b/src/shell/lockscreen/lock_screen.h
-index b90e93d..bfaad0c 100644
+index 5b9250e3a..7db5ffbba 100644
 --- a/src/shell/lockscreen/lock_screen.h
 +++ b/src/shell/lockscreen/lock_screen.h
 @@ -4,6 +4,7 @@
@@ -739,9 +738,9 @@ index b90e93d..bfaad0c 100644
  
  #include <cstdint>
  #include <functional>
-@@ -148,10 +149,18 @@ private:
+@@ -150,10 +151,18 @@ private:
    void tryAuthenticate();
-   void handleAuthResult(std::uint64_t generation, PamAuthenticator::Result result);
+   void handleAuthResult(std::uint64_t generation, const PamAuthenticator::Result& result);
    void invalidatePendingAuthentication();
 -  void startFingerprint();
    void stopFingerprint();
@@ -760,7 +759,7 @@ index b90e93d..bfaad0c 100644
    void handleFingerprintStatus(const std::string& message, bool isError);
    static void clearSensitiveString(std::string& value);
    /// Passwordless grace window: any keypress or pointer movement beyond 5px unlocks
-@@ -174,6 +183,10 @@ private:
+@@ -179,6 +188,10 @@ private:
    std::string m_user;
    std::string m_password;
    std::string m_status;
@@ -772,7 +771,7 @@ index b90e93d..bfaad0c 100644
    bool m_statusIsError = false;
    bool m_authenticating = false;
 diff --git a/src/shell/lockscreen/lock_surface.cpp b/src/shell/lockscreen/lock_surface.cpp
-index 20d3098..767f636 100644
+index f0f6b1820..943c046b0 100644
 --- a/src/shell/lockscreen/lock_surface.cpp
 +++ b/src/shell/lockscreen/lock_surface.cpp
 @@ -43,6 +43,12 @@
@@ -948,7 +947,7 @@ index 20d3098..767f636 100644
  
    const bool regular = loginVisible && loginStyle.layout == lockscreen_login_box::LayoutMode::Regular;
    ensureLayoutChipInPasswordRow();
-@@ -1517,7 +1621,7 @@ void LockSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
+@@ -1518,7 +1622,7 @@ void LockSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
    m_passwordField->setControlHeight(controlHeight);
    m_passwordField->setFontSize(bodySize);
  
@@ -957,7 +956,7 @@ index 20d3098..767f636 100644
    m_loginButton->setVisible(showLoginButton);
    if (showLoginButton) {
      m_loginButton->setRadius(Style::scaledRadius(loginStyle.inputRadius));
-@@ -1531,13 +1635,21 @@ void LockSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
+@@ -1532,13 +1636,21 @@ void LockSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
      m_passwordRevealButton->setGlyphSize(sessionGlyphSize);
    }
  
@@ -980,7 +979,7 @@ index 20d3098..767f636 100644
      m_authPanel->setVisible(showAuth);
      m_authLabel->setVisible(showAuth);
      if (showAuth) {
-@@ -1572,11 +1684,76 @@ void LockSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
+@@ -1573,11 +1685,76 @@ void LockSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
        m_authPanel->arrange(renderer, LayoutRect{authX, authY, authW, authH});
      }
    }
@@ -1016,7 +1015,7 @@ index 20d3098..767f636 100644
 +      m_cuePanel->setGap(gap);
 +      m_cuePanel->setPadding(padV, padH);
 +      m_cuePanel->setFill(loginStyle.panelFill);
-+      m_cuePanel->setBorder(colorForRole(ColorRole::Outline, loginStyle.panelOpacity), Style::borderWidth);
++      m_cuePanel->setBorder(colorForRole(ColorRole::OutlineVariant, loginStyle.panelOpacity), Style::borderWidth);
 +      m_cuePanel->setRadius(Style::scaledRadius(loginStyle.panelRadius));
 +      m_cuePanel->setSoftness(1.0F);
 +      m_cuePanel->setMinWidth(cueW);
@@ -1057,7 +1056,7 @@ index 20d3098..767f636 100644
    m_passwordField->setValue(m_password);
    m_passwordField->setEnabled(!m_authenticating);
    if (m_passwordRevealButton != nullptr) {
-@@ -1596,7 +1773,8 @@ void LockSurface::updateCopy() {
+@@ -1597,7 +1774,8 @@ void LockSurface::updateCopy() {
    if (m_authPanel != nullptr && m_authLabel != nullptr) {
      bool isError = false;
      const std::string text = resolveStatusText(style, isError);
@@ -1067,7 +1066,7 @@ index 20d3098..767f636 100644
      m_authPanel->setVisible(show);
      m_authLabel->setVisible(show);
      if (show) {
-@@ -1607,7 +1785,12 @@ void LockSurface::updateCopy() {
+@@ -1608,7 +1786,12 @@ void LockSurface::updateCopy() {
  
    if (m_layoutChip != nullptr) {
      const bool show =
@@ -1082,7 +1081,7 @@ index 20d3098..767f636 100644
      if (show) {
        m_layoutChip->setGlyph("keyboard");
 diff --git a/src/shell/lockscreen/lock_surface.h b/src/shell/lockscreen/lock_surface.h
-index 5824692..1b327bc 100644
+index 5824692dd..1b327bcd1 100644
 --- a/src/shell/lockscreen/lock_surface.h
 +++ b/src/shell/lockscreen/lock_surface.h
 @@ -10,6 +10,7 @@

@@ -1,0 +1,24 @@
+# Plugins próprios do nix-config, servidos como fonte "path" (home/desktop/noctalia.nix).
+# O plugin.toml de cada um continua sendo a fonte da verdade.
+
+[[plugin]]
+id = "lbssousa/secret-prompts"
+name = "Secret Prompts"
+version = "1.0.0"
+author = "lbssousa"
+license = "MIT"
+icon = "key"
+description = "Answer gpg-agent (pinentry) and ssh/git (SSH_ASKPASS) prompts in a shell panel."
+plugin_api = 42
+tags = ["security", "utility"]
+
+[[plugin]]
+id = "lbssousa/security-hardware"
+name = "Security Hardware"
+version = "1.0.0"
+author = "lbssousa"
+license = "MIT"
+icon = "fingerprint"
+description = "Enroll fingerprints, register FIDO2/U2F keys and set up the OpenPGP card key."
+plugin_api = 42
+tags = ["security", "system", "utility"]

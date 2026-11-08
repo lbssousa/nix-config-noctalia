@@ -1,7 +1,7 @@
-diff --git c/assets/translations/en.json w/assets/translations/en.json
-index 1bedc3a..825cad0 100644
---- c/assets/translations/en.json
-+++ w/assets/translations/en.json
+diff --git a/assets/translations/en.json b/assets/translations/en.json
+index da341404b..4a5b2f51a 100644
+--- a/assets/translations/en.json
++++ b/assets/translations/en.json
 @@ -21,8 +21,16 @@
        "authenticate": "Authenticate",
        "authenticating": "Authenticating…",
@@ -17,12 +17,12 @@ index 1bedc3a..825cad0 100644
 +        "title": "Touch your security key"
 +      },
        "title": "Authentication Required"
-     },
-     "secret-prompt": {
-diff --git c/assets/translations/pt-BR.json w/assets/translations/pt-BR.json
-index a8e2135..2359897 100644
---- c/assets/translations/pt-BR.json
-+++ w/assets/translations/pt-BR.json
+     }
+   },
+diff --git a/assets/translations/pt-BR.json b/assets/translations/pt-BR.json
+index a86e7cf99..dd740f246 100644
+--- a/assets/translations/pt-BR.json
++++ b/assets/translations/pt-BR.json
 @@ -21,8 +21,16 @@
        "authenticate": "Autenticar",
        "authenticating": "Autenticando...",
@@ -38,16 +38,24 @@ index a8e2135..2359897 100644
 +        "title": "Toque na sua chave de segurança"
 +      },
        "title": "Autenticação necessária"
-     },
-     "secret-prompt": {
-diff --git c/src/shell/auth_text.h w/src/shell/auth_text.h
-index 5a5fa27..9761b8e 100644
---- c/src/shell/auth_text.h
-+++ w/src/shell/auth_text.h
-@@ -60,4 +60,24 @@ namespace auth_text {
-     return out;
-   }
- 
+     }
+   },
+diff --git a/src/shell/auth_text.h b/src/shell/auth_text.h
+new file mode 100644
+index 000000000..c9dac350c
+--- /dev/null
++++ b/src/shell/auth_text.h
+@@ -0,0 +1,31 @@
++#pragma once
++
++#include <algorithm>
++#include <cctype>
++#include <string>
++#include <string_view>
++
++// Text helpers shared by the authentication surfaces (polkit panel, lock screen).
++namespace auth_text {
++
 +  // What a PAM info/error message asks the user to do, beyond typing.
 +  enum class AuthCue { None, Fingerprint, SecurityKey };
 +
@@ -68,20 +76,18 @@ index 5a5fa27..9761b8e 100644
 +    return AuthCue::None;
 +  }
 +
- } // namespace auth_text
-diff --git c/src/shell/polkit/polkit_panel.cpp w/src/shell/polkit/polkit_panel.cpp
-index 5c659fb..5a7f100 100644
---- c/src/shell/polkit/polkit_panel.cpp
-+++ w/src/shell/polkit/polkit_panel.cpp
-@@ -24,9 +24,19 @@
- 
- namespace {
++} // namespace auth_text
+diff --git a/src/shell/polkit/polkit_panel.cpp b/src/shell/polkit/polkit_panel.cpp
+index d1f399e8b..370db9f8d 100644
+--- a/src/shell/polkit/polkit_panel.cpp
++++ b/src/shell/polkit/polkit_panel.cpp
+@@ -43,6 +43,17 @@ namespace {
+     return out;
+   }
  
 +  using auth_text::AuthCue;
 +  using auth_text::classifyPamMessage;
-   using auth_text::wrapLongRuns;
-   using auth_text::wrappedLineCount;
- 
++
 +  constexpr float kCueGlyphSize = 72.0F;
 +
 +  // Fingerprint or security-key cue, shown while PAM waits for something other
@@ -93,35 +99,7 @@ index 5c659fb..5a7f100 100644
  } // namespace
  
  PolkitPanel::PolkitPanel(ConfigService* config, std::function<PolkitAgent*()> agentProvider)
-@@ -57,6 +67,7 @@ float PolkitPanel::preferredHeight() const {
-   int promptLines = 1;
-   int supplementaryLines = 0;
-   bool needsInput = false;
-+  AuthCue cue = AuthCue::None;
- 
-   if (PolkitAgent* agent = m_agentProvider != nullptr ? m_agentProvider() : nullptr;
-       agent != nullptr && agent->hasPendingRequest()) {
-@@ -81,10 +92,18 @@ float PolkitPanel::preferredHeight() const {
-     }
-     promptLines = std::max(1, wrappedLineCount(promptText, promptChars, 3));
-     supplementaryLines = wrappedLineCount(supplementaryText, promptChars, 4);
-+    cue = pendingCue(needsInput, supplementaryRaw);
-   }
- 
-   const float top = std::max(iconSize, titleLine + static_cast<float>(messageLines) * bodyLine);
--  float bottom = static_cast<float>(promptLines) * bodyLine + gapSm;
-+  float bottom = 0.0F;
-+  if (cue != AuthCue::None) {
-+    // Glyph, title and up to two lines of detail, padded like the column; the
-+    // prompt label is hidden.
-+    bottom += scaled(kCueGlyphSize) + titleLine + 2.0F * bodyLine + gapSm * 2.0F + gapMd * 2.0F + gapSm;
-+  } else {
-+    bottom += static_cast<float>(promptLines) * bodyLine + gapSm;
-+  }
-   if (needsInput) {
-     bottom += Style::controlHeight * scale + gapSm;
-   }
-@@ -151,6 +170,37 @@ void PolkitPanel::create() {
+@@ -118,6 +129,37 @@ void PolkitPanel::create() {
    );
    root->addChild(std::move(topContent));
  
@@ -159,7 +137,7 @@ index 5c659fb..5a7f100 100644
    auto bottomContent = ui::column(
        {.align = FlexAlign::Stretch, .gap = Style::spaceSm * scale},
        ui::label({
-@@ -212,6 +262,7 @@ void PolkitPanel::create() {
+@@ -179,6 +221,7 @@ void PolkitPanel::create() {
  
  void PolkitPanel::onOpen(std::string_view /*context*/) {
    m_lastResponseRequired = false;
@@ -167,7 +145,7 @@ index 5c659fb..5a7f100 100644
    m_iconResolved = false;
    m_hasTrackedRequest = false;
    m_trackedRequestCookie.clear();
-@@ -251,6 +302,11 @@ void PolkitPanel::onClose() {
+@@ -218,6 +261,11 @@ void PolkitPanel::onClose() {
    m_iconContainer = nullptr;
    m_icon = nullptr;
    m_fallbackIcon = nullptr;
@@ -179,7 +157,7 @@ index 5c659fb..5a7f100 100644
  }
  
  void PolkitPanel::cancelAuth() {
-@@ -305,7 +361,8 @@ void PolkitPanel::doUpdate(Renderer& renderer) {
+@@ -272,7 +320,8 @@ void PolkitPanel::doUpdate(Renderer& renderer) {
        || m_submitButton == nullptr
        || m_input == nullptr
        || m_icon == nullptr
@@ -189,7 +167,7 @@ index 5c659fb..5a7f100 100644
      return;
    }
    const PolkitRequest request = agent->pendingRequest();
-@@ -333,22 +390,25 @@ void PolkitPanel::doUpdate(Renderer& renderer) {
+@@ -296,7 +345,9 @@ void PolkitPanel::doUpdate(Renderer& renderer) {
    m_promptLabel->setColor(
        isInvalidPassword ? colorSpecFromRole(ColorRole::Error) : colorSpecFromRole(ColorRole::OnSurface)
    );
@@ -200,17 +178,7 @@ index 5c659fb..5a7f100 100644
    m_supplementaryLabel->setText(supplementaryText);
    m_supplementaryLabel->setVisible(!supplementaryText.empty());
    m_supplementaryLabel->setColor(colorSpecFromRole(ColorRole::OnSurfaceVariant));
-   m_input->setVisible(needsInput);
-   m_submitButton->setVisible(needsInput);
-   m_submitButton->setEnabled(needsInput && !m_input->value().empty());
--  if (needsInput != m_lastResponseRequired) {
-+  if (needsInput != m_lastResponseRequired || cue != m_lastCue) {
-     if (auto* manager = PanelManager::current(); manager != nullptr && manager->isOpenPanel("polkit")) {
-       manager->relayoutActivePanelPreferredSize();
--      if (needsInput) {
-+      if (needsInput && needsInput != m_lastResponseRequired) {
-         manager->focusArea(m_input->inputArea());
-       }
+@@ -309,6 +360,7 @@ void PolkitPanel::doUpdate(Renderer& renderer) {
      }
    }
    m_lastResponseRequired = needsInput;
@@ -218,7 +186,7 @@ index 5c659fb..5a7f100 100644
  
    if (request.iconName != m_lastIconName || !m_iconResolved) {
      m_lastIconName = request.iconName;
-@@ -388,6 +448,24 @@ void PolkitPanel::resolveIcon(Renderer& renderer, const PolkitRequest& request)
+@@ -348,6 +400,24 @@ void PolkitPanel::resolveIcon(Renderer& renderer, const PolkitRequest& request)
    m_fallbackIcon->setVisible(true);
  }
  
@@ -243,10 +211,10 @@ index 5c659fb..5a7f100 100644
  void PolkitPanel::submit(std::string_view response) {
    PolkitAgent* agent = m_agentProvider != nullptr ? m_agentProvider() : nullptr;
    if (agent == nullptr || m_input == nullptr) {
-diff --git c/src/shell/polkit/polkit_panel.h w/src/shell/polkit/polkit_panel.h
-index 1f0b46b..5ce5e4b 100644
---- c/src/shell/polkit/polkit_panel.h
-+++ w/src/shell/polkit/polkit_panel.h
+diff --git a/src/shell/polkit/polkit_panel.h b/src/shell/polkit/polkit_panel.h
+index cda8a4569..7c29e7334 100644
+--- a/src/shell/polkit/polkit_panel.h
++++ b/src/shell/polkit/polkit_panel.h
 @@ -1,5 +1,6 @@
  #pragma once
  
@@ -254,7 +222,7 @@ index 1f0b46b..5ce5e4b 100644
  #include "shell/panel/panel.h"
  #include "system/icon_resolver.h"
  
-@@ -44,6 +45,7 @@ private:
+@@ -47,6 +48,7 @@ private:
    void cancelAuth();
    bool handleInputKeyEvent(std::uint32_t sym, std::uint32_t modifiers);
    void resolveIcon(Renderer& renderer, const PolkitRequest& request);
@@ -262,7 +230,7 @@ index 1f0b46b..5ce5e4b 100644
  
    ConfigService* m_config = nullptr;
    std::function<PolkitAgent*()> m_agentProvider;
-@@ -59,10 +61,15 @@ private:
+@@ -62,10 +64,15 @@ private:
    Node* m_iconContainer = nullptr;
    Image* m_icon = nullptr;
    Glyph* m_fallbackIcon = nullptr;

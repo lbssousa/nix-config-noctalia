@@ -1,0 +1,11 @@
+{
+  "answer-placeholder": "Answer",
+  "cancel": "Cancel",
+  "gpg-title": "GnuPG Passphrase",
+  "mismatch": "Passphrases do not match",
+  "ok": "OK",
+  "passphrase-placeholder": "Passphrase",
+  "repeat-placeholder": "Repeat passphrase",
+  "ssh-title": "SSH Authentication",
+  "unlock": "Unlock"
+}

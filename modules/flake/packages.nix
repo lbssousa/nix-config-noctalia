@@ -13,6 +13,8 @@ let
       fprintd-goodix = call ../packages/_fprintd-goodix/package.nix;
       yubikey-gpg-import = call ../packages/_yubikey-gpg-import/package.nix;
       strata = call ../packages/_strata/package.nix;
+      noctalia-secret-prompts = call ../packages/_noctalia-secret-prompts/package.nix;
+      noctalia-security-hw = call ../packages/_noctalia-security-hw/package.nix;
 
       # Senha expirada (pam_acct_mgmt: NEW_AUTHTOK_REQD) no login gráfico.
       # O greetd 0.10.3 só falhava; o patch chama pam_chauthtok na mesma
@@ -31,17 +33,18 @@ let
       #  - último usuário que fez login em [user] last do sync.toml (ao lado
       #    de [session] last), pré-selecionado no boot seguinte; --user e
       #    [user].default continuam valendo mais. Patch local, sem PR upstream.
-      # Tela de bloqueio da Noctalia no serviço PAM "noctalia-lock" em vez do
-      # "login" (que fica só com a senha) e digital com 3 tentativas no total
-      # (eram 4). Ver security/pam-policy.nix. Patch local, sem PR upstream.
-      # Pinentry do GnuPG e ssh-askpass desenhados pela shell, no estilo do painel
-      # do polkit: os clientes noctalia-pinentry e noctalia-askpass falam Assuan
-      # com a Noctalia ([shell] pinentry / ssh_askpass). Patch local, sem PR
-      # upstream; fonte no branch feat/secret-prompts do fork lbssousa/noctalia.
+      # Noctalia, patches nesta ordem:
+      #  - [lockscreen].pam_service: PR aberto
+      #    https://github.com/noctalia-dev/noctalia/pull/4132 (resolve a issue
+      #    #3277); remover quando chegar ao nixpkgs. O serviço "noctalia-lock"
+      #    (em vez do "login", que fica só com a senha) é escolhido em
+      #    home/desktop/noctalia.nix; ver security/pam-policy.nix;
+      #  - digital com 3 tentativas no total (eram 4), como o max-tries=3 do
+      #    pam_fprintd. Patch local, sem PR upstream.
       # Destaque no painel do polkit enquanto o PAM espera a digital ou o toque
       # na chave de segurança: ícone grande (impressão digital ou chave) com título e
       # descrição traduzidos, no lugar da mensagem crua do pam_fprintd/pam_u2f.
-      # Aplicado sobre o anterior; patch local, sem PR upstream.
+      # Patch local, sem PR upstream.
       # Toque na chave de segurança desbloqueia a tela sem Enter, em paralelo com a digital
       # e a senha: o helper PAM da Noctalia roda o serviço "noctalia-lock-u2f"
       # em segundo plano ([lockscreen] security_key). Patch local, sem PR upstream.
@@ -57,23 +60,16 @@ let
       # pilha polkit-1 pula direto para a senha (security/pam-policy.nix).
       # Aplicado sobre o anterior; patch local, sem PR upstream.
       #
-      # O compositor Umbriel rejeita pedidos de subscribe do IPC com erro se houver
-      # eventos desconhecidos, desconectando imediatamente o cliente. A Noctalia
-      # pedia "outputs" (que não existe no Umbriel), impedindo a inscrição nos
-      # eventos de "windows" e quebrando a ocultação inteligente da dock.
-      # Categorias "Impressão Digital" e "Chaves de Segurança" na página Segurança
-      # das Configurações: escolher o leitor (quando há mais de um), cadastrar,
-      # testar e excluir digitais pelo D-Bus do fprintd; registrar, testar e
-      # remover chaves FIDO2/U2F (pamu2fcfg, em ~/.config/Yubico/u2f_keys, o
-      # authfile padrão do pam_u2f, ver security/yubikey.nix); e importar a chave
-      # pública GPG do cartão OpenPGP (URL do cartão, keyserver ou arquivo), criar
-      # os stubs e marcar confiança absoluta.
+      # Pinentry/askpass e a configuração de digitais e chaves de segurança não são
+      # mais patches: os mantenedores não aceitam segredos no core (PR #4951) e
+      # mandam controles de hardware para plugins (SCOPE.md). Viraram os plugins
+      # lbssousa/secret-prompts e lbssousa/security-hardware
+      # (home/desktop/_noctalia-plugins), com os auxiliares noctalia-secret-prompts
+      # e noctalia-security-hw.
       #
-      # Os patches da Noctalia saem do fork lbssousa/noctalia: o branch
-      # base/nix-config-v5.3.0 é a tag v5.3.0 mais os patches acima, um commit
-      # cada, e este último é `git diff base/nix-config-v5.3.0..feat/security-hardware`
-      # (feat/security-hardware @ 487140a93).
-      # Os templates dos aplicativos de terminal (emuladores e starship) são
+      # Os patches saem do fork lbssousa/noctalia: o branch base/nix-config-v5.4.1
+      # é a tag v5.4.1 mais os patches acima, um commit cada.
+      # Os templates dos emuladores de terminal são
       # remapeados de `.default` para `.dark`: assim eles usam sempre a variante
       # escura da paleta ativa, mesmo com [theme].mode = "auto". Os demais
       # templates (GTK, Qt, Umbriel) continuam seguindo o modo global.
@@ -85,14 +81,12 @@ let
         let
           base = prev.noctalia.overrideAttrs (old: {
             patches = (old.patches or [ ]) ++ [
+              ../packages/patches/noctalia-lockscreen-pam-service-option.patch
               ../packages/patches/noctalia-lock-pam-service.patch
-              ../packages/patches/noctalia-secret-prompts.patch
               ../packages/patches/noctalia-polkit-auth-cues.patch
               ../packages/patches/noctalia-lock-security-key.patch
               ../packages/patches/noctalia-lock-auth-sequence.patch
               ../packages/patches/noctalia-polkit-use-password.patch
-              ../packages/patches/noctalia-umbriel-subscribe-without-outputs.patch
-              ../packages/patches/noctalia-security-hardware.patch
             ];
           });
         in
@@ -114,18 +108,14 @@ let
               foot/foot \
               ghostty/ghostty \
               kitty/kitty.conf \
-              starship/starship.toml \
               wezterm/wezterm.toml
             do
               substituteInPlace "$out/share/noctalia/assets/templates/$template" \
                 --replace-fail ".default." ".dark."
             done
 
-            mkdir -p $out/bin
-            for program in noctalia noctalia-pinentry noctalia-askpass; do
-              makeWrapper ${base}/bin/$program $out/bin/$program \
-                --set-default NOCTALIA_ASSETS_DIR "$out/share/noctalia/assets"
-            done
+            makeWrapper ${base}/bin/noctalia $out/bin/noctalia \
+              --set-default NOCTALIA_ASSETS_DIR "$out/share/noctalia/assets"
           '';
 
       # pinentry-program do gpg-agent; fora da sessão gráfica cai no pinentry-curses.
@@ -136,26 +126,33 @@ let
             meta.mainProgram = "pinentry-noctalia";
           }
           ''
-            makeWrapper ${final.noctalia}/bin/noctalia-pinentry $out/bin/pinentry-noctalia \
+            makeWrapper ${final.noctalia-secret-prompts}/bin/noctalia-pinentry $out/bin/pinentry-noctalia \
               --set-default NOCTALIA_PINENTRY_FALLBACK ${final.pinentry-curses}/bin/pinentry-curses
           '';
 
       # SSH_ASKPASS (ssh, ssh-add e git); sem a shell, falha com status 1.
       noctalia-askpass = final.runCommand "noctalia-askpass" { meta.mainProgram = "noctalia-askpass"; } ''
         mkdir -p $out/bin
-        ln -s ${final.noctalia}/bin/noctalia-askpass $out/bin/noctalia-askpass
+        ln -s ${final.noctalia-secret-prompts}/bin/noctalia-askpass $out/bin/noctalia-askpass
       '';
 
-      # Ação window-toggle-fullscreen-in-tile, como o "fullscreenstate 0 2" do
-      # Hyprland: o aplicativo recebe o estado fullscreen (o Firefox esconde a
-      # interface, players escondem os controles), mas fica no espaço do tile,
-      # com gaps, bordas e a barra. O unfullscreen do próprio aplicativo (Esc no
-      # vídeo, F11) sai do modo. A regra default_fullscreen_in_tile abre a janela
-      # nesse modo. Patch local, sem PR upstream; fonte no branch
-      # feat/fullscreen-in-tile do fork lbssousa/umbriel (12f8b9ef, sobre o 5cea311
-      # do nixpkgs): o patch é `git diff 5cea311..feat/fullscreen-in-tile`.
+      # Umbriel, dois patches:
+      #  - ação window-toggle-windowed-fullscreen, como o "fullscreenstate 0 2"
+      #    do Hyprland: o aplicativo recebe o estado fullscreen (o Firefox esconde
+      #    a interface, players escondem os controles), mas fica no espaço do
+      #    tile, com gaps, bordas e a barra; o unfullscreen do próprio aplicativo
+      #    (Esc no vídeo, F11) sai do modo. PR aberto
+      #    https://github.com/noctalia-dev/umbriel/pull/644 (substitui o nosso
+      #    antigo fullscreen-in-tile); remover quando chegar ao nixpkgs;
+      #  - regra default_windowed_fullscreen, que abre a janela nesse modo
+      #    (default_fullscreen vence). Patch local, sem PR upstream; fonte no
+      #    branch feat/windowed-fullscreen-rule do fork lbssousa/umbriel, sobre o
+      #    e0da106 do nixpkgs mais os commits do PR #644.
       umbriel = prev.umbriel.overrideAttrs (old: {
-        patches = (old.patches or [ ]) ++ [ ../packages/patches/umbriel-fullscreen-in-tile.patch ];
+        patches = (old.patches or [ ]) ++ [
+          ../packages/patches/umbriel-windowed-fullscreen.patch
+          ../packages/patches/umbriel-windowed-fullscreen-rule.patch
+        ];
       });
 
       noctalia-greeter = prev.noctalia-greeter.overrideAttrs (old: {
@@ -191,6 +188,8 @@ in
         "fprintd-goodix"
         "yubikey-gpg-import"
         "strata"
+        "noctalia-secret-prompts"
+        "noctalia-security-hw"
         "greetd"
         "noctalia"
         "noctalia-greeter"

@@ -1,7 +1,7 @@
-# Pinentry do GnuPG e SSH_ASKPASS no painel da Noctalia ([shell] pinentry e
-# ssh_askpass, ligados por padrão em home/desktop/noctalia.nix), para todos os
-# usuários. Fora da sessão gráfica, o pinentry cai no pinentry-curses e o
-# askpass falha (o ssh volta a perguntar no TTY).
+# Pinentry do GnuPG e SSH_ASKPASS num painel da Noctalia (plugin
+# lbssousa/secret-prompts, habilitado por padrão em home/desktop/noctalia.nix),
+# para todos os usuários. Sem a shell ou sem o plugin, o pinentry cai no
+# pinentry-curses e o askpass falha (o ssh volta a perguntar no TTY).
 {
   flake.modules.nixos.secret-prompts =
     { lib, pkgs, ... }:

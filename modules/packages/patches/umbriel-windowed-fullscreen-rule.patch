@@ -1,0 +1,196 @@
+diff --git a/docs/user/window-rules.md b/docs/user/window-rules.md
+index cf7300d2..c1328719 100644
+--- a/docs/user/window-rules.md
++++ b/docs/user/window-rules.md
+@@ -49,6 +49,7 @@ State selectors update while the window is open. Opening settings are resolved b
+ | `default_workspace`              | Open on a one-based position or exact workspace name.                                                           |
+ | `default_scratchpad`             | Store in the implicit or a configured scratchpad.                                                               |
+ | `default_fullscreen`             | Open fullscreen.                                                                                                |
++| `default_windowed_fullscreen`    | Open told it is fullscreen while keeping its tile, like [`window-toggle-windowed-fullscreen`](actions.md#windows). `default_fullscreen` wins. |
+ | `default_floating`               | Force floating or tiling.                                                                                       |
+ | `default_maximize`               | Open maximized within normal layout bounds.                                                                     |
+ | `default_maximize_to_edges`      | Open maximized without gaps, struts, or borders.                                                                |
+diff --git a/src/config/config.h b/src/config/config.h
+index 86a6825c..00a02d25 100644
+--- a/src/config/config.h
++++ b/src/config/config.h
+@@ -451,6 +451,7 @@ namespace umbriel {
+     std::optional<int> defaultScrollingColumnOrder;
+     std::optional<ColumnDisplay> defaultColumnDisplay;
+     std::optional<bool> defaultFullscreen;
++    std::optional<bool> defaultWindowedFullscreen;
+     std::optional<bool> defaultMaximizeToEdges;
+     std::optional<bool> defaultMaximize;
+     std::optional<bool> defaultFocused;
+@@ -523,6 +524,7 @@ namespace umbriel {
+           && defaultScrollingColumnOrder == other.defaultScrollingColumnOrder
+           && defaultColumnDisplay == other.defaultColumnDisplay
+           && defaultFullscreen == other.defaultFullscreen
++          && defaultWindowedFullscreen == other.defaultWindowedFullscreen
+           && defaultMaximizeToEdges == other.defaultMaximizeToEdges
+           && defaultMaximize == other.defaultMaximize
+           && defaultFocused == other.defaultFocused
+@@ -572,6 +574,7 @@ namespace umbriel {
+     std::optional<int> defaultScrollingColumnOrder;
+     std::optional<ColumnDisplay> defaultColumnDisplay;
+     std::optional<bool> defaultFullscreen;
++    std::optional<bool> defaultWindowedFullscreen;
+     std::optional<bool> defaultMaximizeToEdges;
+     std::optional<bool> defaultMaximize;
+     std::optional<bool> defaultFocused;
+diff --git a/src/config/fields_rules.cpp b/src/config/fields_rules.cpp
+index 61dc5cf7..496f1577 100644
+--- a/src/config/fields_rules.cpp
++++ b/src/config/fields_rules.cpp
+@@ -194,6 +194,7 @@ namespace umbriel {
+           registry::table<W>("match", self, match, rejectUnlessTable<W>),
+           boolean("default_floating", &W::defaultFloating),
+           boolean("default_fullscreen", &W::defaultFullscreen),
++          boolean("default_windowed_fullscreen", &W::defaultWindowedFullscreen),
+           boolean("default_maximize_to_edges", &W::defaultMaximizeToEdges),
+           boolean("default_maximize", &W::defaultMaximize),
+           boolean("default_focused", &W::defaultFocused),
+diff --git a/src/config/resolve.cpp b/src/config/resolve.cpp
+index 16a64d47..f18bf515 100644
+--- a/src/config/resolve.cpp
++++ b/src/config/resolve.cpp
+@@ -325,6 +325,9 @@ namespace umbriel {
+       if (rule.defaultFullscreen) {
+         resolved.defaultFullscreen = rule.defaultFullscreen;
+       }
++      if (rule.defaultWindowedFullscreen) {
++        resolved.defaultWindowedFullscreen = rule.defaultWindowedFullscreen;
++      }
+       if (rule.defaultMaximizeToEdges) {
+         resolved.defaultMaximizeToEdges = rule.defaultMaximizeToEdges;
+       }
+diff --git a/src/view/view_lifecycle.cpp b/src/view/view_lifecycle.cpp
+index d2a90bca..ce72c7f5 100644
+--- a/src/view/view_lifecycle.cpp
++++ b/src/view/view_lifecycle.cpp
+@@ -471,6 +471,14 @@ namespace umbriel {
+     if (placed && rule.defaultFullscreen && *rule.defaultFullscreen) {
+       setFullscreen(true);
+     }
++    // Real fullscreen, from a rule or the client, wins over windowed fullscreen.
++    if (placed
++        && rule.defaultWindowedFullscreen
++        && *rule.defaultWindowedFullscreen
++        && !scheduledFullscreen()
++        && !m_windowedFullscreen) {
++      setWindowedFullscreen(true);
++    }
+ 
+     if (placed) {
+       settleOpeningAloneState();
+@@ -971,6 +979,13 @@ namespace umbriel {
+       const bool tiledEdges = wantTiled || config().appearance.preferNoCsd;
+       setTiledState(tiledEdges ? WLR_EDGE_TOP | WLR_EDGE_RIGHT | WLR_EDGE_BOTTOM | WLR_EDGE_LEFT : 0);
+ 
++      // The first buffer already draws the fullscreen interface; the box stays the tile's or floating one.
++      if (!wantFullscreen
++          && !openingInScratchpad
++          && rule.defaultWindowedFullscreen
++          && *rule.defaultWindowedFullscreen) {
++        setWindowedFullscreen(true);
++      }
+       if (wantFullscreen) {
+         // An X11 client can request fullscreen before its first buffer. The request event is too early to configure,
+         // but the role preserves it in requested state for us to honor now.
+diff --git a/src/view/view_rules.cpp b/src/view/view_rules.cpp
+index 16d9e470..7076eb09 100644
+--- a/src/view/view_rules.cpp
++++ b/src/view/view_rules.cpp
+@@ -536,6 +536,16 @@ namespace umbriel {
+       setFullscreen(true);
+     }
+ 
++    if (!inScratchpad
++        && unseenInitialRuleValue(
++            rule.defaultWindowedFullscreen, m_initialRuleHistory, &ResolvedWindowRule::defaultWindowedFullscreen
++        )
++        && *rule.defaultWindowedFullscreen
++        && !scheduledFullscreen()
++        && !m_windowedFullscreen) {
++      setWindowedFullscreen(true);
++    }
++
+     if (!inScratchpad
+         && unseenInitialRuleValue(
+             rule.defaultMaximizeToEdges, m_initialRuleHistory, &ResolvedWindowRule::defaultMaximizeToEdges
+diff --git a/tests/harness/checks/layout/windowed_fullscreen_rule.sh b/tests/harness/checks/layout/windowed_fullscreen_rule.sh
+new file mode 100755
+index 00000000..49f09560
+--- /dev/null
++++ b/tests/harness/checks/layout/windowed_fullscreen_rule.sh
+@@ -0,0 +1,70 @@
++#!/usr/bin/env bash
++# harness: outputs=1
++# default_windowed_fullscreen opens a window in windowed fullscreen: the configure before its first buffer already
++# carries the fullscreen state, and the window keeps its tile. Real fullscreen from default_fullscreen wins over it.
++set -euo pipefail
++
++readonly CLIENT="${UMBRIEL_UNMAP_CLIENT:-./build-debug/tests/unmap-client}"
++readonly RULE_LOG="$UMBRIEL_RUNTIME_DIR/windowed-fullscreen-rule.log"
++readonly BOTH_LOG="$UMBRIEL_RUNTIME_DIR/windowed-fullscreen-rule-both.log"
++
++cat >> "$UMBRIEL_CONFIG" <<'CONF'
++
++[animation]
++enabled = false
++
++[[window_rule]]
++match.title = "^windowed-rule"
++default_windowed_fullscreen = true
++
++[[window_rule]]
++match.title = "^windowed-rule-both"
++default_fullscreen = true
++CONF
++"$UMBRIEL" msg config-reload > /dev/null
++
++field() {
++  "$UMBRIEL" windows --json | jq -r --arg title "$1" --arg field "$2" '.[] | select(.title == $title) | .[$field]'
++}
++
++expect_field() {
++  local title=$1 name=$2 want=$3 got=
++  got=$(field "$title" "$name")
++  if [[ $got != "$want" ]]; then
++    echo "expected $title $name=$want, got $got: $("$UMBRIEL" windows --json)"
++    exit 1
++  fi
++}
++
++wait_for_window() {
++  for _ in $(seq 60); do
++    [[ -n $(field "$1" id) ]] && return 0
++    sleep 0.05
++  done
++  echo "window $1 never mapped: $("$UMBRIEL" windows --json)"
++  exit 1
++}
++
++LOG_CONFIGURES=1 "$CLIENT" windowed-rule > "$RULE_LOG" 2>&1 &
++wait_for_window windowed-rule
++"$UMBRIEL" settle
++expect_field windowed-rule windowed_fullscreen true
++expect_field windowed-rule fullscreen false
++tile="$(field windowed-rule w)x$(field windowed-rule h)"
++if [[ $tile == "1280x720" ]]; then
++  echo "the ruled window must keep a tile smaller than the output: $tile"
++  exit 1
++fi
++first=$(grep '^configured-state=' "$RULE_LOG" | head -1 || true)
++if [[ $first != *" fullscreen" ]]; then
++  echo "the first configure must already carry the fullscreen state, got '${first:-none}': $(cat "$RULE_LOG")"
++  exit 1
++fi
++
++LOG_CONFIGURES=1 "$CLIENT" windowed-rule-both > "$BOTH_LOG" 2>&1 &
++wait_for_window windowed-rule-both
++"$UMBRIEL" settle
++expect_field windowed-rule-both fullscreen true
++expect_field windowed-rule-both windowed_fullscreen false
++
++echo "default_windowed_fullscreen opens in windowed fullscreen and default_fullscreen wins"

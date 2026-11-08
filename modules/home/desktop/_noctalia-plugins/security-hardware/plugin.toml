@@ -1,0 +1,35 @@
+# Digitais (fprintd), chaves FIDO2/U2F (pam_u2f) e a chave GPG do cartão
+# OpenPGP, num painel aberto pelo centro de controle. Quem fala com o hardware é
+# o auxiliar noctalia-security-hw (modules/packages/_noctalia-security-hw), uma
+# operação por processo com saída em JSON por linha.
+
+id = "lbssousa/security-hardware"
+name = "Security Hardware"
+version = "1.0.0"
+plugin_api = 42
+author = "lbssousa"
+license = "MIT"
+tags = ["security", "system", "utility"]
+icon = "fingerprint"
+description = "Enroll fingerprints, register FIDO2/U2F keys and set up the OpenPGP card key."
+
+[[setting]]
+key = "helper"
+type = "string"
+label_key = "settings.helper.label"
+description_key = "settings.helper.description"
+default = "noctalia-security-hw"
+
+[[panel]]
+id = "panel"
+entry = "panel.luau"
+width = 560
+height = 680
+placement = "floating"
+position = "center"
+keyboard_focus = "on_demand"
+dismiss_on_outside_click = true
+
+[[shortcut]]
+id = "shortcut"
+entry = "shortcut.luau"

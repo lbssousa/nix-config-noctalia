@@ -19,7 +19,7 @@
       toml = pkgs.formats.toml { };
       cfg = config.my.umbriel;
 
-      noctalia = action: "spawn:noctalia msg ${action}";
+      noctalia = action: "spawn noctalia msg ${action}";
       once = action: {
         inherit action;
         repeat = false;
@@ -31,8 +31,8 @@
 
       workspaceBinds = lib.listToAttrs (
         lib.concatMap (n: [
-          (lib.nameValuePair "Mod+${toString n}" "workspace-switch:${toString n}")
-          (lib.nameValuePair "Mod+Shift+${toString n}" "window-move-to-workspace:${toString n}")
+          (lib.nameValuePair "Mod+${toString n}" "workspace-switch ${toString n}")
+          (lib.nameValuePair "Mod+Shift+${toString n}" "window-move-to-workspace ${toString n}")
         ]) (lib.range 1 9)
       );
 
@@ -79,26 +79,26 @@
 
         keybinds = {
           # Aplicativos
-          "Mod+Return" = once "spawn:${cfg.terminal}";
-          "Mod+Alt+Return" = once "spawn:${cfg.terminal} -e tmux new-session -A -s main";
-          "Mod+Ctrl+Return" = once "spawn:${cfg.terminal} -e herdr";
-          "Mod+Shift+Return" = once "spawn:firefox";
-          "Mod+Shift+B" = once "spawn:firefox";
-          "Mod+Shift+Alt+B" = once "spawn:firefox --private-window";
-          "Mod+Shift+F" = once "spawn:${config.my.fileManagerApp.command}";
-          "Mod+Shift+N" = once "spawn:${cfg.terminal} -e nvim";
-          "Mod+Shift+D" = once "spawn:${cfg.terminal} -e lazydocker";
-          "Mod+Shift+Slash" = once "spawn:bitwarden";
-          "Mod+Ctrl+T" = once "spawn:${cfg.terminal} -e btop";
+          "Mod+Return" = once "spawn ${cfg.terminal}";
+          "Mod+Alt+Return" = once "spawn ${cfg.terminal} -e tmux new-session -A -s main";
+          "Mod+Ctrl+Return" = once "spawn ${cfg.terminal} -e herdr";
+          "Mod+Shift+Return" = once "spawn firefox";
+          "Mod+Shift+B" = once "spawn firefox";
+          "Mod+Shift+Alt+B" = once "spawn firefox --private-window";
+          "Mod+Shift+F" = once "spawn ${config.my.fileManagerApp.command}";
+          "Mod+Shift+N" = once "spawn ${cfg.terminal} -e nvim";
+          "Mod+Shift+D" = once "spawn ${cfg.terminal} -e lazydocker";
+          "Mod+Shift+Slash" = once "spawn bitwarden";
+          "Mod+Ctrl+T" = once "spawn ${cfg.terminal} -e btop";
 
           # Web apps: Taskbar Tabs do Firefox nos seus containers (home/desktop/firefox.nix)
-          "Mod+Shift+Y" = once "spawn:webapp youtube";
-          "Mod+Shift+Alt+G" = once "spawn:webapp whatsapp";
-          "Mod+Shift+Ctrl+G" = once "spawn:webapp google-messages";
-          "Mod+Shift+Alt+T" = once "spawn:webapp teams";
-          "Mod+Shift+S" = once "spawn:webapp google-maps";
-          "Mod+Shift+P" = once "spawn:webapp google-photos";
-          "Mod+Shift+X" = once "spawn:webapp x";
+          "Mod+Shift+Y" = once "spawn webapp youtube";
+          "Mod+Shift+Alt+G" = once "spawn webapp whatsapp";
+          "Mod+Shift+Ctrl+G" = once "spawn webapp google-messages";
+          "Mod+Shift+Alt+T" = once "spawn webapp teams";
+          "Mod+Shift+S" = once "spawn webapp google-maps";
+          "Mod+Shift+P" = once "spawn webapp google-photos";
+          "Mod+Shift+X" = once "spawn webapp x";
 
           # Menus da Noctalia
           "Mod" = noctalia "panel-toggle launcher";
@@ -118,19 +118,20 @@
           "Print" = once (noctalia "screenshot-region");
           "Shift+Print" = once (noctalia "screenshot-fullscreen");
           "Mod+Print" = once (noctalia "screenshot-annotate");
-          "Alt+Print" = once "spawn:noctalia msg plugin noctalia/screen_recorder:service all toggle";
+          "Alt+Print" = once "spawn noctalia msg plugin noctalia/screen_recorder:service all toggle";
 
           # Janelas
           "Mod+W" = once "window-close";
           "Mod+T" = once "window-toggle-floating";
           "Mod+F" = once "window-toggle-fullscreen";
           "Mod+Alt+F" = once "window-toggle-maximize";
-          # Fullscreen dentro do tile, como o "fullscreenstate 0 2" do Hyprland.
-          "Mod+Ctrl+F" = once "window-toggle-fullscreen-in-tile";
+          # Fullscreen dentro do tile (windowed fullscreen), como o
+          # "fullscreenstate 0 2" do Hyprland.
+          "Mod+Ctrl+F" = once "window-toggle-windowed-fullscreen";
           "Mod+O" = once "window-toggle-pinned";
           # Super+J (alternar o split, no Omarchy) não tem ação equivalente nesta
           # versão do Umbriel.
-          "Mod+Ctrl+L" = once "workspace-set-layout:toggle";
+          "Mod+Ctrl+L" = once "workspace-set-layout toggle";
           "Mod+Left" = "window-focus-left";
           "Mod+Right" = "window-focus-right";
           "Mod+Up" = "window-focus-up";
@@ -139,8 +140,8 @@
           "Mod+Shift+Right" = "window-swap-right";
           "Mod+Shift+Up" = "window-swap-up";
           "Mod+Shift+Down" = "window-swap-down";
-          "Mod+Minus" = "window-modify-primary-extent:-0.1";
-          "Mod+Equal" = "window-modify-primary-extent:+0.1";
+          "Mod+Minus" = "window-modify-primary-extent -0.1";
+          "Mod+Equal" = "window-modify-primary-extent +0.1";
           "Alt+Tab" = "window-focus-next";
           "Alt+Shift+Tab" = "window-focus-previous";
           "Mod+Shift+Escape" = {
@@ -170,7 +171,7 @@
           "XF86AudioPrev" = locked (noctalia "media previous");
 
           # Ditado (voxtype)
-          "Mod+Ctrl+X" = once "spawn:voxtype record toggle";
+          "Mod+Ctrl+X" = once "spawn voxtype record toggle";
         }
         // workspaceBinds;
 
@@ -199,7 +200,7 @@
           {
             match.app_id = "^firefox\\.webapp-";
             default_maximize = true;
-            default_fullscreen_in_tile = true;
+            default_windowed_fullscreen = true;
           }
           {
             match.title = "^(Picture-in-Picture|Picture in picture)$";

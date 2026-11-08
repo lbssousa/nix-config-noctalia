@@ -77,16 +77,20 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 
 - **Umbriel** em layout dwindle, com o cheatsheet de atalhos embutido (`Super+K`).
 - **Noctalia** com tema Tokyo Night, dock, clipboard, capturas,
-  agente polkit, pinentry do GnuPG e `SSH_ASKPASS` no mesmo painel (patch
-  local: `noctalia-pinentry`/`noctalia-askpass`) e plugins fixados no
+  agente polkit e plugins fixados no
   `flake.lock` (fonte `path`, sem git em tempo de execução): `screen_recorder`, `timer`, `umbriel-companion`, `screen-toolkit`,
   `emoji-picker`, `calculator-plus`, `theme-switcher`, `nix-status`, `nix-search`,
   `umbriel-monitor-control`, `printers`, `headroom` (limites do Claude Code, do
   Codex e do Antigravity), `opencode-companion` e `herdr` (os três de IA
   juntos num grupo de cápsula na barra).
+- **Plugins próprios** da Noctalia (`modules/home/desktop/_noctalia-plugins`):
+  `secret-prompts` (pinentry do GnuPG e `SSH_ASKPASS` num painel da shell, com
+  os clientes `noctalia-pinentry`/`noctalia-askpass`) e `security-hardware`
+  (cadastro de digitais, chaves FIDO2/U2F e a chave GPG do cartão, num botão
+  do centro de controle).
 - **Templates de tema** da Noctalia recolorem ghostty, kitty, foot, GTK, Qt,
   btop e Umbriel conforme a paleta ativa. Os aplicativos de terminal (alacritty,
-  foot, ghostty, kitty, starship e wezterm) usam sempre a variante escura.
+  foot, ghostty, kitty e wezterm) usam sempre a variante escura.
 - **Noctalia Greeter** com o patch do PR
   [noctalia-greeter#131](https://github.com/noctalia-dev/noctalia-greeter/pull/131)
   (`appearance.show_real_names`): mostra o nome completo no login.

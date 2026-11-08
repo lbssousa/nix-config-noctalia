@@ -17,7 +17,8 @@
 #     30 s sem leitura), por isso não há pam_fprintd nas duas pilhas abaixo;
 #   - FIDO2: "noctalia-lock-u2f", só o pam_u2f; sem chave cadastrada conectada
 #     ou com o toque expirado, segue para a senha;
-#   - senha: "noctalia-lock" (sem o patch seria o "login"). Com o campo vazio,
+#   - senha: "noctalia-lock" ([lockscreen].pam_service em
+#     home/desktop/noctalia.nix; o padrão seria o "login"). Com o campo vazio,
 #     plugar uma chave cadastrada (novo /dev/hidraw*) volta à FIDO2.
 # A sequência recomeça pela digital a cada bloqueio e a cada resume.
 #

@@ -1,0 +1,671 @@
+# https://github.com/noctalia-dev/umbriel/pull/644 (NoahIles, head 5f64a5f78), on e0da106
+diff --git a/docs/user/actions.md b/docs/user/actions.md
+index bfcecfd0..4da00b1a 100644
+--- a/docs/user/actions.md
++++ b/docs/user/actions.md
+@@ -179,6 +179,7 @@ Sizing rules per layout live in [Sizing behavior](layout.md#sizing-behavior).
+ | `window-toggle-maximize`               | Toggle full width for the focused column                   |
+ | `window-toggle-maximize-to-edges`      | Toggle maximize without gaps, struts, or borders           |
+ | `window-toggle-pinned`                 | Pin the focused window above other windows                 |
++| `window-toggle-windowed-fullscreen`    | Tell the window it is fullscreen while it keeps its size   |
+ 
+ Which windows minimize and how they come back is described in [Minimize](layout.md#minimize).
+ 
+diff --git a/docs/user/ipc.md b/docs/user/ipc.md
+index 4f1a7644..746ae65e 100644
+--- a/docs/user/ipc.md
++++ b/docs/user/ipc.md
+@@ -77,20 +77,21 @@ Window entries include IDs, application identity, process ID, geometry, output,
+ 
+ Window state follows what Umbriel has decided, ahead of the client's redraw, the same way geometry reports layout targets:
+ 
+-| Field                | Meaning                                                                                                                                                                                                                                                                      |
+-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+-| `floating`           | Outside the tiled layout                                                                                                                                                                                                                                                     |
+-| `region`             | Edge placement region (`left`, `right`, `top`, `bottom`, `top_left`, `top_right`, `bottom_left`, `bottom_right`), or `null`; retained under maximize and fullscreen within stacking                                                                                          |
+-| `title_bar`          | Umbriel's server-side title bar is enabled for this window in its current state                                                                                                                                                                                              |
+-| `fullscreen`         | Fullscreen                                                                                                                                                                                                                                                                   |
+-| `maximized`          | Maximized by `window-toggle-maximize` (a full-width column for a tiled window) or by maximize-to-edges                                                                                                                                                                       |
+-| `maximized_to_edges` | Maximized without gaps, struts, or borders                                                                                                                                                                                                                                   |
+-| `pinned`             | Pinned above other windows on every workspace of its output. Its `workspace` is always the output's active workspace                                                                                                                                                         |
+-| `minimizable`        | Supports minimize in its current placement: a mapped, unattached floating window on a workspace, outside a scratchpad and not pinned. Matches the minimize capability offered to the application; fullscreen or an active move or resize can still reject a minimize request |
+-| `minimized`          | Hidden by `window-minimize`, the application, or a taskbar; see [Minimize](layout.md#minimize)                                                                                                                                                                               |
+-| `visible`            | On its output's active workspace (or pinned), not a hidden tab, not minimized, and not in a hidden scratchpad; it may still be scrolled out of view                                                                                                                          |
+-| `parent`             | ID of the window the client named as its parent, or `""`                                                                                                                                                                                                                     |
+-| `column`, `row`      | Place in a scrolling strip, from 0; `-1` for floating windows and other layouts                                                                                                                                                                                              |
++| Field                 | Meaning                                                                                                                                                                                                                                                                      |
++| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
++| `floating`            | Outside the tiled layout                                                                                                                                                                                                                                                     |
++| `region`              | Edge placement region (`left`, `right`, `top`, `bottom`, `top_left`, `top_right`, `bottom_left`, `bottom_right`), or `null`; retained under maximize and fullscreen within stacking                                                                                          |
++| `title_bar`           | Umbriel's server-side title bar is enabled for this window in its current state                                                                                                                                                                                              |
++| `windowed_fullscreen` | Told it is fullscreen by `window-toggle-windowed-fullscreen` while it keeps its size; `fullscreen` stays `false`                                                                                                                                                             |
++| `fullscreen`          | Fullscreen                                                                                                                                                                                                                                                                   |
++| `maximized`           | Maximized by `window-toggle-maximize` (a full-width column for a tiled window) or by maximize-to-edges                                                                                                                                                                       |
++| `maximized_to_edges`  | Maximized without gaps, struts, or borders                                                                                                                                                                                                                                   |
++| `pinned`              | Pinned above other windows on every workspace of its output. Its `workspace` is always the output's active workspace                                                                                                                                                         |
++| `minimizable`         | Supports minimize in its current placement: a mapped, unattached floating window on a workspace, outside a scratchpad and not pinned. Matches the minimize capability offered to the application; fullscreen or an active move or resize can still reject a minimize request |
++| `minimized`           | Hidden by `window-minimize`, the application, or a taskbar; see [Minimize](layout.md#minimize)                                                                                                                                                                               |
++| `visible`             | On its output's active workspace (or pinned), not a hidden tab, not minimized, and not in a hidden scratchpad; it may still be scrolled out of view                                                                                                                          |
++| `parent`              | ID of the window the client named as its parent, or `""`                                                                                                                                                                                                                     |
++| `column`, `row`       | Place in a scrolling strip, from 0; `-1` for floating windows and other layouts                                                                                                                                                                                              |
+ 
+ Workspace entries include a stable ID, display name, index, output, layout, occupancy, and active and focused states. The `layout` field is `"scrolling"`, `"dwindle"`, `"master"`, or `"stacking"`. Use the `named` boolean instead of guessing from the display name; an explicitly named workspace may still be called `"2"`. `window_count` counts its mapped windows. Pinned windows belong to the output, so neither `occupied` nor `window_count` includes them. `focused_window` is the ID of the window it last focused (`""` when none), `urgent` is set while any of its windows is urgent, and `layout_override` is set while a runtime `workspace-set-layout` replaces the configured layout.
+ 
+diff --git a/docs/user/layout.md b/docs/user/layout.md
+index 20983700..e58a6beb 100644
+--- a/docs/user/layout.md
++++ b/docs/user/layout.md
+@@ -325,6 +325,8 @@ Without a taskbar, `window-restore-minimized` restores the most recently minimiz
+ 
+ `window-toggle-fullscreen` fills the complete output, ignoring struts and panel exclusive zones. A floating window keeps its normal size and position when moved through a tiled workspace while fullscreen and back to a stacking workspace. Leaving fullscreen then restores that original floating box. Entering fullscreen during a resize still restores the requested size afterward.
+ 
++`window-toggle-windowed-fullscreen` tells the application it is fullscreen without changing the window's size, position, borders, or place in the layout. A video player or browser then shows its fullscreen view inside the tile, so a video can fill a column next to other windows. Umbriel treats the window as windowed throughout: it does not cover panels, and window rules, VRR, and HDR see it as not fullscreen. While it is on, the application's own fullscreen button keeps the window in its tile, and leaving fullscreen from the application (for example pressing Escape in a video player) turns it off. `window-toggle-fullscreen` replaces it with real fullscreen, and leaving that returns the window to its tile.
++
+ Visible floating windows above fullscreen require composition on that output. Once fullscreen covers them again, direct scanout can resume if the fullscreen buffer meets the other scanout requirements.
+ 
+ `window-toggle-maximize` fills the layout area. Tiled columns keep struts and gaps; floating windows fill the output's usable area inside the same margin, and follow it when the gap, borders, struts, or usable area change.
+diff --git a/examples/config.toml b/examples/config.toml
+index 4341c1fe..98d26e56 100644
+--- a/examples/config.toml
++++ b/examples/config.toml
+@@ -215,6 +215,7 @@ numlock_toggle = true
+ "Mod+M" = { action = "window-toggle-maximize-to-edges", repeat = false }
+ "Mod+F" = { action = "window-toggle-fullscreen", repeat = false }
+ "Mod+Ctrl+F" = { action = "window-toggle-maximize", repeat = false }
++"Mod+Alt+F" = { action = "window-toggle-windowed-fullscreen", repeat = false }
+ "Mod+R" = "window-cycle-primary-extent"
+ "Mod+Shift+R" = "window-cycle-primary-extent-back"
+ "Mod+Comma" = "window-consume-left"
+diff --git a/src/config/keybind_parse.cpp b/src/config/keybind_parse.cpp
+index 7d1ae74c..8647dfac 100644
+--- a/src/config/keybind_parse.cpp
++++ b/src/config/keybind_parse.cpp
+@@ -620,6 +620,8 @@ namespace umbriel {
+         {"window-toggle-pinned", "", "Pin the focused window above other windows", KeybindAction::TogglePinned},
+         {"window-toggle-scratchpad", "[<scratchpad>]", "Move the focused window to or from a scratchpad",
+          KeybindAction::WindowToggleScratchpad, ActionArgKind::OptionalScratchpad},
++        {"window-toggle-windowed-fullscreen", "", "Tell the window it is fullscreen while it keeps its size",
++         KeybindAction::ToggleWindowedFullscreen},
+         {"workspace-focus-last", "", "Focus the previously active workspace", KeybindAction::WorkspaceFocusLast},
+         {"workspace-move-down", "", "Move the focused workspace down the list", KeybindAction::WorkspaceMoveDown},
+         {"workspace-move-to-output", "<destination> [<workspace>] [--output <output>]",
+diff --git a/src/config/keybind_parse.h b/src/config/keybind_parse.h
+index eac4b261..023e7c96 100644
+--- a/src/config/keybind_parse.h
++++ b/src/config/keybind_parse.h
+@@ -76,6 +76,7 @@ namespace umbriel {
+     ToggleMaximize,
+     ToggleMaximizeToEdges,
+     ToggleFullscreen,
++    ToggleWindowedFullscreen,
+     ToggleFloating,
+     TogglePinned,
+     WindowFocusNext,
+diff --git a/src/scene/cheatsheet_rows.cpp b/src/scene/cheatsheet_rows.cpp
+index f4efe894..3fb11ab3 100644
+--- a/src/scene/cheatsheet_rows.cpp
++++ b/src/scene/cheatsheet_rows.cpp
+@@ -465,6 +465,7 @@ namespace {
+     case A::ToggleMaximize:
+     case A::ToggleMaximizeToEdges:
+     case A::ToggleFullscreen:
++    case A::ToggleWindowedFullscreen:
+     case A::TogglePinned:
+     case A::ColumnToggleTabbed:
+     case A::ColumnSetDisplay:
+diff --git a/src/server/actions.cpp b/src/server/actions.cpp
+index e9edb432..3bb1f359 100644
+--- a/src/server/actions.cpp
++++ b/src/server/actions.cpp
+@@ -1298,6 +1298,19 @@ namespace umbriel {
+       return true;
+     }
+ 
++    bool actionToggleWindowedFullscreen(Server& server, const Keybind& /*bind*/, std::string* /*error*/) {
++      View* view = placementTarget(server, {}, FocusSource::Scratchpad).value_or(nullptr);
++      if (view == nullptr) {
++        if (Workspace* workspace = activeWorkspace(server)) {
++          view = workspace->focusedView();
++        }
++      }
++      if (view != nullptr && view->mapped()) {
++        view->toggleWindowedFullscreen();
++      }
++      return true;
++    }
++
+     bool actionToggleFloating(Server& server, const Keybind& bind, std::string* error) {
+       if (const std::string_view id = windowIdArg(bind); !id.empty()) {
+         const auto target = placementTarget(server, id);
+@@ -2241,6 +2254,7 @@ namespace umbriel {
+         &actionToggleMaximize,
+         &actionToggleMaximizeToEdges,
+         &actionToggleFullscreen,
++        &actionToggleWindowedFullscreen,
+         &actionToggleFloating,
+         &actionTogglePinned,
+         &actionFocusCycle<1>,
+diff --git a/src/server/ipc_commands.cpp b/src/server/ipc_commands.cpp
+index 7e1bd5d9..c0f92bc0 100644
+--- a/src/server/ipc_commands.cpp
++++ b/src/server/ipc_commands.cpp
+@@ -637,6 +637,7 @@ namespace umbriel {
+       entry["floating"] = view.floating();
+       entry["title_bar"] = view.titleBarHeight() > 0;
+       entry["fullscreen"] = view.scheduledFullscreen();
++      entry["windowed_fullscreen"] = view.windowedFullscreen();
+       entry["maximized"] = view.scheduledMaximized();
+       entry["maximized_to_edges"] = view.maximizedToEdges();
+       entry["pinned"] = view.pinned();
+diff --git a/src/view/view.h b/src/view/view.h
+index 52a43f63..ecc0b1c1 100644
+--- a/src/view/view.h
++++ b/src/view/view.h
+@@ -449,6 +449,10 @@ namespace umbriel {
+     void applyFullscreenLayout(bool animate = false);
+     // Compositor-driven fullscreen toggle (keybind); client requests use handleRequestFullscreen.
+     void toggleFullscreen();
++    // Tell the client it is fullscreen while the window keeps its layout slot, so a video can fill a tile. The
++    // compositor treats the window as windowed throughout; the client's own fullscreen requests toggle this state.
++    void toggleWindowedFullscreen();
++    [[nodiscard]] bool windowedFullscreen() const { return m_windowedFullscreen; }
+     void applyDeferredUnfullscreen();
+     void setMaximizedToEdges(bool maximized, bool animate = true);
+     void toggleMaximizedToEdges();
+@@ -1051,6 +1055,12 @@ namespace umbriel {
+     // An X11 window entered through the compositor toggle stays fullscreen until another compositor action releases
+     // it. This prevents Wine from immediately undoing the explicit user action with a contradictory EWMH request.
+     bool m_xCompositorFullscreen = false;
++    // Windowed fullscreen: the client's xdg state says fullscreen, which the fullscreen accessors hide from the layout.
++    // Leaving it keeps hiding the client's acked fullscreen until it commits the windowed configure.
++    bool m_windowedFullscreen = false;
++    bool m_windowedFullscreenExitPending = false;
++    void setWindowedFullscreen(bool windowed);
++    void sendClientFullscreen(bool fullscreen);
+     bool m_onActiveWorkspace = false;
+     bool m_inScratchpad = false;
+     bool m_urgent = false;
+diff --git a/src/view/view_lifecycle.cpp b/src/view/view_lifecycle.cpp
+index c32740da..d2a90bca 100644
+--- a/src/view/view_lifecycle.cpp
++++ b/src/view/view_lifecycle.cpp
+@@ -633,6 +633,8 @@ namespace umbriel {
+     clearRegionState();
+     m_restorePinnedAfterFullscreen = false;
+     m_xCompositorFullscreen = false;
++    m_windowedFullscreen = false;
++    m_windowedFullscreenExitPending = false;
+     if (m_pinned) {
+       m_pinned = false;
+       m_restoreTiledAfterUnpin = false;
+@@ -851,6 +853,9 @@ namespace umbriel {
+ 
+   void View::handleCommit(bool reconfigureOpeningState) {
+     UMBRIEL_ZONE("View::handleCommit");
++    if (m_windowedFullscreenExitPending && m_toplevel != nullptr && !m_toplevel->current.fullscreen) {
++      m_windowedFullscreenExitPending = false;
++    }
+     // Client transparency can change on any commit. An unmap commit reaches here after handleUnmap hid the backdrop.
+     if (m_mapped) {
+       m_presentation.setFullscreenOpaque(fullscreenOpaque());
+diff --git a/src/view/view_role.cpp b/src/view/view_role.cpp
+index 86bdbe89..5549f697 100644
+--- a/src/view/view_role.cpp
++++ b/src/view/view_role.cpp
+@@ -27,11 +27,13 @@ namespace umbriel {
+   const char* View::appId() const { return m_toplevel != nullptr ? m_toplevel->app_id : m_xsurface->class_; }
+ 
+   bool View::scheduledFullscreen() const {
+-    return m_toplevel != nullptr ? m_toplevel->scheduled.fullscreen : m_xState.fullscreen;
++    return m_toplevel != nullptr ? m_toplevel->scheduled.fullscreen && !m_windowedFullscreen : m_xState.fullscreen;
+   }
+ 
+   bool View::currentFullscreen() const {
+-    return m_toplevel != nullptr ? m_toplevel->current.fullscreen : m_xState.fullscreen;
++    return m_toplevel != nullptr
++        ? m_toplevel->current.fullscreen && !m_windowedFullscreen && !m_windowedFullscreenExitPending
++        : m_xState.fullscreen;
+   }
+ 
+   bool View::scheduledMaximized() const {
+@@ -125,6 +127,16 @@ namespace umbriel {
+     syncSsdFrame();
+   }
+ 
++  void View::sendClientFullscreen(bool fullscreen) {
++    // Only the client's view of the state: m_xState.fullscreen stays the compositor's.
++    m_server->scheduleIpcWindowsEvent();
++    if (m_toplevel != nullptr) {
++      wlr_xdg_toplevel_set_fullscreen(m_toplevel, fullscreen);
++    } else {
++      wlr_xwayland_surface_set_fullscreen(m_xsurface, fullscreen);
++    }
++  }
++
+   void View::setMaximizedState(bool maximized) {
+     m_server->scheduleIpcWindowsEvent();
+     if (m_toplevel != nullptr) {
+@@ -273,7 +285,7 @@ namespace umbriel {
+       wlr_xdg_surface_schedule_configure(m_toplevel->base);
+       return;
+     }
+-    wlr_xwayland_surface_set_fullscreen(m_xsurface, m_xState.fullscreen);
++    wlr_xwayland_surface_set_fullscreen(m_xsurface, m_xState.fullscreen || m_windowedFullscreen);
+     wlr_xwayland_surface_set_maximized(m_xsurface, m_xState.maximized, m_xState.maximized);
+   }
+ 
+diff --git a/src/view/view_state.cpp b/src/view/view_state.cpp
+index c171665e..32839eff 100644
+--- a/src/view/view_state.cpp
++++ b/src/view/view_state.cpp
+@@ -472,6 +472,11 @@ namespace umbriel {
+       reassertRoleState();
+       return;
+     }
++    if (m_windowedFullscreen) {
++      // A video player's own fullscreen button stays in the tile; its exit leaves windowed fullscreen.
++      setWindowedFullscreen(requested);
++      return;
++    }
+     if (!requested && scheduledFullscreen() && m_xCompositorFullscreen) {
+       kLog.debug("request_fullscreen denied for compositor-owned X11 '{}'", appId() != nullptr ? appId() : "?");
+       reassertRoleState();
+@@ -540,6 +545,31 @@ namespace umbriel {
+     setFullscreen(fullscreen);
+   }
+ 
++  void View::toggleWindowedFullscreen() {
++    if (!roleInitialized() || attached()) {
++      return;
++    }
++    if (!m_windowedFullscreen && scheduledFullscreen()) {
++      setFullscreen(false);
++    }
++    setWindowedFullscreen(!m_windowedFullscreen);
++  }
++
++  void View::setWindowedFullscreen(bool windowed) {
++    if (windowed == m_windowedFullscreen) {
++      sendClientFullscreen(windowed);
++      return;
++    }
++    kLog.debug(
++        "set_windowed_fullscreen '{}' [{}] -> {}", appId() != nullptr ? appId() : "?", static_cast<const void*>(this),
++        windowed
++    );
++    m_deferredUnfullscreen.clear();
++    m_windowedFullscreen = windowed;
++    m_windowedFullscreenExitPending = !windowed && m_toplevel != nullptr;
++    sendClientFullscreen(windowed);
++  }
++
+   void View::applyDeferredUnfullscreen() {
+     if (!m_deferredUnfullscreen.takeOnActivation() || !roleInitialized()) {
+       return;
+@@ -1018,6 +1048,10 @@ namespace umbriel {
+     if (continuePresentation) {
+       m_presentation.setSize(presentedWidth, presentedHeight);
+     }
++    // Real fullscreen, entered or left, replaces windowed fullscreen. Leaving still hides the client's acked state.
++    m_windowedFullscreenExitPending =
++        !fullscreen && m_toplevel != nullptr && (m_windowedFullscreen || m_windowedFullscreenExitPending);
++    m_windowedFullscreen = false;
+     setFullscreenState(fullscreen);
+     if (m_workspace != nullptr) {
+       m_workspace->syncFloatingStack(this);
+diff --git a/tests/harness/checks/layout/windowed_fullscreen_outputs.sh b/tests/harness/checks/layout/windowed_fullscreen_outputs.sh
+new file mode 100755
+index 00000000..9a63b850
+--- /dev/null
++++ b/tests/harness/checks/layout/windowed_fullscreen_outputs.sh
+@@ -0,0 +1,128 @@
++#!/usr/bin/env bash
++# harness: outputs=2
++# Windowed fullscreen follows an output move between a scaled and an unscaled output: the client stays configured
++# fullscreen at its logical tile size, while IPC and foreign-toplevel report the window as not fullscreen.
++set -euo pipefail
++
++readonly CLIENT="${UMBRIEL_UNMAP_CLIENT:-./build-debug/tests/unmap-client}"
++readonly FOREIGN="${UMBRIEL_FOREIGN_TOPLEVEL_CLIENT:-./build-debug/tests/foreign-toplevel-client}"
++
++cat >> "$UMBRIEL_CONFIG" <<'EOF'
++
++[animation]
++enabled = false
++
++[layout]
++mode = "scrolling"
++
++[output.HEADLESS-1]
++position = [0, 0]
++
++[output.HEADLESS-2]
++position = [1280, 0]
++scale = 1.5
++EOF
++"$UMBRIEL" msg config-reload > /dev/null
++
++declare -A control_fd=()
++
++spawn() {
++  local title=$1 fifo="$UMBRIEL_RUNTIME_DIR/$1.ctl" fd
++  mkfifo "$fifo"
++  exec {fd}<>"$fifo"
++  control_fd[$title]=$fd
++  FULLSCREEN_ON_STDIN=1 LOG_CONFIGURES=1 FOLLOW_CONFIGURES=1 "$CLIENT" "$title" \
++    <&"$fd" > "$UMBRIEL_RUNTIME_DIR/$title.log" 2>&1 &
++  for _ in $(seq 60); do
++    [[ -n $(field "$title" id) ]] && break
++    sleep 0.05
++  done
++  "$UMBRIEL" settle
++}
++
++field() {
++  "$UMBRIEL" windows --json | jq -r --arg title "$1" --arg field "$2" '.[] | select(.title == $title) | .[$field]'
++}
++
++focus() {
++  "$UMBRIEL" msg window-focus-warp "$(field "$1" id)" > /dev/null
++}
++
++# The client's latest configure must be fullscreen at exactly the box IPC reports for the window.
++expect_windowed_fullscreen() {
++  local title=$1 want= configured=
++  "$UMBRIEL" settle
++  want="$(field "$title" w)x$(field "$title" h) fullscreen"
++  for _ in $(seq 60); do
++    configured=$(grep '^configured-state=' "$UMBRIEL_RUNTIME_DIR/$title.log" | tail -1 || true)
++    [[ $configured == "configured-state=$want" ]] && break
++    sleep 0.05
++  done
++  if [[ $configured != "configured-state=$want" ]]; then
++    echo "$title: expected client configure '$want', got '${configured:-none}'"
++    exit 1
++  fi
++  if [[ $(field "$title" windowed_fullscreen) != true || $(field "$title" fullscreen) != false ]]; then
++    echo "$title: expected windowed_fullscreen=true fullscreen=false: $("$UMBRIEL" windows --json)"
++    exit 1
++  fi
++  local output reply
++  output=$(field "$title" output)
++  reply=$("$FOREIGN" "$title" "$output" fullscreen)
++  if [[ $reply != "fullscreen=0" ]]; then
++    echo "$title: foreign-toplevel reported '$reply', expected fullscreen=0"
++    exit 1
++  fi
++}
++
++expect_width_below() {
++  local title=$1 limit=$2 width
++  width=$(field "$title" w)
++  if (( width >= limit )); then
++    echo "$title: expected a tile narrower than $limit, got $width"
++    exit 1
++  fi
++}
++
++# Scrolling, then an output move between the scaled and unscaled outputs: the configure follows each logical tile.
++# 1280 physical pixels at scale 1.5 leave 853 logical pixels.
++expect_scaled_width() {
++  if [[ $(field scroll-video output) == HEADLESS-2 ]]; then
++    expect_width_below scroll-video 854
++  fi
++}
++spawn scroll-video
++focus scroll-video
++"$UMBRIEL" msg window-toggle-windowed-fullscreen > /dev/null
++expect_windowed_fullscreen scroll-video
++expect_width_below scroll-video 1280
++expect_scaled_width
++start_output=$(field scroll-video output)
++before="$(field scroll-video w)x$(field scroll-video h)"
++"$UMBRIEL" msg window-move-to-output-next > /dev/null
++for _ in $(seq 60); do
++  [[ $(field scroll-video output) != "$start_output" ]] && break
++  sleep 0.05
++done
++if [[ $(field scroll-video output) == "$start_output" ]]; then
++  echo "scroll-video did not leave $start_output"
++  exit 1
++fi
++expect_windowed_fullscreen scroll-video
++expect_scaled_width
++if [[ "$(field scroll-video w)x$(field scroll-video h)" == "$before" ]]; then
++  echo "scroll-video kept its $start_output size $before after moving to $(field scroll-video output)"
++  exit 1
++fi
++
++# Real fullscreen is reported as fullscreen, so the foreign-toplevel check above is not vacuous.
++"$UMBRIEL" msg window-toggle-fullscreen > /dev/null
++"$UMBRIEL" settle
++reply=$("$FOREIGN" scroll-video "$(field scroll-video output)" fullscreen)
++if [[ $reply != "fullscreen=1" || $(field scroll-video fullscreen) != true ]]; then
++  echo "real fullscreen: foreign-toplevel reported '$reply', IPC fullscreen=$(field scroll-video fullscreen)"
++  exit 1
++fi
++"$UMBRIEL" msg window-toggle-fullscreen > /dev/null
++
++echo "windowed fullscreen follows output moves and scaled outputs; only the client sees fullscreen"
+diff --git a/tests/harness/checks/layout/windowed_fullscreen_retile.sh b/tests/harness/checks/layout/windowed_fullscreen_retile.sh
+new file mode 100755
+index 00000000..7d15fb0c
+--- /dev/null
++++ b/tests/harness/checks/layout/windowed_fullscreen_retile.sh
+@@ -0,0 +1,71 @@
++#!/usr/bin/env bash
++# harness: outputs=1
++# Windowed fullscreen follows dwindle and master retiles: when neighbours open, the client is reconfigured at its new
++# tile size and stays fullscreen from its own point of view.
++set -euo pipefail
++
++readonly CLIENT="${UMBRIEL_UNMAP_CLIENT:-./build-debug/tests/unmap-client}"
++readonly FOREIGN="${UMBRIEL_FOREIGN_TOPLEVEL_CLIENT:-./build-debug/tests/foreign-toplevel-client}"
++
++cat >> "$UMBRIEL_CONFIG" <<'EOF'
++
++[animation]
++enabled = false
++
++[layout]
++mode = "scrolling"
++EOF
++"$UMBRIEL" msg config-reload > /dev/null
++
++declare -A control_fd=()
++
++spawn() {
++  local title=$1 fifo="$UMBRIEL_RUNTIME_DIR/$1.ctl" fd
++  mkfifo "$fifo"
++  exec {fd}<>"$fifo"
++  control_fd[$title]=$fd
++  FULLSCREEN_ON_STDIN=1 LOG_CONFIGURES=1 FOLLOW_CONFIGURES=1 "$CLIENT" "$title" \
++    <&"$fd" > "$UMBRIEL_RUNTIME_DIR/$title.log" 2>&1 &
++  for _ in $(seq 60); do
++    [[ -n $(field "$title" id) ]] && break
++    sleep 0.05
++  done
++  "$UMBRIEL" settle
++}
++
++field() {
++  "$UMBRIEL" windows --json | jq -r --arg title "$1" --arg field "$2" '.[] | select(.title == $title) | .[$field]'
++}
++
++focus() {
++  "$UMBRIEL" msg window-focus-warp "$(field "$1" id)" > /dev/null
++}
++
++# The client's latest configure must be fullscreen at exactly the box IPC reports for the window.
++expect_windowed_fullscreen() {
++  local title=$1 want= configured=
++  "$UMBRIEL" settle
++  want="$(field "$title" w)x$(field "$title" h) fullscreen"
++  for _ in $(seq 60); do
++    configured=$(grep '^configured-state=' "$UMBRIEL_RUNTIME_DIR/$title.log" | tail -1 || true)
++    [[ $configured == "configured-state=$want" ]] && break
++    sleep 0.05
++  done
++  if [[ $configured != "configured-state=$want" ]]; then
++    echo "$title: expected client configure '$want', got '${configured:-none}'"
++    exit 1
++  fi
++  if [[ $(field "$title" windowed_fullscreen) != true || $(field "$title" fullscreen) != false ]]; then
++    echo "$title: expected windowed_fullscreen=true fullscreen=false: $("$UMBRIEL" windows --json)"
++    exit 1
++  fi
++  local output reply
++  output=$(field "$title" output)
++  reply=$("$FOREIGN" "$title" "$output" fullscreen)
++  if [[ $reply != "fullscreen=0" ]]; then
++    echo "$title: foreign-toplevel reported '$reply', expected fullscreen=0"
++    exit 1
++  fi
++}
++
++echo "windowed fullscreen follows dwindle and master retiles"
+diff --git a/tests/harness/checks/layout/windowed_fullscreen_toggle.sh b/tests/harness/checks/layout/windowed_fullscreen_toggle.sh
+new file mode 100755
+index 00000000..dc5fb2f7
+--- /dev/null
++++ b/tests/harness/checks/layout/windowed_fullscreen_toggle.sh
+@@ -0,0 +1,96 @@
++#!/usr/bin/env bash
++# harness: outputs=1
++# Windowed fullscreen tells the client it is fullscreen while the window keeps its tile, so a video player can fill a
++# column. The client's own fullscreen requests stay in the tile, its unfullscreen request leaves the state, and real
++# fullscreen replaces it.
++set -euo pipefail
++
++readonly CLIENT="${UMBRIEL_UNMAP_CLIENT:-./build-debug/tests/unmap-client}"
++readonly CONTROL_FIFO="$UMBRIEL_RUNTIME_DIR/windowed-fullscreen-control"
++readonly CLIENT_LOG="$UMBRIEL_RUNTIME_DIR/windowed-fullscreen.log"
++
++cat >> "$UMBRIEL_CONFIG" <<'EOF'
++
++[animation]
++enabled = false
++EOF
++"$UMBRIEL" msg config-reload > /dev/null
++
++field() {
++  "$UMBRIEL" windows --json | jq -r --arg field "$1" '.[] | select(.title == "windowed-video") | .[$field]'
++}
++
++expect_field() {
++  local name=$1 want=$2 got=
++  got=$(field "$name")
++  if [[ $got != "$want" ]]; then
++    echo "expected $name=$want, got $got: $("$UMBRIEL" windows --json)"
++    exit 1
++  fi
++}
++
++wait_for_configured_state() {
++  local want=$1 configured=
++  for _ in $(seq 60); do
++    configured=$(grep '^configured-state=' "$CLIENT_LOG" | tail -1 || true)
++    [[ $configured == "configured-state=$want" ]] && return 0
++    sleep 0.05
++  done
++  echo "expected latest client configure to be '$want', got '${configured:-none}': $(cat "$CLIENT_LOG")"
++  exit 1
++}
++
++mkfifo "$CONTROL_FIFO"
++exec {control_fd}<>"$CONTROL_FIFO"
++FULLSCREEN_ON_STDIN=1 LOG_CONFIGURES=1 FOLLOW_CONFIGURES=1 "$CLIENT" windowed-video \
++  <&"$control_fd" > "$CLIENT_LOG" 2>&1 &
++
++for _ in $(seq 60); do
++  [[ -n $(field id) ]] && break
++  sleep 0.05
++done
++"$UMBRIEL" settle
++tile="$(field w)x$(field h)"
++if [[ $tile == "1280x720" ]]; then
++  echo "the tile must be smaller than the output for this check to mean anything: $tile"
++  exit 1
++fi
++wait_for_configured_state "$tile windowed"
++
++"$UMBRIEL" msg window-toggle-windowed-fullscreen > /dev/null
++wait_for_configured_state "$tile fullscreen"
++"$UMBRIEL" settle
++expect_field windowed_fullscreen true
++expect_field fullscreen false
++expect_field w "${tile%x*}"
++
++# The client leaving fullscreen leaves windowed fullscreen.
++printf u >&"$control_fd"
++wait_for_configured_state "$tile windowed"
++"$UMBRIEL" settle
++expect_field windowed_fullscreen false
++expect_field fullscreen false
++
++# The client asking for fullscreen while windowed fullscreen stays in its tile.
++"$UMBRIEL" msg window-toggle-windowed-fullscreen > /dev/null
++wait_for_configured_state "$tile fullscreen"
++printf f >&"$control_fd"
++"$UMBRIEL" settle
++wait_for_configured_state "$tile fullscreen"
++expect_field windowed_fullscreen true
++expect_field fullscreen false
++
++# Real fullscreen replaces windowed fullscreen, and leaving it returns to the tile.
++"$UMBRIEL" msg window-toggle-fullscreen > /dev/null
++wait_for_configured_state "1280x720 fullscreen"
++"$UMBRIEL" settle
++expect_field windowed_fullscreen false
++expect_field fullscreen true
++
++"$UMBRIEL" msg window-toggle-fullscreen > /dev/null
++wait_for_configured_state "$tile windowed"
++"$UMBRIEL" settle
++expect_field windowed_fullscreen false
++expect_field fullscreen false
++
++echo "windowed fullscreen keeps the tile while the client sees fullscreen"
+diff --git a/tests/harness/clients/foreign_toplevel_client.cpp b/tests/harness/clients/foreign_toplevel_client.cpp
+index 6784f0ba..db0928f5 100644
+--- a/tests/harness/clients/foreign_toplevel_client.cpp
++++ b/tests/harness/clients/foreign_toplevel_client.cpp
+@@ -23,6 +23,7 @@ namespace {
+     std::vector<wl_output*> outputs;
+     bool closed = false;
+     bool minimized = false;
++    bool fullscreen = false;
+   };
+ 
+   struct State {
+@@ -74,6 +75,8 @@ namespace {
+     const std::span entries(static_cast<const uint32_t*>(states->data), states->size / sizeof(uint32_t));
+     static_cast<Toplevel*>(data)->minimized =
+         std::ranges::contains(entries, uint32_t{ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MINIMIZED});
++    static_cast<Toplevel*>(data)->fullscreen =
++        std::ranges::contains(entries, uint32_t{ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN});
+   }
+   void toplevelDone(void*, zwlr_foreign_toplevel_handle_v1*) {}
+   void toplevelClosed(void* data, zwlr_foreign_toplevel_handle_v1*) { static_cast<Toplevel*>(data)->closed = true; }
+@@ -139,8 +142,9 @@ int main(int argc, char** argv) {
+           && command != "activate"
+           && command != "minimize"
+           && command != "unminimize"
+-          && command != "state")) {
+-    std::println(stderr, "usage: foreign-toplevel-client TITLE OUTPUT [activate|minimize|unminimize|state]");
++          && command != "state"
++          && command != "fullscreen")) {
++    std::println(stderr, "usage: foreign-toplevel-client TITLE OUTPUT [activate|minimize|unminimize|state|fullscreen]");
+     return 2;
+   }
+   const std::string_view wantedTitle = argv[1];
+@@ -202,6 +206,9 @@ int main(int argc, char** argv) {
+   if (reportMinimized && target != state.toplevels.end()) {
+     std::println("minimized={}", (*target)->minimized ? 1 : 0);
+   }
++  if (command == "fullscreen" && target != state.toplevels.end()) {
++    std::println("fullscreen={}", (*target)->fullscreen ? 1 : 0);
++  }
+ 
+   for (const auto& toplevel : state.toplevels) {
+     zwlr_foreign_toplevel_handle_v1_destroy(toplevel->handle);
