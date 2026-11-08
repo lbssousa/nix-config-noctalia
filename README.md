@@ -143,6 +143,7 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 | `Super+Shift+Ctrl+setas` | janela para outro monitor | `Alt+Space` | ditado (voxtype) |
 | `Super+1…9` | área de trabalho | `Super+Shift+Y/P/S/X` | YouTube/Photos/Maps/X |
 | `Super+Shift+Alt+G` | WhatsApp | `Super+Ctrl+W` | papéis de parede |
+| `Super+Ctrl+K` | hardware de segurança (digitais, YubiKey, SSH) | | |
 
 Caps Lock vira Esc, e Shift+Caps Lock é o Caps Lock (opção XKB
 `caps:escape_shifted_capslock`, no TTY, no greeter e no Umbriel).
