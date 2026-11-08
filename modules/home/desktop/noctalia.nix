@@ -339,8 +339,8 @@
               # (nixos/security/secret-prompts.nix aponta o gpg-agent e o
               # SSH_ASKPASS para os clientes, para todos os usuários).
               "lbssousa/secret-prompts"
-              # Digitais, chaves FIDO2/U2F e a chave GPG do cartão (botão no
-              # centro de controle).
+              # Digitais, chaves FIDO2/U2F, a chave GPG do cartão e as chaves
+              # SSH residentes da YubiKey (botão no centro de controle).
               "lbssousa/security-hardware"
               # Agentes de IA e terminal
               # Limites dos planos do Claude Code, do Codex e do Antigravity

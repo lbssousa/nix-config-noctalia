@@ -5,6 +5,11 @@
 # Sem ControlMaster no sistema instalado: ele fica só na config SSH da
 # instalação (scripts/import-ssh-yubikey.sh, usada pelo install.sh).
 #
+# Chaves SSH residentes da YubiKey: instaladas à mão pela aba SSH do plugin
+# lbssousa/security-hardware da Noctalia, que também escreve
+# ~/.ssh/config.d/<host>.conf para os hosts git (IdentitiesOnly, sem agente,
+# reuso de conexão opcional).
+#
 # Override local: ~/.ssh/config.d/*.conf, incluído ANTES dos blocos gerados
 # (no ssh, vale o primeiro valor encontrado para cada opção).
 {

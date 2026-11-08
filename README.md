@@ -86,8 +86,8 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 - **Plugins próprios** da Noctalia, em repositórios separados e fixados no `flake.lock`:
   [`secret-prompts`](https://github.com/lbssousa/noctalia-secret-prompts) (pinentry do GnuPG e `SSH_ASKPASS` num painel da shell, com
   os clientes `noctalia-pinentry`/`noctalia-askpass`) e [`security-hardware`](https://github.com/lbssousa/noctalia-security-hardware)
-  (cadastro de digitais, chaves FIDO2/U2F e a chave GPG do cartão, num botão
-  do centro de controle).
+  (digitais, chaves FIDO2/U2F, a chave GPG do cartão e as chaves SSH residentes
+  da YubiKey, uma aba para cada, num botão do centro de controle).
 - **Templates de tema** da Noctalia recolorem ghostty, kitty, foot, GTK, Qt,
   btop e Umbriel conforme a paleta ativa. Os aplicativos de terminal (alacritty,
   foot, ghostty, kitty e wezterm) usam sempre a variante escura.
