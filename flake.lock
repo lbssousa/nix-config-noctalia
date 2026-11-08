@@ -114,11 +114,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1793876309,
-        "narHash": "sha256-Wojg9lIH/hDH91iDVH2/EPw8oDSpxjxhXONbU1yf4Zg=",
+        "lastModified": 1794042290,
+        "narHash": "sha256-ziZn2PvCJE5JEEpqTdxXwJpPB+L3YqoCpTAMCzyaP3U=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "f9a75f41be3a74eab55d3a7679d34ad6cc0da977",
+        "rev": "f4a03c008967841f2a0b3cb7c436fc6fc31671f6",
         "type": "github"
       },
       "original": {
@@ -153,11 +153,11 @@
     "noctalia-plugins-community": {
       "flake": false,
       "locked": {
-        "lastModified": 1794098227,
-        "narHash": "sha256-2Uxvn+vGq4cIgy1cbkJvqN4lRTooc30ZyG8K3G++Kao=",
+        "lastModified": 1794146220,
+        "narHash": "sha256-4xh9LTNcGS0/oC/5B7Z19gOhyupg8WiznnOFpwYASFc=",
         "owner": "noctalia-dev",
         "repo": "community-plugins",
-        "rev": "01fc60894ee15825b9c9c30f1f0649ee72ee37c3",
+        "rev": "b322884707c2073c82f7db8b34986acdbf528787",
         "type": "github"
       },
       "original": {
@@ -185,11 +185,11 @@
     "noctalia-secret-prompts": {
       "flake": false,
       "locked": {
-        "lastModified": 1794138429,
-        "narHash": "sha256-Fd+hy0n6dYhN90YnSQZtJKK8WC/kr0M51W1Ri+FTGv4=",
+        "lastModified": 1794142996,
+        "narHash": "sha256-jex+0xVlEOXPv1ZQES/agRABDdpyBxGoUivxypHfPmA=",
         "owner": "lbssousa",
         "repo": "noctalia-secret-prompts",
-        "rev": "d8806fece801206c49925343e0c644eefad5db26",
+        "rev": "a4788531d282d63c34fe7e49d3288954509c2c27",
         "type": "github"
       },
       "original": {
@@ -201,11 +201,11 @@
     "noctalia-security-hardware": {
       "flake": false,
       "locked": {
-        "lastModified": 1794140226,
-        "narHash": "sha256-JBYZyB8x+YuJ/rSRYLcwtX2gbWUS914T9XL3+by4oho=",
+        "lastModified": 1794142996,
+        "narHash": "sha256-IAc2NBPcyMzBMxlTdt2UMF0d5skuqW1YtxLQDRw4XnI=",
         "owner": "lbssousa",
         "repo": "noctalia-security-hardware",
-        "rev": "1af23d5e0b0af1c90549835eda10ab5129e40cf2",
+        "rev": "9443ddff732f591e43b3b5b62c10744197d5777e",
         "type": "github"
       },
       "original": {
