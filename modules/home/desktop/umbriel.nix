@@ -21,6 +21,9 @@
 
       noctalia = action: "spawn noctalia msg ${action}";
       calculator = once (noctalia "panel-toggle samuelskovbakke/calculator-plus:panel");
+      # Janelas que o Omarchy deixa translúcidas (tag "terminal" de
+      # default/hypr/apps/terminals.lua e o Nautilus), mais o Flea e o console.
+      transparentApps = "^(Alacritty|kitty|com\\.mitchellh\\.ghostty|foot|org\\.codeberg\\.dnkl\\.foot|wezterm|org\\.wezfurlong\\.wezterm|dev\\.lbssousa\\.console|org\\.gnome\\.Nautilus|com\\.thisisgm\\.flea)$";
       # Trio de layouts do Omarchy (tiling, scrolling, flutuante); a lista ao
       # contrário volta ao anterior.
       layouts = [
@@ -239,6 +242,21 @@
           {
             blur = true;
             blur_optimized = false;
+          }
+          # Translucência padrão do Omarchy 4.5 (modo "transparent" de
+          # omarchy-hyprland-window-transparency: o.transparent_window com
+          # "0.985 0.96", ativa/inativa) nos terminais, no console Quake e nos
+          # gerenciadores de arquivos (o Omarchy a aplica no Nautilus; aqui
+          # também no Flea, que o substitui). A transição de foco é suave
+          # ([animation.windows_opacity], ligada por padrão).
+          {
+            match.app_id = transparentApps;
+            opacity = 0.985;
+          }
+          {
+            match.app_id = transparentApps;
+            match.is_focused = false;
+            opacity = 0.96;
           }
           {
             match.app_id = "^dev.noctalia.Noctalia$";
