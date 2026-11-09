@@ -31,7 +31,8 @@
       # Modos de omarchy-hyprland-window-transparency (Omarchy 4.5):
       #  - transparent (o padrão do Omarchy): o.transparent_window com
       #    "0.985 0.96" (ativa/inativa) nos apps acima;
-      #  - glassy: o mesmo, mais o fundo dos terminais a 0.65 (terminals.nix),
+      #  - glassy: o mesmo, mais o fundo dos terminais a 0.65 (terminals.nix)
+      #    e sem o do btop (btop.nix),
       #    os gerenciadores de arquivos inteiros a 0.75 ("0.75 0.75", pois o
       #    GTK desenha o fundo sólido) e o blur de default/hypr/glass.lua;
       #  - opaque: nenhuma translucência.
