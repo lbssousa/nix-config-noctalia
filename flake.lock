@@ -201,11 +201,11 @@
     "noctalia-security-hardware": {
       "flake": false,
       "locked": {
-        "lastModified": 1794142996,
-        "narHash": "sha256-IAc2NBPcyMzBMxlTdt2UMF0d5skuqW1YtxLQDRw4XnI=",
+        "lastModified": 1794187610,
+        "narHash": "sha256-PR1yQGrSoGxY/8VpJXcBEWbLWi2CFm2SD3KMUm5/gbI=",
         "owner": "lbssousa",
         "repo": "noctalia-security-hardware",
-        "rev": "9443ddff732f591e43b3b5b62c10744197d5777e",
+        "rev": "5aeab4f110fe17e9902d981a14a94fdfd544fe79",
         "type": "github"
       },
       "original": {
