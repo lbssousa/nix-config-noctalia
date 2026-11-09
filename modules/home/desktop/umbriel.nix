@@ -228,9 +228,10 @@
           "XF86AudioNext" = locked (noctalia "media next");
           "XF86AudioPrev" = locked (noctalia "media previous");
 
-          # Ditado (voxtype)
-          "Mod+Ctrl+X" = once "spawn voxtype record toggle";
-          "Alt+Space" = once "spawn voxtype record toggle";
+          # Ditado (Superwhisper): começa e termina a gravação, que é colada
+          # na janela em foco.
+          "Mod+Ctrl+X" = once "spawn superwhisper record";
+          "Alt+Space" = once "spawn superwhisper record";
         }
         // workspaceBinds;
 

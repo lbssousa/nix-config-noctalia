@@ -140,7 +140,7 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 | `Super+M` / `Super+Alt+M` | minimizar / restaurar (janela flutuante) | `Super+Ctrl+N` | rede |
 | `Super+S` | scratchpad | `Super+'` | console Quake (shell que desce do topo) |
 | `Super+,` | agir na última notificação | `Super+Ctrl+Alt+,` | não perturbe |
-| `Super+Shift+Ctrl+setas` | janela para outro monitor | `Alt+Space` | ditado (voxtype) |
+| `Super+Shift+Ctrl+setas` | janela para outro monitor | `Alt+Space` | ditado (Superwhisper) |
 | `Super+1…9` | área de trabalho | `Super+Shift+Y/P/S/X` | YouTube/Photos/Maps/X |
 | `Super+Shift+Alt+G` | WhatsApp | `Super+Ctrl+W` | papéis de parede |
 | `Super+Ctrl+K` | hardware de segurança (digitais, YubiKey, SSH) | | |

@@ -41,10 +41,10 @@
         vscode-fhs
         emacs-pgtk
 
-        # Tema Qt e ditado por voz
+        # Tema Qt e ditado por voz (Superwhisper: packages/_superwhisper)
         libsForQt5.qt5ct
         kdePackages.qt6ct
-        voxtype
+        superwhisper
 
         # TUIs do Omarchy
         lazygit
@@ -76,6 +76,12 @@
         libqalculate
         nix-search-tv
       ];
+
+      # Serviço de usuário do Superwhisper (o daemon que grava, transcreve e
+      # cola), na sessão gráfica de todo usuário. Os atalhos chamam
+      # `superwhisper record` (home/desktop/umbriel.nix).
+      systemd.packages = [ pkgs.superwhisper ];
+      systemd.user.services.superwhisper.wantedBy = [ "graphical-session.target" ];
 
       # A porta do LocalSend precisa estar aberta para receber arquivos.
       networking.firewall = {
