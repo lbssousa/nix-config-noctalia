@@ -19,9 +19,8 @@ let
       yubikey-gpg-import = call ../packages/_yubikey-gpg-import/package.nix;
       flea = call ../packages/_flea/package.nix;
       superwhisper = call ../packages/_superwhisper/package.nix;
-      # Auxiliares dos plugins próprios da Noctalia (repositórios em flake.nix).
+      # Auxiliar do plugin próprio da Noctalia (repositório em flake.nix).
       noctalia-secret-prompts = call "${inputs.noctalia-secret-prompts}/nix/package.nix";
-      noctalia-security-hw = call "${inputs.noctalia-security-hardware}/nix/package.nix";
 
       # Senha expirada (pam_acct_mgmt: NEW_AUTHTOK_REQD) no login gráfico.
       # O greetd 0.10.3 só falhava; o patch chama pam_chauthtok na mesma
@@ -66,13 +65,22 @@ let
       # /run/user/<uid>/noctalia-polkit-use-password e reinicia a sessão, e a
       # pilha polkit-1 pula direto para a senha (security/pam-policy.nix).
       # Aplicado sobre o anterior; patch local, sem PR upstream.
+      # Configurações > Segurança com digitais (fprintd por D-Bus: leitor, cadastrar,
+      # testar, excluir), login com a chave de segurança (pam_u2f: registra onde o
+      # sudo e o polkit leem as chaves, remove por key handle, testa no serviço
+      # "noctalia-lock-u2f"), a chave OpenPGP do cartão (importar/atualizar, ligar,
+      # confiar, remover do chaveiro) e as chaves SSH residentes (importar, criar,
+      # remover cópia, apagar da chave, ~/.ssh/config.d/<host>.conf com reuso de
+      # conexão), com diálogo de PIN e detecção de plug/unplug; mais o atalho
+      # "security" da central de controle. Substitui o antigo plugin
+      # lbssousa/security-hardware (os drop-ins que ele escreveu continuam
+      # reconhecidos). Patch local, sem PR upstream: SCOPE.md manda controles de
+      # hardware para plugins.
       #
-      # Pinentry/askpass e a configuração de digitais e chaves de segurança não são
-      # mais patches: os mantenedores não aceitam segredos no core (PR #4951) e
-      # mandam controles de hardware para plugins (SCOPE.md). Viraram os plugins
-      # lbssousa/secret-prompts e lbssousa/security-hardware (repositórios
-      # github.com/lbssousa/noctalia-secret-prompts e noctalia-security-hardware),
-      # com os auxiliares noctalia-secret-prompts e noctalia-security-hw.
+      # O pinentry/askpass não é patch: os mantenedores não aceitam segredos no
+      # core (PR #4951). É o plugin lbssousa/secret-prompts (repositório
+      # github.com/lbssousa/noctalia-secret-prompts), com o auxiliar
+      # noctalia-secret-prompts.
       #
       # Os patches saem do fork lbssousa/noctalia: o branch base/nix-config-v5.4.1
       # é a tag v5.4.1 mais os patches acima, um commit cada.
@@ -94,6 +102,7 @@ let
               ../packages/patches/noctalia-lock-security-key.patch
               ../packages/patches/noctalia-lock-auth-sequence.patch
               ../packages/patches/noctalia-polkit-use-password.patch
+              ../packages/patches/noctalia-security-hardware.patch
             ];
           });
         in
@@ -121,8 +130,17 @@ let
                 --replace-fail ".default." ".dark."
             done
 
+            # Ferramentas da página Segurança no fim do PATH: as do usuário vêm antes.
             makeWrapper ${base}/bin/noctalia $out/bin/noctalia \
-              --set-default NOCTALIA_ASSETS_DIR "$out/share/noctalia/assets"
+              --set-default NOCTALIA_ASSETS_DIR "$out/share/noctalia/assets" \
+              --suffix PATH : ${
+                final.lib.makeBinPath [
+                  final.libfido2
+                  final.pam_u2f
+                  final.openssh
+                  final.gnupg
+                ]
+              }
           '';
 
       # pinentry-program do gpg-agent; fora da sessão gráfica cai no pinentry-curses.
@@ -197,7 +215,6 @@ in
         "flea"
         "superwhisper"
         "noctalia-secret-prompts"
-        "noctalia-security-hw"
         "greetd"
         "noctalia"
         "noctalia-greeter"

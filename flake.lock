@@ -198,22 +198,6 @@
         "type": "github"
       }
     },
-    "noctalia-security-hardware": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1794187610,
-        "narHash": "sha256-PR1yQGrSoGxY/8VpJXcBEWbLWi2CFm2SD3KMUm5/gbI=",
-        "owner": "lbssousa",
-        "repo": "noctalia-security-hardware",
-        "rev": "5aeab4f110fe17e9902d981a14a94fdfd544fe79",
-        "type": "github"
-      },
-      "original": {
-        "owner": "lbssousa",
-        "repo": "noctalia-security-hardware",
-        "type": "github"
-      }
-    },
     "preservation": {
       "locked": {
         "lastModified": 1792953443,
@@ -241,7 +225,6 @@
         "noctalia-plugins-community": "noctalia-plugins-community",
         "noctalia-plugins-official": "noctalia-plugins-official",
         "noctalia-secret-prompts": "noctalia-secret-prompts",
-        "noctalia-security-hardware": "noctalia-security-hardware",
         "preservation": "preservation",
         "sops-nix": "sops-nix"
       }

@@ -45,14 +45,10 @@
       url = "github:noctalia-dev/community-plugins";
       flake = false;
     };
-    # Plugins próprios, cada um com o seu auxiliar (nix/package.nix, chamado
-    # pelo overlay em flake/packages.nix sobre o nixpkgs deste flake).
+    # Plugin próprio, com o seu auxiliar (nix/package.nix, chamado pelo overlay
+    # em flake/packages.nix sobre o nixpkgs deste flake).
     noctalia-secret-prompts = {
       url = "github:lbssousa/noctalia-secret-prompts";
-      flake = false;
-    };
-    noctalia-security-hardware = {
-      url = "github:lbssousa/noctalia-security-hardware";
       flake = false;
     };
 

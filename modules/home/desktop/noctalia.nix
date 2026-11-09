@@ -259,7 +259,8 @@
               "noctalia/screen_recorder:toggle"
               "alexander/screen-toolkit:toggle"
               "muhammadessam/umbriel-monitor-control:display"
-              "lbssousa/security-hardware:shortcut"
+              # Configurações > Segurança (patch noctalia-security-hardware).
+              "security"
             ]
           );
 
@@ -304,18 +305,12 @@
                 location = "${inputs.noctalia-plugins-community}";
                 enabled = true;
               }
-              # Plugins próprios (github.com/lbssousa/noctalia-secret-prompts e
-              # noctalia-security-hardware), fixados no flake.lock.
+              # Plugin próprio (github.com/lbssousa/noctalia-secret-prompts),
+              # fixado no flake.lock.
               {
                 name = "nix-secret-prompts";
                 kind = "path";
                 location = "${inputs.noctalia-secret-prompts}";
-                enabled = true;
-              }
-              {
-                name = "nix-security-hardware";
-                kind = "path";
-                location = "${inputs.noctalia-security-hardware}";
                 enabled = true;
               }
             ];
@@ -339,9 +334,6 @@
               # (nixos/security/secret-prompts.nix aponta o gpg-agent e o
               # SSH_ASKPASS para os clientes, para todos os usuários).
               "lbssousa/secret-prompts"
-              # Digitais, chaves FIDO2/U2F, a chave GPG do cartão e as chaves
-              # SSH residentes da YubiKey (botão no centro de controle).
-              "lbssousa/security-hardware"
               # Agentes de IA e terminal
               # Limites dos planos do Claude Code, do Codex e do Antigravity
               "ayagmar/headroom"
@@ -354,7 +346,6 @@
 
           # Logos coloridos pela paleta da shell no status do NixOS.
           plugin_settings."mindnbytes/nix-status".use_themed_logos = lib.mkDefault true;
-          plugin_settings."lbssousa/security-hardware".helper = lib.getExe pkgs.noctalia-security-hw;
         };
       };
     };

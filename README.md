@@ -83,11 +83,12 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
   `umbriel-monitor-control`, `printers`, `headroom` (limites do Claude Code, do
   Codex e do Antigravity), `opencode-companion` e `herdr` (os três de IA
   juntos num grupo de cápsula na barra).
-- **Plugins próprios** da Noctalia, em repositórios separados e fixados no `flake.lock`:
+- **Plugin próprio** da Noctalia, em repositório separado e fixado no `flake.lock`:
   [`secret-prompts`](https://github.com/lbssousa/noctalia-secret-prompts) (pinentry do GnuPG e `SSH_ASKPASS` num painel da shell, com
-  os clientes `noctalia-pinentry`/`noctalia-askpass`) e [`security-hardware`](https://github.com/lbssousa/noctalia-security-hardware)
-  (digitais, chaves FIDO2/U2F, a chave GPG do cartão e as chaves SSH residentes
-  da YubiKey, uma aba para cada, num botão do centro de controle).
+  os clientes `noctalia-pinentry`/`noctalia-askpass`).
+- **Configurações > Segurança** (patch da Noctalia): digitais, login com a chave
+  FIDO2/U2F (pam_u2f), a chave OpenPGP do cartão e as chaves SSH residentes da
+  YubiKey, com atalho na central de controle e em Mod+Ctrl+K.
 - **Templates de tema** da Noctalia recolorem ghostty, kitty, foot, GTK, Qt,
   btop e Umbriel conforme a paleta ativa. Os aplicativos de terminal (alacritty,
   foot, ghostty, kitty e wezterm) usam sempre a variante escura.
@@ -143,7 +144,7 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 | `Super+Shift+Ctrl+setas` | janela para outro monitor | `Alt+Space` | ditado (Superwhisper) |
 | `Super+1…9` | área de trabalho | `Super+Shift+Y/P/S/X` | YouTube/Photos/Maps/X |
 | `Super+Shift+Alt+G` | WhatsApp | `Super+Ctrl+W` | papéis de parede |
-| `Super+Ctrl+K` | hardware de segurança (digitais, YubiKey, SSH) | | |
+| `Super+Ctrl+K` | Configurações › Segurança (digitais, YubiKey, SSH) | | |
 
 Caps Lock vira Esc, e Shift+Caps Lock é o Caps Lock (opção XKB
 `caps:escape_shifted_capslock`, no TTY, no greeter e no Umbriel).

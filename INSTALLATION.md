@@ -278,7 +278,8 @@ senha. `sudo`, `run0` e os pedidos do polkit tentam, nesta ordem, a digital
 conectada) e a senha. Na tela de bloqueio, a digital fica ativa o tempo todo;
 Enter com o campo vazio pede o toque na YubiKey. Detalhes em
 `modules/nixos/security/pam-policy.nix`; cadastre a YubiKey com
-`just yubikey-register` ou em Configurações › Segurança › Chaves FIDO2 / U2F
-(`~/.config/Yubico/u2f_keys`). As digitais se cadastram em Configurações ›
-Segurança › Leitor de Impressão Digital. Quem vem do authfile central antigo
+`just yubikey-register` ou em Configurações › Segurança › Entrar com Chave de
+Segurança (`~/.config/Yubico/u2f_keys`). As digitais se cadastram em
+Configurações › Segurança › Leitor de Impressão Digital; a chave OpenPGP do
+cartão e as chaves SSH residentes ficam na mesma página (`Super+Ctrl+K`). Quem vem do authfile central antigo
 (`/persist/etc/u2f-mappings`) roda `just yubikey-migrate` antes do `switch`.

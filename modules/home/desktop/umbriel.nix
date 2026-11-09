@@ -183,8 +183,8 @@
           "Mod+Ctrl+T" = once (noctalia "settings-toggle theme");
           "Mod+Ctrl+N" = once (noctalia "panel-toggle control-center network");
           # Digitais, chaves FIDO2, cartão OpenPGP e chaves SSH residentes
-          # (plugin lbssousa/security-hardware).
-          "Mod+Ctrl+K" = once (noctalia "panel-toggle lbssousa/security-hardware:panel");
+          # (Configurações > Segurança).
+          "Mod+Ctrl+K" = once (noctalia "settings-toggle security");
           "Mod+Ctrl+Alt+F" = once (noctalia "bar-toggle");
           "Mod+L" = once (noctalia "session lock");
           "Mod+K" = once "cheatsheet-toggle";

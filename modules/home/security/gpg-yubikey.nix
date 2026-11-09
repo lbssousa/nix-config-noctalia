@@ -17,7 +17,7 @@
             yubikey-manager
             yubioath-flutter
             pam_u2f
-            # fido2-token: lists the connected keys on the Noctalia Security page.
+            # fido2-token: the connected keys on Noctalia's Settings > Security.
             libfido2
           ];
         }
