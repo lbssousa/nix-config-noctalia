@@ -21,9 +21,52 @@
 
       noctalia = action: "spawn noctalia msg ${action}";
       calculator = once (noctalia "panel-toggle samuelskovbakke/calculator-plus:panel");
-      # Janelas que o Omarchy deixa translúcidas (tag "terminal" de
-      # default/hypr/apps/terminals.lua e o Nautilus), mais o Flea e o console.
-      transparentApps = "^(Alacritty|kitty|com\\.mitchellh\\.ghostty|foot|org\\.codeberg\\.dnkl\\.foot|wezterm|org\\.wezfurlong\\.wezterm|dev\\.lbssousa\\.console|org\\.gnome\\.Nautilus|com\\.thisisgm\\.flea)$";
+      # Janelas que o Omarchy deixa translúcidas: a tag "terminal" de
+      # default/hypr/apps/terminals.lua (mais o console Quake) e o Nautilus
+      # (mais o Flea, que o substitui aqui).
+      terminalApps = "Alacritty|kitty|com\\.mitchellh\\.ghostty|foot|org\\.codeberg\\.dnkl\\.foot|wezterm|org\\.wezfurlong\\.wezterm|dev\\.lbssousa\\.console";
+      fileManagerApps = "org\\.gnome\\.Nautilus|com\\.thisisgm\\.flea";
+      transparentApps = "^(${terminalApps}|${fileManagerApps})$";
+
+      # Modos de omarchy-hyprland-window-transparency (Omarchy 4.5):
+      #  - transparent (o padrão do Omarchy): o.transparent_window com
+      #    "0.985 0.96" (ativa/inativa) nos apps acima;
+      #  - glassy: o mesmo, mais o fundo dos terminais a 0.65 (terminals.nix),
+      #    os gerenciadores de arquivos inteiros a 0.75 ("0.75 0.75", pois o
+      #    GTK desenha o fundo sólido) e o blur de default/hypr/glass.lua;
+      #  - opaque: nenhuma translucência.
+      # A transição de foco é suave ([animation.windows_opacity], ligada por
+      # padrão). O blur das janelas já vem da primeira regra de window_rule.
+      transparencyRules =
+        lib.optionals (cfg.transparency != "opaque") [
+          {
+            match.app_id = transparentApps;
+            opacity = 0.985;
+          }
+          {
+            match.app_id = transparentApps;
+            match.is_focused = false;
+            opacity = 0.96;
+          }
+        ]
+        ++ lib.optional (cfg.transparency == "glassy") {
+          match.app_id = "^(${fileManagerApps})$";
+          opacity = 0.75;
+        };
+
+      # glass.lua: size 4, passes 2, contrast 1.0, brightness 0.75,
+      # noise 0.01 (vibrancy não tem equivalente no Umbriel).
+      blur =
+        if cfg.transparency == "glassy" then
+          {
+            radius = 4;
+            passes = 2;
+            contrast = 1.0;
+            brightness = 0.75;
+            noise = 1.0e-2;
+          }
+        else
+          { radius = 3; };
       # Trio de layouts do Omarchy (tiling, scrolling, flutuante); a lista ao
       # contrário volta ao anterior.
       layouts = [
@@ -82,7 +125,7 @@
           gap = 8;
         };
 
-        appearance.blur.radius = 3;
+        appearance = { inherit blur; };
 
         # Scratchpads nomeados: o comum (Mod+S) e o console Quake (Mod+'), que
         # desce do topo com o desktop escurecido e abre um shell na primeira vez.
@@ -178,7 +221,8 @@
           # No Omarchy, Super+L alterna o layout e Super+Ctrl+L bloqueia; aqui
           # é o inverso, e Mod+Ctrl+Alt+L faz o papel do Super+Alt+L (volta).
           "Mod+Ctrl+L" = once "workspace-set-layout toggle ${lib.concatStringsSep " " layouts}";
-          "Mod+Ctrl+Alt+L" = once "workspace-set-layout toggle ${lib.concatStringsSep " " (lib.reverseList layouts)}";
+          "Mod+Ctrl+Alt+L" =
+            once "workspace-set-layout toggle ${lib.concatStringsSep " " (lib.reverseList layouts)}";
           # Na borda, o foco passa para o monitor vizinho.
           "Mod+Left" = "window-focus-or-output-left";
           "Mod+Right" = "window-focus-or-output-right";
@@ -243,21 +287,9 @@
             blur = true;
             blur_optimized = false;
           }
-          # Translucência padrão do Omarchy 4.5 (modo "transparent" de
-          # omarchy-hyprland-window-transparency: o.transparent_window com
-          # "0.985 0.96", ativa/inativa) nos terminais, no console Quake e nos
-          # gerenciadores de arquivos (o Omarchy a aplica no Nautilus; aqui
-          # também no Flea, que o substitui). A transição de foco é suave
-          # ([animation.windows_opacity], ligada por padrão).
-          {
-            match.app_id = transparentApps;
-            opacity = 0.985;
-          }
-          {
-            match.app_id = transparentApps;
-            match.is_focused = false;
-            opacity = 0.96;
-          }
+        ]
+        ++ transparencyRules
+        ++ [
           {
             match.app_id = "^dev.noctalia.Noctalia$";
             default_floating = true;
@@ -330,6 +362,15 @@
           type = lib.types.str;
           default = "ghostty --class=dev.lbssousa.console";
           description = "Comando do console Quake (Mod+'); a janela precisa do app id dev.lbssousa.console.";
+        };
+        transparency = lib.mkOption {
+          type = lib.types.enum [
+            "opaque"
+            "transparent"
+            "glassy"
+          ];
+          default = "glassy";
+          description = "Translucência das janelas, como os modos do Omarchy 4.5 (omarchy-hyprland-window-transparency).";
         };
         extraSettings = lib.mkOption {
           inherit (toml) type;
