@@ -185,11 +185,11 @@
     "noctalia-secret-prompts": {
       "flake": false,
       "locked": {
-        "lastModified": 1794142996,
-        "narHash": "sha256-jex+0xVlEOXPv1ZQES/agRABDdpyBxGoUivxypHfPmA=",
+        "lastModified": 1794280698,
+        "narHash": "sha256-vAy0SXKsy1Add8A65xFua9z989Q3+nlcRzN//wnBvzc=",
         "owner": "lbssousa",
         "repo": "noctalia-secret-prompts",
-        "rev": "a4788531d282d63c34fe7e49d3288954509c2c27",
+        "rev": "73e103764013b0f2f2ff005ec35c66aabcba8552",
         "type": "github"
       },
       "original": {
