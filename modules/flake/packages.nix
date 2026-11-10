@@ -17,7 +17,8 @@ let
       libfprint-goodix = call ../packages/_libfprint-goodix/package.nix;
       fprintd-goodix = call ../packages/_fprintd-goodix/package.nix;
       yubikey-gpg-import = call ../packages/_yubikey-gpg-import/package.nix;
-      flea = call ../packages/_flea/package.nix;
+      # Strata pelo flake do próprio projeto (input em flake.nix).
+      strata = inputs.strata.packages.${final.stdenv.hostPlatform.system}.strata;
       superwhisper = call ../packages/_superwhisper/package.nix;
       # Auxiliar do plugin próprio da Noctalia (repositório em flake.nix).
       noctalia-secret-prompts = call "${inputs.noctalia-secret-prompts}/nix/package.nix";
@@ -163,7 +164,7 @@ let
 
       # Umbriel, dois patches:
       #  - ação window-toggle-windowed-fullscreen, como o "fullscreenstate 0 2"
-      #    do Hyprland: o aplicativo recebe o estado fullscreen (o Firefox esconde
+      #    do Hyprland: o aplicativo recebe o estado fullscreen (o navegador esconde
       #    a interface, players escondem os controles), mas fica no espaço do
       #    tile, com gaps, bordas e a barra; o unfullscreen do próprio aplicativo
       #    (Esc no vídeo, F11) sai do modo. PR aberto
@@ -212,7 +213,7 @@ in
         "libfprint-goodix"
         "fprintd-goodix"
         "yubikey-gpg-import"
-        "flea"
+        "strata"
         "superwhisper"
         "noctalia-secret-prompts"
         "greetd"

@@ -36,7 +36,7 @@ in
       m.fonts
       m.cursor
       m.secret-service
-      m.firefox
+      m.google-chrome
       m.apps
       m.file-manager
       # periféricos e rede

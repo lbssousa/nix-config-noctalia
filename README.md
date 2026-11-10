@@ -66,7 +66,7 @@ lugar para ajustes locais do próprio usuário, que o Nix nunca apaga:
 | starship | `~/.config/starship.toml.local` | mescla na ativação (`my.mutableConfigs`; `config-diff starship.toml`) |
 | herdr | o próprio `~/.config/herdr/config.toml` (gravável) | `programs.herdr.mutableSettings` |
 | apps padrão (PDF, pastas, navegador) | `~/.config/mimeapps.list` / `xdg-mime default` | defaults via `XDG_CONFIG_DIRS` |
-| Firefox (web apps) | o próprio Firefox; os web apps declarados voltam a ter URL e container | `firefox-webapps` (home/desktop/firefox.nix) |
+| Chrome (web apps) | os declarados são PWAs forçadas (não removíveis); outras se instalam no próprio Chrome | `WebAppInstallForceList` (nixos/desktop/google-chrome.nix) |
 | agente SSH | `~/.config/environment.d/*.conf` posterior ou `IdentityAgent` em `~/.ssh/config.d/` | `SSH_AUTH_SOCK` do Bitwarden (`home/security/bitwarden.nix`) |
 
 Overrides **declarativos** por usuário ficam em `modules/users/<nome>.nix`
@@ -101,20 +101,17 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
   do GDM, toda conta nova nasce sem senha e expirada: ao escolher o usuário,
   o greeter pede direto a nova senha e a confirmação (`nullresetok` no PAM:
   senha vazia só entra enquanto expirada).
-- **Firefox** é o navegador padrão: extensões do Bitwarden (native
-  messaging declarativo com o app), Multi-Account Containers e os "Container" de
-  Facebook, Google, Microsoft, Twitter, Discord, Amazon e TikTok (os domínios
-  de cada empresa abrem no container dela; o GitHub fica no da Microsoft; as
-  demais extensões vêm da sincronização com a conta Mozilla) e web apps como
-  Taskbar Tabs (ligadas por preferência do sistema), cada um no container da
-  sua empresa (`webapp <id>`): WhatsApp (Facebook), Teams (Microsoft),
-  YouTube e Google Maps/Photos/Messages/Contacts (Google), Discord e X
-  (Twitter).
-- **Nautilus** é o gerenciador de arquivos padrão, e o **Flea** o do `abutre`
+- **Google Chrome** é o navegador padrão, com a extensão do Bitwarden
+  (native messaging declarativo com o app; as demais extensões vêm da
+  sincronização com a conta Google), as cores da Noctalia (política
+  `BrowserThemeColor`, do template `chromium-based` da comunidade) e web apps
+  instalados como PWAs pela política `WebAppInstallForceList` (`webapp <id>`):
+  WhatsApp, Teams, YouTube, Google Maps/Photos/Messages/Contacts, Discord e X.
+- **Nautilus** é o gerenciador de arquivos padrão, e o **Strata** o do `abutre`
   (`my.fileManager`): pastas, "Mostrar na pasta" (`org.freedesktop.FileManager1`)
-  e o diálogo de abrir/salvar (portal FileChooser), também nos apps Qt. O Flea
-  é compilado do código-fonte (`modules/packages/_flea`), com os caminhos FHS
-  trocados pelos do Nix e as jaulas do bubblewrap enxergando o `/nix/store`.
+  e o diálogo de abrir/salvar (portal FileChooser), também nos apps Qt. O
+  Strata vem do flake do próprio projeto (`github:lgse/strata`) e segue a fonte
+  e as cores da Noctalia (template `strata` da comunidade, recolorido ao vivo).
 - **Apps de usuário nativos:** OnlyOffice, Xournal++, Papers, LocalSend,
   Zoom, OBS, Kdenlive, Pinta, Inkscape e FontForge, como pacotes Nix
   (`modules/nixos/desktop/apps.nix`); o mpv decodifica vídeo por hardware.
@@ -127,8 +124,8 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 | Atalho | Ação | Atalho | Ação |
 |---|---|---|---|
 | `Super+Return` | terminal (ghostty) | `Super` (sozinho) | launcher |
-| `Super+Shift+B` | Firefox | `Super+Alt+Space` | central de controle |
-| `Super+Shift+F` | arquivos (Nautilus/Flea) | `Super+Escape` | menu de sessão |
+| `Super+Shift+B` | Chrome | `Super+Alt+Space` | central de controle |
+| `Super+Shift+F` | arquivos (Nautilus/Strata) | `Super+Escape` | menu de sessão |
 | `Super+Shift+N` | neovim | `Super+K` | cheatsheet de atalhos |
 | `Super+Alt+Return` | tmux | `Super+Ctrl+V` | histórico do clipboard |
 | `Super+Ctrl+Return` | herdr | `Super+Ctrl+E` | emojis |

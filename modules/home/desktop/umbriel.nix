@@ -23,9 +23,9 @@
       calculator = once (noctalia "panel-toggle samuelskovbakke/calculator-plus:panel");
       # Janelas que o Omarchy deixa translúcidas: a tag "terminal" de
       # default/hypr/apps/terminals.lua (mais o console Quake) e o Nautilus
-      # (mais o Flea, que o substitui aqui).
+      # (mais o Strata, que o substitui aqui).
       terminalApps = "Alacritty|kitty|com\\.mitchellh\\.ghostty|foot|org\\.codeberg\\.dnkl\\.foot|wezterm|org\\.wezfurlong\\.wezterm|dev\\.lbssousa\\.console";
-      fileManagerApps = "org\\.gnome\\.Nautilus|com\\.thisisgm\\.flea";
+      fileManagerApps = "org\\.gnome\\.Nautilus|io\\.github\\.lgse\\.Strata";
       transparentApps = "^(${terminalApps}|${fileManagerApps})$";
 
       # Modos de omarchy-hyprland-window-transparency (Omarchy 4.5):
@@ -150,9 +150,9 @@
           "Mod+Return" = once "spawn ${cfg.terminal}";
           "Mod+Alt+Return" = once "spawn ${cfg.terminal} -e tmux new-session -A -s main";
           "Mod+Ctrl+Return" = once "spawn ${cfg.terminal} -e herdr";
-          "Mod+Shift+Return" = once "spawn firefox";
-          "Mod+Shift+B" = once "spawn firefox";
-          "Mod+Shift+Alt+B" = once "spawn firefox --private-window";
+          "Mod+Shift+Return" = once "spawn google-chrome-stable";
+          "Mod+Shift+B" = once "spawn google-chrome-stable";
+          "Mod+Shift+Alt+B" = once "spawn google-chrome-stable --incognito";
           "Mod+Shift+F" = once "spawn ${config.my.fileManagerApp.command}";
           "Mod+Shift+N" = once "spawn ${cfg.terminal} -e nvim";
           "Mod+Shift+D" = once "spawn ${cfg.terminal} -e lazydocker";
@@ -161,7 +161,7 @@
           "Mod+Shift+Q" = calculator;
           "XF86Calculator" = calculator;
 
-          # Web apps: Taskbar Tabs do Firefox nos seus containers (home/desktop/firefox.nix)
+          # Web apps: PWAs do Chrome (home/desktop/webapps.nix)
           "Mod+Shift+Y" = once "spawn webapp youtube";
           "Mod+Shift+Alt+G" = once "spawn webapp whatsapp";
           "Mod+Shift+Ctrl+G" = once "spawn webapp google-messages";
@@ -303,13 +303,13 @@
             match.app_id = "^dev.noctalia.UmbrielSharePicker$";
             default_floating = true;
           }
-          # Web apps do Firefox (Taskbar Tabs, classe firefox.webapp-<id>)
+          # Web apps do Chrome (PWAs e janelas --app, classe
+          # chrome-<app>-Default; a janela do navegador é google-chrome)
           # maximizados como o "fullscreen, 1" do Hyprland: ocupam a área do
           # layout, com a barra e os gaps, e continuam no tiling. Abrem em
-          # fullscreen dentro do tile (como o Mod+Ctrl+F), sem a interface do
-          # Firefox.
+          # fullscreen dentro do tile (como o Mod+Ctrl+F).
           {
-            match.app_id = "^firefox\\.webapp-";
+            match.app_id = "^chrome-.*-Default$";
             default_maximize = true;
             default_windowed_fullscreen = true;
           }

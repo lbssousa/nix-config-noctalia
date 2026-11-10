@@ -15,12 +15,12 @@
 # bitwarden fica num wrapper sem essa variável; o Electron usa o portal de
 # arquivos por conta própria.
 #
-# Native messaging com a extensão do Firefox (nixos/desktop/firefox.nix): o
-# manifesto com.8bit.bitwarden vai para o diretório do sistema do wrapper do
-# Firefox (MOZ_SYSTEM_DIR) e aponta para o desktop_proxy do pacote, que
-# conversa com o app em execução. O app ainda grava a própria cópia em
-# ~/.mozilla/native-messaging-hosts quando essa pasta existe; as duas levam ao
-# mesmo app.
+# Native messaging com a extensão do Chrome (nixos/desktop/google-chrome.nix):
+# o manifesto com.8bit.bitwarden vai para o diretório do sistema do Chrome
+# (/etc/opt/chrome/native-messaging-hosts) e aponta para o desktop_proxy do
+# pacote, que conversa com o app em execução. O app ainda grava a própria
+# cópia em ~/.config/google-chrome/NativeMessagingHosts quando a integração
+# com o navegador é ligada nele; as duas levam ao mesmo app.
 {
   flake.modules.nixos.bitwarden =
     { pkgs, ... }:
@@ -34,33 +34,33 @@
         '';
       };
 
-      nativeMessagingHost = pkgs.writeTextFile {
-        name = "bitwarden-native-messaging-host";
-        destination = "/lib/mozilla/native-messaging-hosts/com.8bit.bitwarden.json";
-        text = builtins.toJSON {
-          name = "com.8bit.bitwarden";
-          description = "Bitwarden desktop <-> browser bridge";
-          path = "${pkgs.bitwarden-desktop}/libexec/desktop_proxy";
-          type = "stdio";
-          allowed_extensions = [ "{446900e4-71c2-419f-a6a7-df9c091e268b}" ];
-        };
-      };
     in
     {
-      environment.systemPackages = [
-        bitwarden-desktop
-        pkgs.bitwarden-cli
-      ];
+      environment = {
+        systemPackages = [
+          bitwarden-desktop
+          pkgs.bitwarden-cli
+        ];
 
-      programs.firefox.nativeMessagingHosts.packages = [ nativeMessagingHost ];
+        etc = {
+          "opt/chrome/native-messaging-hosts/com.8bit.bitwarden.json".text = builtins.toJSON {
+            name = "com.8bit.bitwarden";
+            description = "Bitwarden desktop <-> browser bridge";
+            path = "${pkgs.bitwarden-desktop}/libexec/desktop_proxy";
+            type = "stdio";
+            allowed_origins = [ "chrome-extension://nngceckbapebfimnlniiiahkandclblb/" ];
+          };
+
+          # Bitwarden's Linux biometrics expects the polkit policy in /usr/share/polkit-1/actions/
+          "polkit-1/actions/com.bitwarden.Bitwarden.policy".source =
+            "${pkgs.bitwarden-desktop}/share/polkit-1/actions/com.bitwarden.Bitwarden.policy";
+        };
+      };
 
       # Sem ssh-agent do sistema: o agente SSH é o do próprio Bitwarden
       # (home/security/bitwarden.nix).
       programs.ssh.startAgent = false;
 
-      # Bitwarden's Linux biometrics expects the polkit policy in /usr/share/polkit-1/actions/
-      environment.etc."polkit-1/actions/com.bitwarden.Bitwarden.policy".source =
-        "${pkgs.bitwarden-desktop}/share/polkit-1/actions/com.bitwarden.Bitwarden.policy";
       system.activationScripts.bitwardenPolkitUsr = {
         text = ''
           mkdir -p /usr/share/polkit-1/actions

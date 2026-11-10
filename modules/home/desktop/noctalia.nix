@@ -282,7 +282,7 @@
             launcher_position = lib.mkDefault "end";
             show_dots = lib.mkDefault true;
             pinned = lib.mkDefault [
-              "firefox"
+              "google-chrome"
               "com.mitchellh.ghostty"
               config.my.fileManagerApp.appId
               "onlyoffice-desktopeditors"

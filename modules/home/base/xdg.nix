@@ -25,9 +25,9 @@
           appId = "org.gnome.Nautilus";
           command = "nautilus --new-window";
         };
-        flea = {
-          appId = "com.thisisgm.flea";
-          command = "flea --gui";
+        strata = {
+          appId = "io.github.lgse.Strata";
+          command = "strata";
         };
       };
       defaults = {

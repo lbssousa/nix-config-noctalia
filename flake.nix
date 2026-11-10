@@ -52,6 +52,19 @@
       flake = false;
     };
 
+    # Strata, gerenciador de arquivos do abutre, pelo flake do próprio projeto.
+    strata = {
+      url = "github:lgse/strata";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    # Templates de tema da comunidade Noctalia (Strata e Chrome), fixados no
+    # flake.lock e usados como templates de usuário (sem rede em tempo de
+    # execução).
+    noctalia-templates-community = {
+      url = "github:noctalia-dev/community-templates";
+      flake = false;
+    };
+
     # Segredos (sops/age) e dados não-sensíveis (outputs do flake).
     nix-secrets = {
       url = "git+ssh://git@github.com/lbssousa/nix-secrets?shallow=1";
