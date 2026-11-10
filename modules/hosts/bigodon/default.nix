@@ -12,6 +12,9 @@ in
     (
       { lib, ... }:
       {
+        # Clone de trabalho do administrador (/etc/nixos aponta para ele).
+        my.flakeDir = "/home/abutre/Projetos/lbssousa/nix-config-noctalia";
+
         imports = [
           (import ../_disko-btrfs.nix {
             inherit lib;

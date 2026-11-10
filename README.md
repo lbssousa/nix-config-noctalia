@@ -161,9 +161,9 @@ O CI (`.github/workflows/validate.yml`) precisa do secret
 `NIX_SECRETS_SSH_KEY` (deploy key somente leitura do `nix-secrets`).
 `just hooks` ativa o pre-commit (nixfmt, statix, deadnix).
 
-O sistema é reconstruído a partir de `/etc/nixos`, um espelho git do root que só
-recebe fast-forward (`just sync`); as alterações são feitas num clone de
-trabalho e chegam lá pelo remoto. Os comandos e aliases (`nrs`, `nru`, …) estão
+O sistema é reconstruído direto do clone de trabalho (`my.flakeDir`, para o qual
+`/etc/nixos` aponta), inclusive com alterações não commitadas, que marcam a
+geração como `-dirty`; commit e push vêm depois. Os comandos e aliases (`nrs`, `nru`, …) estão
 em [INSTALLATION.md › Manutenção](INSTALLATION.md#manutenção).
 
 ## Créditos

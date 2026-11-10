@@ -88,9 +88,10 @@ Depois da confirmação, o script:
    `modules/users/_template.nix.in`) — o nome completo vem do `nix-secrets`;
 5. cria as chaves do Secure Boot em `/persist/etc/secureboot` (sbctl);
 6. copia a chave age do host para `/persist/etc/sops/age/keys.txt`;
-7. faz commit dos arquivos gerados (host e usuários), clona a configuração em
-   `/persist/etc/nixos` (espelho git do root, com `origin` em HTTPS) e roda
-   `nixos-install`;
+7. faz commit dos arquivos gerados (host e usuários), clona a configuração no
+   `my.flakeDir` do host (padrão `/persist/etc/nixos`; em `barbudus` e
+   `bigodon`, `~abutre/Projetos/lbssousa/nix-config-noctalia`), com dono
+   administrador, e roda `nixos-install`;
 8. deixa todos os usuários sem senha e expirados, aplica a senha do root
    escolhida no formulário, grava `/persist/etc/shadow` e registra a
    YubiKey para `pam_u2f` (`~/.config/Yubico/u2f_keys` de cada usuário do
@@ -154,53 +155,45 @@ fprintd-verify
 
 ## Manutenção
 
-O sistema é sempre reconstruído a partir de `/etc/nixos` (→ `/persist/etc/nixos`),
-um **espelho git** do root que só avança por fast-forward a partir do remoto
-(HTTPS, sem credenciais). As alterações são feitas num **clone de trabalho**
-(por exemplo `~/Projetos/lbssousa/nix-config-noctalia`), que publica por push:
+O sistema é reconstruído direto do **clone de trabalho**, um clone git comum
+de um administrador, indicado por `my.flakeDir` no host (por exemplo
+`~/Projetos/lbssousa/nix-config-noctalia`). `/etc/nixos` é só um symlink para
+ele, recriado a cada boot (`modules/nixos/core/nix.nix`). Não há espelho nem
+sincronização: o que está no clone, commitado ou não, é o que o `switch` aplica.
 
 ```text
-clone de trabalho ──commit/push──▶ GitHub ──just sync──▶ /etc/nixos ──just switch──▶ sistema
+editar ──just switch──▶ sistema      (depois, quando quiser: commit/push)
 ```
 
-No clone de trabalho:
+Cada geração registra a revisão do flake (`nixos-version
+--configuration-revision`); um switch com alterações não commitadas fica
+marcado com o sufixo `-dirty`. Como o flake é um repositório git, arquivos
+novos precisam de `git add` (não de commit) para entrar na build; o `just`
+avisa quando há arquivos `.nix` não rastreados.
+
+No clone (ou em qualquer diretório, pelos aliases abaixo):
 
 ```bash
-just build / test  # testa a configuração do clone (test não cria geração de boot)
-just diff          # pacotes que mudariam com a configuração do clone
-just update        # atualiza o flake.lock e faz commit/push (salvo auto_commit=false)
-just upgrade       # update + sync + switch
-just publish-mirror  # publica commits feitos no espelho (o da instalação, por exemplo)
-just validate      # nixfmt + statix + deadnix + flake check
+just switch / boot / test  # aplica a configuração do clone
+just build / diff          # constrói / mostra os pacotes que mudariam
+just update                # atualiza o flake.lock e faz commit/push (salvo auto_commit=false)
+just upgrade               # update + switch
+just validate              # nixfmt + statix + deadnix + flake check
 ```
 
-Em qualquer diretório (aliases do fish/bash, sempre com o justfile do espelho):
+Aliases do fish/bash (sempre com o justfile de `/etc/nixos`):
 
 ```bash
-nsync              # just sync: fast-forward do espelho (recusa se estiver sujo ou com commits próprios)
-nrs / nrb / nrt    # just switch / boot / test a partir do espelho
-nrB / nrd          # just build / diff a partir do espelho
-nru                # just upgrade no espelho: sync + switch
+nrs / nrb / nrt    # just switch / boot / test
+nrB / nrd          # just build / diff
+nru                # just upgrade: update + switch
 nrr                # volta para a geração anterior
 ngl / ngc          # lista as gerações / coleta de lixo
 ```
 
-`just switch` e `just boot` usam o espelho mesmo quando chamados no clone de
-trabalho, e avisam se o clone tem alterações que ainda não chegaram lá. O
-`just update` recusa rodar no espelho.
-
-Logo após a instalação, o espelho tem um commit local com os arquivos do host e
-dos usuários, e o `just sync` recusa até que ele chegue ao remoto. Para isso,
-clone o repositório (por SSH) e rode `just publish-mirror` nele: o commit é
-trazido do espelho com o mesmo hash, os commits locais do clone são reaplicados
-sobre ele, e tudo é enviado por push.
-
-Depois de um push forçado no clone de trabalho (um `commit --amend` para
-assinar, um rebase), os commits que o espelho já tinha recebido somem do
-remoto. O `just sync` reconhece esses commits, porque o ramo remoto já passou
-por eles ou porque o remoto tem a mesma alteração, e os descarta, levando o
-espelho ao remoto. Só os commits feitos no próprio espelho continuam exigindo o
-`just publish-mirror`, que, nesse caso, os reaplica no clone em vez de manter o hash.
+Logo após a instalação, o clone tem um commit local com os arquivos do host e
+dos usuários; envie-o com `git -C /etc/nixos push` (o `origin` é o mesmo do
+clone usado na instalação).
 
 O `just switch` roda o `nixos-rebuild --elevate run0`: o flake (incluindo o input
 `git+ssh` do `nix-secrets`) é avaliado pelo próprio usuário, que alcança o

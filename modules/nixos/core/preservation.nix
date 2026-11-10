@@ -36,13 +36,6 @@ in
       preserveAt."/persist" = {
         directories = [
           # Symlinks: lidos por stat() comum.
-          # No initrd: o stage 2 cria /etc/nixos como diretório vazio se ele
-          # ainda não for um symlink, e o "L" do tmpfiles não o substitui.
-          {
-            directory = "/etc/nixos";
-            how = "symlink";
-            inInitrd = true;
-          }
           {
             directory = "/etc/NetworkManager/system-connections";
             how = "symlink";
@@ -91,9 +84,6 @@ in
     };
 
     systemd.tmpfiles.rules = [
-      # Espelho git do config, do root e só com fast-forward (`just sync`); os
-      # usuários apenas o leem e avaliam.
-      "d /persist/etc/nixos 0755 root root - -"
       # libdbus (não dbus-broker) lê este caminho, efêmero com / em tmpfs.
       "d  /var/lib/dbus 0755 root root - -"
       "L+ /var/lib/dbus/machine-id - - - - /etc/machine-id"

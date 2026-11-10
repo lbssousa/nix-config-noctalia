@@ -1,9 +1,9 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
+# The working clone is the single source of the system (/etc/nixos links to
+# it, see my.flakeDir): every rebuild uses it as is, uncommitted changes
+# included, and the generation records the revision (with a -dirty suffix).
 flake_root := env_var_or_default("FLAKE_DIR", justfile_directory())
-# The system's git mirror (root-owned, fast-forward only). switch/boot always
-# build from it; a working clone only tests (build/test/diff/vm/check).
-mirror := env_var_or_default("NIXOS_MIRROR", "/etc/nixos")
 justfile_file := justfile_directory() + "/justfile"
 
 # When "true", flake.lock is committed and pushed automatically after
@@ -29,24 +29,15 @@ _rebuild action host='' *args:
   elevate_flag=()
   case "{{action}}" in switch|boot|test) elevate_flag=(--elevate run0) ;; esac
   flake="{{flake_root}}"
-  case "{{action}}" in
-    switch|boot)
-      flake="{{mirror}}"
-      if [[ ! -f "{{mirror}}/flake.nix" || ! -d "{{mirror}}/.git" ]]; then
-        echo "error: {{mirror}} is not a git mirror of this configuration yet. Create it with:" >&2
-        echo "  run0 git clone https://github.com/lbssousa/nix-config-noctalia.git /persist/etc/nixos" >&2
-        echo "or, to bootstrap without it, rebuild once from this directory:" >&2
-        echo "  nixos-rebuild {{action}} --elevate run0 --flake \"{{flake_root}}#${host}\"" >&2
-        exit 1
-      fi
-      if [[ "$(realpath "{{flake_root}}")" != "$(realpath "{{mirror}}")" ]] \
-        && { [[ "$(git -C "{{flake_root}}" rev-parse HEAD)" != "$(git -C "{{mirror}}" rev-parse HEAD)" ]] \
-          || [[ -n "$(git -C "{{flake_root}}" status --porcelain)" ]]; }; then
-        echo "warning: building from {{mirror}}; changes in {{flake_root}} that were not" >&2
-        echo "         pushed and synced (just sync) are not part of this generation" >&2
-      fi
-      ;;
-  esac
+  # A git flake only sees tracked files: new ones need a `git add` (no commit).
+  untracked="$(git -C "$flake" ls-files --others --exclude-standard -- '*.nix' 2>/dev/null || true)"
+  if [[ -n "$untracked" ]]; then
+    echo "warning: untracked files are not part of this build (git add them):" >&2
+    sed 's/^/  /' <<< "$untracked" >&2
+  fi
+  if [[ -n "$(git -C "$flake" status --porcelain --untracked-files=no 2>/dev/null)" ]]; then
+    echo "note: building with uncommitted changes (the generation is marked -dirty)" >&2
+  fi
   old_system="$(readlink -f /run/current-system)"
   nixos-rebuild "{{action}}" "${elevate_flag[@]}" --flake "${flake}#${host}" {{args}}
   if [[ "{{action}}" == "switch" ]]; then
@@ -69,7 +60,7 @@ show:
 systems:
   cd "{{flake_root}}" && nix eval --json .#nixosConfigurations --apply builtins.attrNames | jq -r '.[]'
 
-# Applies NixOS + Home Manager (HM is a NixOS module), always from the mirror.
+# Applies NixOS + Home Manager (HM is a NixOS module) from the working clone.
 switch host='' *args:
   just --justfile "{{justfile_file}}" _rebuild switch "{{host}}" {{args}}
 
@@ -91,24 +82,15 @@ diff host='':
   next="$(nix build "{{flake_root}}#nixosConfigurations.${host}.config.system.build.toplevel" --no-link --print-out-paths)"
   nvd diff /run/current-system "$next"
 
-# Update + push the lock (working clone only), then sync + switch.
+# Updates (and, with auto_commit, commits and pushes) the lock, then switches.
 upgrade host='' *args:
-  #!/usr/bin/env bash
-  set -euo pipefail
-  if [[ "$(realpath "{{flake_root}}")" != "$(realpath "{{mirror}}")" ]]; then
-    just --justfile "{{justfile_file}}" auto_commit="{{auto_commit}}" update
-  fi
-  just --justfile "{{justfile_file}}" sync
+  just --justfile "{{justfile_file}}" auto_commit="{{auto_commit}}" update
   just --justfile "{{justfile_file}}" switch "{{host}}" {{args}}
 
 [group("maintenance")]
 update *inputs:
   #!/usr/bin/env bash
   set -euo pipefail
-  if [[ "$(realpath "{{flake_root}}")" == "$(realpath "{{mirror}}")" ]]; then
-    echo "error: {{mirror}} is a mirror; update the lock in the working clone and push it" >&2
-    exit 1
-  fi
   cd "{{flake_root}}"
   old_lock=$(mktemp)
   trap 'rm -f "$old_lock"' EXIT
@@ -143,109 +125,6 @@ update *inputs:
     git commit -m "flake: update flake.lock"
     git push
   fi
-
-# Commits are made in the working clone and reach the mirror through its
-# remote (HTTPS, no credentials).
-# Fast-forwards the mirror to its remote.
-[group("maintenance")]
-sync:
-  #!/usr/bin/env bash
-  set -euo pipefail
-  m="{{mirror}}"
-  # The mirror belongs to root; git only runs elevated when it has to write.
-  as_owner=()
-  [[ -O "$m" ]] || as_owner=(run0)
-  if [[ -n "$(git -C "$m" status --porcelain)" ]]; then
-    echo "error: $m has local changes; it must stay a pure mirror" >&2
-    git -C "$m" status --short >&2
-    exit 1
-  fi
-  "${as_owner[@]}" git -C "$m" fetch --quiet origin
-  mirror_commits() { "{{just_executable()}}" --justfile "{{justfile_file}}" mirror="$m" _mirror-commits "$1"; }
-  mapfile -t own < <(mirror_commits local)
-  if (( ${#own[@]} )); then
-    echo "error: $m has commits that are not on its remote:" >&2
-    git -C "$m" log --oneline --no-walk=unsorted "${own[@]}" >&2
-    echo "Run 'just publish-mirror' in the working clone to push them." >&2
-    exit 1
-  fi
-  mapfile -t obsolete < <(mirror_commits obsolete)
-  if (( ${#obsolete[@]} )); then
-    # A forced push replaced them; the remote has the history to keep.
-    echo "The remote history was rewritten; dropping from $m:"
-    git -C "$m" log --oneline --no-walk=unsorted "${obsolete[@]}"
-    "${as_owner[@]}" git -C "$m" reset --hard --quiet '@{upstream}'
-  else
-    "${as_owner[@]}" git -C "$m" merge --ff-only --quiet '@{upstream}'
-  fi
-  git -C "$m" log --oneline -1
-
-# The mirror's commits that are not on its remote (as last fetched), oldest
-# first, of one kind:
-#   local    - made in the mirror (install.sh's), pushed by `just publish-mirror`;
-#   obsolete - published and then replaced by a forced push (an amend or a
-#              rebase in the working clone), dropped by `just sync`.
-# A commit is obsolete when the remote-tracking branch once reached it (its
-# reflog) or when the remote has the same change (git cherry): an amend that
-# only signs the commit, or a local commit that publish-mirror replayed onto a
-# rewritten history.
-[private]
-_mirror-commits kind:
-  #!/usr/bin/env bash
-  set -euo pipefail
-  m="{{mirror}}"
-  upstream="$(git -C "$m" rev-parse --symbolic-full-name '@{upstream}')"
-  mapfile -t seen < <(git -C "$m" reflog show --format=%H "$upstream" -- 2>/dev/null || true)
-  declare -A unseen=() changed=()
-  while read -r c; do unseen[$c]=1; done \
-    < <(git -C "$m" rev-list HEAD --not "$upstream" "${seen[@]}")
-  while read -r mark c; do [[ "$mark" == "+" ]] && changed[$c]=1; done \
-    < <(git -C "$m" cherry "$upstream" HEAD)
-  while read -r c; do
-    if [[ -n "${unseen[$c]:-}" && -n "${changed[$c]:-}" ]]; then kind=local; else kind=obsolete; fi
-    [[ "$kind" == "{{kind}}" ]] && echo "$c"
-  done < <(git -C "$m" rev-list --reverse HEAD --not "$upstream")
-  true
-
-# The mirror's own commits (the one install.sh makes for the generated user
-# and host files) keep their hashes, so the next `just sync` fast-forwards;
-# on a history the remote rewrote they are replayed here instead, and the
-# next `just sync` drops the originals.
-# Pushes the mirror's local commits from the working clone.
-[group("maintenance")]
-publish-mirror:
-  #!/usr/bin/env bash
-  set -euo pipefail
-  m="{{mirror}}"
-  if [[ "$(realpath "{{flake_root}}")" == "$(realpath "$m")" ]]; then
-    echo "error: run this in the working clone, not in $m" >&2
-    exit 1
-  fi
-  cd "{{flake_root}}"
-  # The mirror's view of the remote decides which of its commits are its own.
-  as_owner=()
-  [[ -O "$m" ]] || as_owner=(run0)
-  "${as_owner[@]}" git -C "$m" fetch --quiet origin
-  mirror_commits() { "{{just_executable()}}" --justfile "{{justfile_file}}" mirror="$m" _mirror-commits "$1"; }
-  mapfile -t own < <(mirror_commits local)
-  if (( ${#own[@]} == 0 )); then
-    echo "Nothing to publish: the mirror has no commits of its own."
-    if [[ -n "$(mirror_commits obsolete)" ]]; then
-      echo "Its commits replaced by a forced push are dropped by 'just sync'."
-    fi
-    exit 0
-  fi
-  git fetch --quiet "$m" HEAD
-  git log --oneline --no-walk=unsorted "${own[@]}"
-  if [[ -n "$(mirror_commits obsolete)" ]]; then
-    git cherry-pick "${own[@]}"
-  # Local commits are replayed on top of the mirror's, never the other way.
-  elif git merge-base --is-ancestor HEAD FETCH_HEAD; then
-    git merge --ff-only --quiet FETCH_HEAD
-  else
-    git rebase FETCH_HEAD
-  fi
-  git push
 
 [group("maintenance")]
 gc period='30d':

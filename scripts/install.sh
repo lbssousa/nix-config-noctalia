@@ -13,8 +13,8 @@
 #   5.  Adds the new files to the git index (git add)
 #   6a. Creates the sbctl Secure Boot keys (all hosts use Secure Boot)
 #   6b. Copies the sops-nix system age key to /persist
-#   7.  Commits the generated files, clones the configuration to the
-#       root-owned git mirror /persist/etc/nixos and installs NixOS
+#   7.  Commits the generated files, clones the configuration to the host's
+#       my.flakeDir (owned by an administrator) and installs NixOS
 #   7b. (--age-keys-from-vault) Copies each user's personal age key
 #   8.  Expires every user's empty initial password (set on first login)
 #   8b. Registers the YubiKey for U2F authentication (pamu2fcfg)
@@ -385,8 +385,8 @@ This script automates the steps described in INSTALLATION.md:
   5.  Adds the new files to the git index (git add)
   6a. Creates the sbctl Secure Boot keys (all hosts use Secure Boot)
   6b. Copies the sops-nix system age key to /persist
-  7.  Commits the generated files, clones the configuration to the
-      root-owned git mirror /persist/etc/nixos and installs NixOS
+  7.  Commits the generated files, clones the configuration to the host's
+      my.flakeDir (owned by an administrator) and installs NixOS
   7b. (--age-keys-from-vault) Copies each user's personal age key
   8.  Expires every user's empty initial password and optionally sets root's
   8b. Registers the YubiKey for U2F authentication (pamu2fcfg)
@@ -1054,15 +1054,15 @@ fi
 echo
 info "==> Step 7: Install NixOS"
 
-# The configuration lives at /persist/etc/nixos: "/" is a tmpfs, and on the
-# first boot preservation turns /etc/nixos into a symlink to it. The
-# /mnt/etc/nixos symlink below only serves nixos-install.
+# The configuration lives in a git clone owned by an administrator, at the
+# host's my.flakeDir (default /persist/etc/nixos; a path in a user's home
+# also works, since /home is persistent). "/" is a tmpfs: on every boot
+# tmpfiles links /etc/nixos to the clone. Rebuilds use the clone as is, so
+# it is the only copy of the configuration on the system.
 #
-# It is a git mirror owned by root that only fast-forwards (`just sync`). The
-# host and user files staged above are committed here first, so the mirror
-# gets them as a regular commit; `just publish-mirror`, run later in the
-# working clone, pushes that commit with the same hash. Unstaged changes are
-# not part of the clone (nor of the installed system).
+# The host and user files staged above are committed first, so the clone
+# gets them as a regular commit, pushed later from the installed system.
+# Unstaged changes are not part of the clone (nor of the installed system).
 _install_commit=false
 if ! git -C "$CONFIG_DIR" diff --cached --quiet; then
   _install_commit=true
@@ -1077,25 +1077,36 @@ if [[ -n "$(git -C "$CONFIG_DIR" status --porcelain --untracked-files=no)" ]]; t
   git -C "$CONFIG_DIR" status --short --untracked-files=no
 fi
 
-# The mirror fetches over HTTPS: no credentials, and root never needs a key.
-_origin_url="$(git -C "$CONFIG_DIR" remote get-url origin 2>/dev/null || true)"
-case "$_origin_url" in
-  git@github.com:*) _origin_url="https://github.com/${_origin_url#git@github.com:}" ;;
-  ssh://git@github.com/*) _origin_url="https://github.com/${_origin_url#ssh://git@github.com/}" ;;
-esac
+FLAKE_DIR="$(nix eval --raw "$CONFIG_DIR#nixosConfigurations.$FLAKE_SYSTEM_ATTR.config.my.flakeDir")"
+[[ "$FLAKE_DIR" == /* ]] || die "my.flakeDir must be an absolute path (got '$FLAKE_DIR')."
 
-rm -rf /mnt/persist/etc/nixos
-mkdir -p /mnt/persist/etc /mnt/etc
-git clone --quiet --no-hardlinks "$CONFIG_DIR" /mnt/persist/etc/nixos
-if [[ -n "$_origin_url" ]]; then
-  git -C /mnt/persist/etc/nixos remote set-url origin "$_origin_url"
+# Owner: the user whose home holds the clone; elsewhere, the first
+# administrator (sudo = true) by uid.
+if [[ "$FLAKE_DIR" =~ ^/home/([^/]+)/ ]]; then
+  FLAKE_OWNER="${BASH_REMATCH[1]}"
 else
-  warn "$CONFIG_DIR has no origin remote; set one in /persist/etc/nixos before 'just sync'."
+  FLAKE_OWNER="$(grep -l 'sudo = true' "$USERS_DIR"/*.nix 2>/dev/null \
+    | while read -r _f; do
+        printf '%s %s\n' "$(grep -oP 'uid\s*=\s*\K[0-9]+' "$_f" | head -1)" "$(basename "$_f" .nix)"
+      done | sort -n | head -1 | cut -d' ' -f2)"
 fi
-chown -R root:root /mnt/persist/etc/nixos
-chmod 0755 /mnt/persist/etc/nixos
-[[ -L /mnt/etc/nixos ]] || { rm -rf /mnt/etc/nixos; ln -s ../persist/etc/nixos /mnt/etc/nixos; }
-success "Configuration cloned to /mnt/persist/etc/nixos (linked at /mnt/etc/nixos, origin: ${_origin_url:-none})."
+[[ -n "$FLAKE_OWNER" ]] || die "No administrator to own $FLAKE_DIR (no user with sudo = true)."
+
+rm -rf "/mnt$FLAKE_DIR"
+mkdir -p "$(dirname "/mnt$FLAKE_DIR")"
+git clone --quiet --no-hardlinks "$CONFIG_DIR" "/mnt$FLAKE_DIR"
+_origin_url="$(git -C "$CONFIG_DIR" remote get-url origin 2>/dev/null || true)"
+if [[ -n "$_origin_url" ]]; then
+  git -C "/mnt$FLAKE_DIR" remote set-url origin "$_origin_url"
+else
+  warn "$CONFIG_DIR has no origin remote; set one in $FLAKE_DIR to push from it."
+fi
+# Only for this live session (scripts/inspect-installation.sh); the
+# installed system recreates /etc/nixos on every boot.
+mkdir -p /mnt/etc
+[[ -L /mnt/etc/nixos ]] && rm -f /mnt/etc/nixos
+[[ -e /mnt/etc/nixos ]] || ln -s "..${FLAKE_DIR}" /mnt/etc/nixos
+success "Configuration cloned to /mnt$FLAKE_DIR (origin: ${_origin_url:-none}); owner set after nixos-install: $FLAKE_OWNER."
 
 info "Running nixos-install..."
 # Passes the binary caches explicitly so nixos-install uses them even if
@@ -1107,12 +1118,29 @@ info "Running nixos-install..."
 # would never reach /persist/etc/shadow (the copy happens in step 8,
 # after nixos-install).
 nixos-install \
-  --flake "/mnt/etc/nixos#$FLAKE_SYSTEM_ATTR" \
+  --flake "/mnt$FLAKE_DIR#$FLAKE_SYSTEM_ATTR" \
   --no-root-password \
   --option accept-flake-config true \
   --option extra-substituters "$NIX_COMMUNITY_SUBSTITUTER" \
   --option extra-trusted-public-keys "$NIX_COMMUNITY_KEY"
 success "NixOS installed successfully!"
+
+# The owner's uid/gid only exist now, in the passwd written by nixos-install.
+_pw="$(grep "^${FLAKE_OWNER}:" /mnt/etc/passwd 2>/dev/null || true)"
+if [[ -z "$_pw" ]]; then
+  warn "'$FLAKE_OWNER' isn't in /mnt/etc/passwd; $FLAKE_DIR stays owned by root."
+else
+  IFS=: read -r _ _ _uid _gid _ _home _ <<<"$_pw"
+  chown -R "$_uid:$_gid" "/mnt$FLAKE_DIR"
+  # Directories created above inside the owner's home (e.g. ~/Projetos).
+  _d="$(dirname "/mnt$FLAKE_DIR")"
+  while [[ "$_d" == "/mnt$_home"/* || "$_d" == "/mnt$_home" ]]; do
+    chown "$_uid:$_gid" "$_d"
+    [[ "$_d" == "/mnt$_home" ]] && { chmod 700 "$_d"; break; }
+    _d="$(dirname "$_d")"
+  done
+  success "$FLAKE_DIR owned by $FLAKE_OWNER."
+fi
 
 # -----------------------------------------------------------------------
 # 7c. Copy Wi-Fi connections from the live CD to the installed system
@@ -1385,9 +1413,8 @@ echo -e "    ${CYAN}sudo reboot${RESET}"
 echo
 echo -e "  After the first boot:"
 if [[ "$_install_commit" == "true" ]]; then
-  echo -e "    • Publish the install commit (host/user files) from a working clone of the"
-  echo -e "      repository, so that ${CYAN}just sync${RESET} can fast-forward the mirror again:"
-  echo -e "        ${CYAN}just publish-mirror${RESET}"
+  echo -e "    • Push the install commit (host/user files) from the configuration"
+  echo -e "      (as $FLAKE_OWNER): ${CYAN}git -C /etc/nixos push${RESET}"
 fi
 echo -e "    • Enroll the Secure Boot keys (firmware in Setup Mode): ${CYAN}sudo scripts/setup-secureboot.sh${RESET}"
 echo -e "      (see ${BOLD}INSTALLATION.md${RESET} → 'Secure Boot')"

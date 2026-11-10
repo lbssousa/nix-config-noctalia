@@ -70,6 +70,10 @@ in
         {
           networking.hostName = name;
           nixpkgs.hostPlatform = host.system;
+          # Revisão do flake em cada geração (`nixos-version
+          # --configuration-revision`); "-dirty" marca um switch feito com
+          # alterações ainda não commitadas no clone.
+          system.configurationRevision = self.rev or self.dirtyRev or null;
         }
       ]
       ++ host.modules;

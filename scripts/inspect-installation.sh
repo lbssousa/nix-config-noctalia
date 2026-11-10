@@ -393,30 +393,34 @@ if [[ -d "$ROOT/etc/nixos" ]]; then
   # Check the git index
   if [[ -d "$ROOT/etc/nixos/.git" ]]; then
     ok "git repository found at /etc/nixos"
-    # /etc/nixos is a root-owned mirror that only fast-forwards (just sync).
+    # /etc/nixos links to the host's my.flakeDir: a clone owned by an
+    # administrator, rebuilt from as is.
+    if [[ -L "$ROOT/etc/nixos" ]]; then
+      info "/etc/nixos -> $(readlink "$ROOT/etc/nixos")"
+    fi
     _owner="$(stat -L -c %U "$ROOT/etc/nixos" 2>/dev/null || true)"
-    if [[ "$_owner" == "root" ]]; then
-      ok "mirror owned by root"
+    if [[ -n "$_owner" && "$_owner" != "root" ]]; then
+      ok "clone owned by '$_owner'"
     else
-      warn "mirror owned by '${_owner:-?}' (expected root)"
+      warn "clone owned by '${_owner:-?}' (expected an administrator; root only before nixos-install finishes)"
     fi
     _origin="$(git -C "$ROOT/etc/nixos" remote get-url origin 2>/dev/null || true)"
-    case "$_origin" in
-      https://*) ok "origin over HTTPS: $_origin" ;;
-      "") fail "no origin remote (just sync can't update the mirror)"; ((_issues++)) || true ;;
-      *) warn "origin is not HTTPS ($_origin): root can't fetch without credentials" ;;
-    esac
+    if [[ -n "$_origin" ]]; then
+      ok "origin: $_origin"
+    else
+      warn "no origin remote (commits can't be pushed)"
+    fi
     _dirty="$(git -C "$ROOT/etc/nixos" status --porcelain --untracked-files=no 2>/dev/null || true)"
     if [[ -z "$_dirty" ]]; then
-      ok "mirror has no local changes"
+      ok "no uncommitted changes"
     else
-      warn "mirror has local changes (just sync will refuse to run):"
+      info "uncommitted changes (part of the next rebuild):"
       sed 's/^/    /' <<<"$_dirty"
     fi
     # Compares with the last fetched state of the remote (no network access).
     _ahead="$(git -C "$ROOT/etc/nixos" log --oneline '@{upstream}..HEAD' 2>/dev/null || true)"
     if [[ -n "$_ahead" ]]; then
-      warn "mirror has commits not on its remote: 'just publish-mirror' (in a working clone) pushes its own; 'just sync' drops those replaced by a forced push:"
+      info "commits not pushed yet (git push from the clone):"
       sed 's/^/    /' <<<"$_ahead"
     fi
     # List staged files (in the index)

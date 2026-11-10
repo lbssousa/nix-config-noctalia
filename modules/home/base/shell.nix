@@ -7,8 +7,8 @@
   flake.modules.homeManager.shell =
     { lib, pkgs, ... }:
     let
-      # Sempre o justfile do espelho: dentro de um projeto com justfile próprio
-      # (o clone de trabalho, por exemplo) o wrapper do just usaria o local.
+      # Sempre o justfile do sistema (/etc/nixos → my.flakeDir): dentro de
+      # outro projeto com justfile próprio o wrapper do just usaria o local.
       sysJust = "just --justfile /etc/nixos/justfile";
       aliases = {
         ls = "eza";
@@ -24,10 +24,10 @@
         lg = "lazygit";
         dk = "podman";
         dkc = "podman-compose";
-        # O sistema é reconstruído a partir do espelho /etc/nixos (`nsync` o
-        # atualiza); o flake é avaliado pelo próprio usuário (que alcança o
-        # nix-secrets pelo agente SSH do Bitwarden) e só a ativação usa run0.
-        nsync = "${sysJust} sync";
+        # O sistema é reconstruído a partir do clone de trabalho (/etc/nixos),
+        # inclusive com alterações não commitadas; o flake é avaliado pelo
+        # próprio usuário (que alcança o nix-secrets pelo agente SSH do
+        # Bitwarden) e só a ativação usa run0.
         nrs = "${sysJust} switch";
         nrb = "${sysJust} boot";
         nrt = "${sysJust} test";
