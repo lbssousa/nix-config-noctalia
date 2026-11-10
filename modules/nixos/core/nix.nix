@@ -74,6 +74,28 @@
         };
 
         networking.networkmanager.enable = true;
+        # DNS pelo systemd-resolved (com o NetworkManager entregando o DNS de
+        # cada rede): cache local e reenvio em ~1 s, em vez do timeout de 5 s
+        # do glibc por consulta perdida (o DNS do roteador de casa perdia
+        # 10-20% delas). Os servidores globais abaixo são consultados junto
+        # com os da rede, e vence a primeira resposta positiva: nomes internos
+        # de redes corporativas continuam vindo do DNS delas.
+        networking.networkmanager.dns = "systemd-resolved";
+        services.resolved = {
+          enable = true;
+          settings.Resolve = {
+            DNS = [
+              "1.1.1.1#cloudflare-dns.com"
+              "9.9.9.9#dns.quad9.net"
+              "2606:4700:4700::1111#cloudflare-dns.com"
+              "2620:fe::fe#dns.quad9.net"
+            ];
+            FallbackDNS = [
+              "1.0.0.1#cloudflare-dns.com"
+              "149.112.112.112#dns.quad9.net"
+            ];
+          };
+        };
 
         # "/" é tmpfs: o atalho é recriado a cada boot (o "+" troca o diretório
         # vazio que o stage 2 cria em /etc/nixos). Fica pendente até o clone

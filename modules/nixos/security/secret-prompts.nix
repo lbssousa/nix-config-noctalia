@@ -15,11 +15,15 @@
       };
 
       # SSH_ASKPASS: ssh, ssh-add e git (sem GIT_ASKPASS, o git usa o
-      # SSH_ASKPASS) fora de um terminal. Sem SSH_ASKPASS_REQUIRE: com um TTY,
-      # o ssh continua perguntando nele.
+      # SSH_ASKPASS). Com SSH_ASKPASS_REQUIRE=prefer, também num terminal,
+      # sempre que houver sessão gráfica (DISPLAY/WAYLAND_DISPLAY); sem ela
+      # (console, ssh remoto), o ssh pergunta no TTY. O aviso "Confirm user
+      # presence" das chaves FIDO é a exceção: o OpenSSH o escreve no terminal
+      # quando o stderr é um TTY (notify_start), qualquer que seja esta variável.
       programs.ssh = {
         enableAskPassword = true;
         askPassword = lib.getExe pkgs.noctalia-askpass;
       };
+      environment.sessionVariables.SSH_ASKPASS_REQUIRE = "prefer";
     };
 }
