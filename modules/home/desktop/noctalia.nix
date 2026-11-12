@@ -1,4 +1,4 @@
-# Noctalia: shell no estilo Omarchy (tema Nord, barra no topo, dock
+# Noctalia: shell no estilo Omarchy (paleta Osaka jade, barra no topo, dock
 # habilitado por padrão) com um conjunto de plugins pré-instalados.
 #
 # Camadas de configuração (todas mescladas pela própria Noctalia):
@@ -135,7 +135,11 @@
           };
 
           theme = {
-            source = lib.mkDefault "builtin";
+            # Paleta da comunidade (baixada e guardada em cache pela própria
+            # Noctalia em ~/.local/state/noctalia/community-palettes no
+            # primeiro uso; exige rede nesse primeiro carregamento).
+            source = lib.mkDefault "community";
+            community_palette = lib.mkDefault "Osaka jade";
             builtin = lib.mkDefault "Nord";
             mode = lib.mkDefault "auto";
             # Superfícies da própria shell acompanham o modo acima (auto).
@@ -159,6 +163,8 @@
             };
           };
 
+          bar.order = lib.mkDefault [ "default" "dock" ];
+
           # Barra padrão da Noctalia com os widgets dos plugins abaixo, que não
           # entram na barra só por estarem habilitados. Cada lista substitui a
           # padrão inteira, por isso os widgets nativos estão repetidos aqui.
@@ -168,10 +174,11 @@
           bar.default = {
             # Ícones, texto e espessura da barra ("Escala do Conteúdo").
             scale = lib.mkDefault 1.15;
-            background_opacity = lib.mkDefault 0.75;
-            # Flutuante: 4 px da borda de cima e 120 px de cada lateral da tela.
-            margin_edge = lib.mkDefault 4;
-            margin_ends = lib.mkDefault 120;
+            background_opacity = lib.mkDefault 1.0;
+            # Estilo Unity: preenche toda a largura da tela, flush com o topo.
+            margin_edge = lib.mkDefault 0;
+            margin_ends = lib.mkDefault 0;
+            radius = lib.mkDefault 0;
             start = lib.mkDefault [
               "noctalia/umbriel-companion:bar"
               "workspaces"
@@ -225,10 +232,51 @@
             ];
           };
 
+          # Barra vertical na lateral esquerda emulando a Unity Dock:
+          # preenche 100% da altura da tela, sempre visível (sem ocultação),
+          # reserva espaço exclusivo e posiciona o launcher no final.
+          # Escala 2.0 define os ícones para 32 px (baseGlyphSize 16 px * 2.0).
+          bar.dock = {
+            enabled = lib.mkDefault true;
+            position = lib.mkDefault "left";
+            thickness = lib.mkDefault 48;
+            scale = lib.mkDefault 2.0;
+            background_opacity = lib.mkDefault 1.0;
+            margin_edge = lib.mkDefault 0;
+            margin_ends = lib.mkDefault 0;
+            radius = lib.mkDefault 0;
+            auto_hide = lib.mkDefault false;
+            smart_auto_hide = lib.mkDefault false;
+            reserve_space = lib.mkDefault true;
+            start = lib.mkDefault [
+              "dock-taskbar"
+            ];
+            center = lib.mkDefault [ ];
+            end = lib.mkDefault [
+              "dock-launcher"
+            ];
+          };
+
           # Rede e volume na barra só com o ícone, sem o nome da rede nem a
           # porcentagem; relógio com dia da semana e data (strftime, no idioma
           # do LC_TIME: "dom 18 out 20:15").
           widget = {
+            # Alternador de espaços de trabalho no estilo GNOME:
+            # pílulas animadas sem rótulos de texto, altura ajustada (~10 px).
+            # Usa papéis de cor semânticos da paleta para inversão automática
+            # entre modo claro e escuro:
+            #   - Painel escuro: on_surface (branco), on_surface_variant (cinza claro), outline_variant (cinza escuro);
+            #   - Painel claro:  on_surface (escuro/preto), on_surface_variant (cinza escuro), outline_variant (cinza claro).
+            workspaces = {
+              style = lib.mkDefault "regular";
+              show_labels = lib.mkDefault false;
+              pill_scale = lib.mkDefault 0.55;
+              active_pill_size = lib.mkDefault 3.2;
+              inactive_pill_size = lib.mkDefault 1.0;
+              focused_color = lib.mkDefault "on_surface";
+              occupied_color = lib.mkDefault "on_surface_variant";
+              empty_color = lib.mkDefault "outline_variant";
+            };
             clock = {
               format = lib.mkDefault "{:%a %d %b  %H:%M}";
               # Ancorado no centro da barra para que o relógio fique na linha média
@@ -245,6 +293,23 @@
             spacer-clock-right.type = "spacer";
             spacer-tray.type = "spacer";
             usage.type = "ayagmar/headroom:usage";
+
+            # Widgets da barra vertical (emulação da Unity Dock)
+            dock-taskbar = {
+              type = "taskbar";
+              pinned = lib.mkDefault [
+                "google-chrome"
+                "com.mitchellh.ghostty"
+                config.my.fileManagerApp.appId
+                "onlyoffice-desktopeditors"
+              ];
+              icon_scale = lib.mkDefault 1.0;
+              item_spacing = lib.mkDefault 8;
+            };
+            dock-launcher = {
+              type = "launcher";
+              glyph = lib.mkDefault "grid-dots";
+            };
           };
 
           # Atalhos padrão da central de controle mais os blocos dos plugins.
@@ -264,29 +329,9 @@
             ]
           );
 
-          # Habilitado para todos os usuários.
+          # Desativa o componente dock nativo (substituído por bar.dock para preencher 100% da altura).
           dock = {
-            enabled = lib.mkDefault true;
-            position = lib.mkDefault "bottom";
-            # Ocultação inteligente: visível com o workspace vazio, escondida
-            # quando ele tem janelas (reaparece na borda). auto_hide é o modo
-            # que só esconde quando o ponteiro sai da dock.
-            auto_hide = lib.mkDefault false;
-            smart_auto_hide = lib.mkDefault true;
-            # Sem zona exclusiva: escondida, a dock não deixa a faixa vazia
-            # embaixo das janelas lado a lado. Revelada, fica por cima delas.
-            reserve_space = lib.mkDefault false;
-            # Flutuante: afastada da borda de baixo da tela.
-            margin_edge = lib.mkDefault 8;
-            # Botão do launcher no fim da dock e pontos nos apps abertos.
-            launcher_position = lib.mkDefault "end";
-            show_dots = lib.mkDefault true;
-            pinned = lib.mkDefault [
-              "google-chrome"
-              "com.mitchellh.ghostty"
-              config.my.fileManagerApp.appId
-              "onlyoffice-desktopeditors"
-            ];
+            enabled = lib.mkDefault false;
           };
 
           plugins = {
