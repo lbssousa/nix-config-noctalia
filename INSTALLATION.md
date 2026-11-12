@@ -177,16 +177,23 @@ No clone (ou em qualquer diretório, pelos aliases abaixo):
 just switch / boot / test  # aplica a configuração do clone
 just build / diff          # constrói / mostra os pacotes que mudariam
 just update                # atualiza o flake.lock e faz commit/push (salvo auto_commit=false)
-just upgrade               # update + switch
+just upgrade               # update + build + switch ou boot (upgrade_mode)
 just validate              # nixfmt + statix + deadnix + flake check
 ```
+
+O `just upgrade` constrói a próxima geração antes de ativá-la, conforme
+`upgrade_mode` (ou a variável `UPGRADE_MODE`): `switch` aplica na hora, `boot`
+deixa para o próximo boot e `auto` (padrão) escolhe `boot` quando o kernel ou
+os módulos mudaram, ou quando o switch reiniciaria a sessão gráfica (fechando
+os apps abertos); senão, `switch` (`scripts/activation-step.sh`). Ex.:
+`just upgrade_mode=boot upgrade` ou `UPGRADE_MODE=switch nru`.
 
 Aliases do fish/bash (sempre com o justfile de `/etc/nixos`):
 
 ```bash
 nrs / nrb / nrt    # just switch / boot / test
 nrB / nrd          # just build / diff
-nru                # just upgrade: update + switch
+nru                # just upgrade: update + build + switch ou boot
 nrr                # volta para a geração anterior
 ngl / ngc          # lista as gerações / coleta de lixo
 ```

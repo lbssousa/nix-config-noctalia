@@ -11,6 +11,15 @@ justfile_file := justfile_directory() + "/justfile"
 # Usage: just auto_commit=false update   or   AUTO_COMMIT=false just update
 auto_commit := env_var_or_default("AUTO_COMMIT", "true")
 
+# How `upgrade` activates the generation it has just built:
+#   switch  apply it right away;
+#   boot    make it the default for the next boot;
+#   auto    boot when the kernel (or its modules) changed or when switching
+#           would restart the graphical session and close the open apps
+#           (scripts/activation-step.sh); switch otherwise.
+# Usage: just upgrade_mode=boot upgrade   or   UPGRADE_MODE=boot just upgrade
+upgrade_mode := env_var_or_default("UPGRADE_MODE", "auto")
+
 # pam_u2f's default per-user authfile, relative to each user's home. The
 # Noctalia Security page (Configurações › Segurança) writes the same file.
 u2f_keys := ".config/Yubico/u2f_keys"
@@ -82,10 +91,37 @@ diff host='':
   next="$(nix build "{{flake_root}}#nixosConfigurations.${host}.config.system.build.toplevel" --no-link --print-out-paths)"
   nvd diff /run/current-system "$next"
 
-# Updates (and, with auto_commit, commits and pushes) the lock, then switches.
+# Updates the lock (auto_commit), builds, then switches or sets boot (upgrade_mode).
 upgrade host='' *args:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  mode="{{upgrade_mode}}"
+  case "$mode" in
+    switch|boot|auto) ;;
+    *) echo "error: upgrade_mode must be switch, boot or auto (got '$mode')" >&2; exit 1 ;;
+  esac
   just --justfile "{{justfile_file}}" auto_commit="{{auto_commit}}" update
-  just --justfile "{{justfile_file}}" switch "{{host}}" {{args}}
+  host="{{host}}"
+  host="${host:-$(hostname)}"
+  echo "Building the next generation of ${host}..."
+  next="$(nix build "{{flake_root}}#nixosConfigurations.${host}.config.system.build.toplevel" --no-link --print-out-paths)"
+  echo ""
+  echo "Packages changed in the next generation:"
+  nvd diff /run/current-system "$next"
+  echo ""
+  if [[ "$mode" == "auto" ]]; then
+    if [[ "$host" != "$(hostname)" ]]; then
+      echo "error: auto mode compares with the running system; use upgrade_mode=switch or boot for ${host}" >&2
+      exit 1
+    fi
+    mode="$(bash "{{flake_root}}/scripts/activation-step.sh" /run/current-system "$next")"
+  fi
+  # Same flake, same evaluation: nixos-rebuild finds the generation already built.
+  just --justfile "{{justfile_file}}" _rebuild "$mode" "$host" {{args}}
+  if [[ "$mode" == "boot" ]]; then
+    echo ""
+    echo "The new generation takes effect on the next boot."
+  fi
 
 [group("maintenance")]
 update *inputs:
