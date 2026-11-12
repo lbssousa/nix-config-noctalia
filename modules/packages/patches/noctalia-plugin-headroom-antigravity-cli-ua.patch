@@ -1,0 +1,65 @@
+--- a/headroom/providers/antigravity/init.luau
++++ b/headroom/providers/antigravity/init.luau
+@@ -14,8 +14,10 @@
+ --
+ -- Endpoints: POST https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary,
+ -- and :loadCodeAssist for the plan name (at most every 6 hours). Undocumented. It only answers clients that
+--- identify as Antigravity, so this adapter's User-Agent is "antigravity"
+--- rather than Headroom's own. Plans without Antigravity quota get 403
++-- identify as Antigravity, and returns the Gemini groups (Gemini Models,
++-- Gemini 4 Argon) only to the CLI user agent, so this adapter sends
++-- "antigravity/cli/<version>" rather than Headroom's own. Plans without
++-- Antigravity quota get 403
+ -- SUBSCRIPTION_REQUIRED, reported as no_plan rather than as a sign-in problem.
+ 
+ local provider = require("../../lib/provider.luau")
+@@ -109,6 +111,27 @@
+   return renew.findCommand(ctx, "agy", { LOCAL_AGY })
+ end
+ 
++-- The quota endpoint returns the Gemini groups (Gemini Models and Gemini 4
++-- Argon) only to clients that identify as the CLI; a bare "antigravity" gets
++-- just the Claude & GPT group. Version from `agy --version`, asked once.
++local KNOWN_CLI_VERSION = "1.5.3"
++local cliVersion: string? = nil
++local versionAsked = false
++
++local function userAgent(ctx): string
++  if not versionAsked then
++    versionAsked = true
++    local agy = agyCommand(ctx)
++    if agy then
++      ctx.run({ "env", "AGY_CLI_DISABLE_AUTO_UPDATE=true", agy, "--version" }, 5000, function(result)
++        cliVersion = result and result.exitCode == 0
++          and result.stdout:match("^%s*(%d+%.%d+%.%d+)") or nil
++      end)
++    end
++  end
++  return `antigravity/cli/{cliVersion or KNOWN_CLI_VERSION}`
++end
++
+ local function isFresh(session: Session?, now: number): boolean
+   return session ~= nil and not time.isExpired(session.expiry, now)
+ end
+@@ -127,7 +150,11 @@
+ 
+ local function groupLabel(name: any): string
+   name = if type(name) == "string" then name else ""
+-  if name:find("Gemini", 1, true) then
++  -- Gemini 4 Argon has its own weekly quota; keep its name so the panel does
++  -- not show two identical "Gemini · Weekly" rows.
++  if name:find("Argon", 1, true) then
++    return name
++  elseif name:find("Gemini", 1, true) then
+     return "Gemini"
+   elseif name:find("Claude", 1, true) or name:find("GPT", 1, true) then
+     return "Claude & GPT"
+@@ -212,7 +239,7 @@
+ local function query(ctx, session: Session, done)
+   local headers = {
+     ["Authorization"] = `Bearer {session.accessToken}`,
+-    ["User-Agent"] = "antigravity", -- required by the endpoint; see header comment
++    ["User-Agent"] = userAgent(ctx), -- the CLI form is required; see header comment
+   }
+   ctx.postJson(QUOTA_URL, headers, "{}", function(data, err)
+     if err then
