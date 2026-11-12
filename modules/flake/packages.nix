@@ -31,10 +31,30 @@ let
       # de `agy --version`, com fallback) devolve também "Gemini Models" e
       # "Gemini 4 Argon"; o patch mantém o rótulo do Argon em vez de juntá-lo
       # ao "Gemini". Sem PR upstream.
+      #
+      # Global Menu (amancode22/global-menu): o daemon é iniciado como
+      # `python3` do PATH e precisa de dbus-python e PyGObject; o `wtype`
+      # (menus de atalho, teclas sintetizadas) também era procurado no PATH.
+      # Os dois passam a apontar para a store, independentemente do python3
+      # que o usuário tenha (ou não) no perfil.
       noctalia-plugins-community = final.applyPatches {
         name = "noctalia-plugins-community";
         src = inputs.noctalia-plugins-community;
         patches = [ ../packages/patches/noctalia-plugin-headroom-antigravity-cli-ua.patch ];
+        postPatch =
+          let
+            python = final.python3.withPackages (ps: [
+              ps.dbus-python
+              ps.pygobject3
+            ]);
+          in
+          ''
+            substituteInPlace global-menu/entries/service.luau \
+              --replace-fail '"python3 %s' '"${python}/bin/python3 %s'
+            substituteInPlace global-menu/daemon/keyer.py \
+              --replace-fail "shutil.which('wtype')" "shutil.which('${final.wtype}/bin/wtype')" \
+              --replace-fail "argv = ['wtype']" "argv = ['${final.wtype}/bin/wtype']"
+          '';
       };
 
       # Senha expirada (pam_acct_mgmt: NEW_AUTHTOK_REQD) no login gráfico.

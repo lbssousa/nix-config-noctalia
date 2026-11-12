@@ -183,7 +183,8 @@
               "noctalia/umbriel-companion:bar"
               "workspaces"
               "spacer-start"
-              "media"
+              # Menus do app em foco na barra, à moda do macOS/Unity.
+              "amancode22/global-menu:menubar"
             ];
             # À direita do relógio, depois de um respiro: área de transferência
             # e notificações ("group:inbox"), impressoras e status do NixOS. O
@@ -378,6 +379,9 @@
               "knyrps/nix-search"
               "muhammadessam/umbriel-monitor-control"
               "andrewdems/printers"
+              # Menu global na barra superior (daemon Python com dbus/PyGObject
+              # e wtype fixados no overlay, flake/packages.nix).
+              "amancode22/global-menu"
               # Pinentry do GnuPG e SSH_ASKPASS num painel da shell
               # (nixos/security/secret-prompts.nix aponta o gpg-agent e o
               # SSH_ASKPASS para os clientes, para todos os usuários).
