@@ -299,10 +299,13 @@
                 location = "${inputs.noctalia-plugins-official}";
                 enabled = true;
               }
+              # Plugins da comunidade com o patch local do Headroom (cota do
+              # Antigravity com os grupos do Gemini); ver
+              # flake/packages.nix.
               {
                 name = "nix-community";
                 kind = "path";
-                location = "${inputs.noctalia-plugins-community}";
+                location = "${pkgs.noctalia-plugins-community}";
                 enabled = true;
               }
               # Plugin próprio (github.com/lbssousa/noctalia-secret-prompts),

@@ -23,6 +23,20 @@ let
       # Auxiliar do plugin próprio da Noctalia (repositório em flake.nix).
       noctalia-secret-prompts = call "${inputs.noctalia-secret-prompts}/nix/package.nix";
 
+      # Plugins da comunidade da Noctalia com um patch local no Headroom (feito
+      # sobre a 0.3.0, a versão do flake.lock; uma atualização que mude esse
+      # arquivo faz o build falhar, para o patch ser revisto): o adapter do
+      # Antigravity mandava User-Agent "antigravity" e a API só devolvia o grupo
+      # "Claude and GPT models". A forma "antigravity/cli/<versão>" (versão lida
+      # de `agy --version`, com fallback) devolve também "Gemini Models" e
+      # "Gemini 4 Argon"; o patch mantém o rótulo do Argon em vez de juntá-lo
+      # ao "Gemini". Sem PR upstream.
+      noctalia-plugins-community = final.applyPatches {
+        name = "noctalia-plugins-community";
+        src = inputs.noctalia-plugins-community;
+        patches = [ ../packages/patches/noctalia-plugin-headroom-antigravity-cli-ua.patch ];
+      };
+
       # Senha expirada (pam_acct_mgmt: NEW_AUTHTOK_REQD) no login gráfico.
       # O greetd 0.10.3 só falhava; o patch chama pam_chauthtok na mesma
       # conversa, e os prompts (senha atual, nova, confirmação) chegam ao
@@ -216,6 +230,7 @@ in
         "strata"
         "superwhisper"
         "noctalia-secret-prompts"
+        "noctalia-plugins-community"
         "greetd"
         "noctalia"
         "noctalia-greeter"
