@@ -31,30 +31,10 @@ let
       # de `agy --version`, com fallback) devolve também "Gemini Models" e
       # "Gemini 4 Argon"; o patch mantém o rótulo do Argon em vez de juntá-lo
       # ao "Gemini". Sem PR upstream.
-      #
-      # Global Menu (amancode22/global-menu): o daemon é iniciado como
-      # `python3` do PATH e precisa de dbus-python e PyGObject; o `wtype`
-      # (menus de atalho, teclas sintetizadas) também era procurado no PATH.
-      # Os dois passam a apontar para a store, independentemente do python3
-      # que o usuário tenha (ou não) no perfil.
       noctalia-plugins-community = final.applyPatches {
         name = "noctalia-plugins-community";
         src = inputs.noctalia-plugins-community;
         patches = [ ../packages/patches/noctalia-plugin-headroom-antigravity-cli-ua.patch ];
-        postPatch =
-          let
-            python = final.python3.withPackages (ps: [
-              ps.dbus-python
-              ps.pygobject3
-            ]);
-          in
-          ''
-            substituteInPlace global-menu/entries/service.luau \
-              --replace-fail '"python3 %s' '"${python}/bin/python3 %s'
-            substituteInPlace global-menu/daemon/keyer.py \
-              --replace-fail "shutil.which('wtype')" "shutil.which('${final.wtype}/bin/wtype')" \
-              --replace-fail "argv = ['wtype']" "argv = ['${final.wtype}/bin/wtype']"
-          '';
       };
 
       # Senha expirada (pam_acct_mgmt: NEW_AUTHTOK_REQD) no login gráfico.
@@ -112,6 +92,11 @@ let
       # reconhecidos). Patch local, sem PR upstream: SCOPE.md manda controles de
       # hardware para plugins.
       #
+      # Taskbar com quadro por ícone ([widget.<taskbar>] item_frame, com
+      # item_frame_color e item_frame_border_color): fundo e borda da paleta
+      # atrás de cada app, para ícones claros não sumirem numa barra clara.
+      # Patch local, sem PR upstream.
+      #
       # O pinentry/askpass não é patch: os mantenedores não aceitam segredos no
       # core (PR #4951). É o plugin lbssousa/secret-prompts (repositório
       # github.com/lbssousa/noctalia-secret-prompts), com o auxiliar
@@ -138,6 +123,7 @@ let
               ../packages/patches/noctalia-lock-auth-sequence.patch
               ../packages/patches/noctalia-polkit-use-password.patch
               ../packages/patches/noctalia-security-hardware.patch
+              ../packages/patches/noctalia-taskbar-item-frame.patch
             ];
           });
         in

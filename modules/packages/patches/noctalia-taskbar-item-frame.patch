@@ -1,0 +1,120 @@
+diff --git a/assets/translations/en.json b/assets/translations/en.json
+index 1c7f5d3..a94bc50 100644
+--- a/assets/translations/en.json
++++ b/assets/translations/en.json
+@@ -4714,6 +4714,18 @@
+           "description": "Color used for active privacy indicators; fixed hex colors are also supported",
+           "label": "Active Color"
+         },
++        "item-frame": {
++          "description": "Show a background and border behind each app icon, for contrast with the bar",
++          "label": "Icon Frame"
++        },
++        "item-frame-color": {
++          "description": "Background color of the frame behind each app icon",
++          "label": "Icon Frame Color"
++        },
++        "item-frame-border-color": {
++          "description": "Border color of the frame behind each app icon",
++          "label": "Icon Frame Border Color"
++        },
+         "active-indicator-color": {
+           "description": "Color of the indicator below the active window icon",
+           "label": "Active Indicator Color"
+diff --git a/assets/translations/pt-BR.json b/assets/translations/pt-BR.json
+index 6c43a28..1cc7f08 100644
+--- a/assets/translations/pt-BR.json
++++ b/assets/translations/pt-BR.json
+@@ -4706,6 +4706,18 @@
+           "description": "Cor usada para indicadores de privacidade ativos; cores hex fixas também são suportadas",
+           "label": "Cor Ativa"
+         },
++        "item-frame": {
++          "description": "Mostra um fundo e uma borda atrás de cada ícone de aplicativo, para contraste com a barra",
++          "label": "Quadro dos Ícones"
++        },
++        "item-frame-color": {
++          "description": "Cor de fundo do quadro atrás de cada ícone de aplicativo",
++          "label": "Cor do Quadro dos Ícones"
++        },
++        "item-frame-border-color": {
++          "description": "Cor da borda do quadro atrás de cada ícone de aplicativo",
++          "label": "Cor da Borda do Quadro dos Ícones"
++        },
+         "active-indicator-color": {
+           "description": "Cor do indicador abaixo do ícone da janela ativa",
+           "label": "Cor do Indicador de Ativo"
+diff --git a/src/shell/bar/widgets/taskbar_widget.cpp b/src/shell/bar/widgets/taskbar_widget.cpp
+index b7eb007..73108d6 100644
+--- a/src/shell/bar/widgets/taskbar_widget.cpp
++++ b/src/shell/bar/widgets/taskbar_widget.cpp
+@@ -867,7 +867,9 @@ void TaskbarWidget::buildTaskButtons(Renderer& renderer) {
+   const float effectiveIconScale =
+       m_groupByWorkspace && m_workspaceGroupContent != WorkspaceGroupContent::Icons ? 1.0F : m_configOptions.iconScale;
+   float iconSize = std::round(Style::baseGlyphSize * effectiveIconScale * m_contentScale);
+-  float tilePadding = Style::spaceXs * 0.35F * m_contentScale;
++  // With item_frame, each icon sits on its own tile background: a wider padding keeps the
++  // frame from hugging the icon edges (still clamped to the bar thickness below).
++  float tilePadding = Style::spaceXs * (m_configOptions.itemFrame ? 1.0F : 0.35F) * m_contentScale;
+   float tileSize = std::round(iconSize + tilePadding * 2.0F);
+   const float barCross = m_vertical ? m_containerWidth : m_containerHeight;
+   const float capsuleThickness = barCapsuleThicknessFor(m_configService, m_barName);
+@@ -1346,6 +1348,21 @@ void TaskbarWidget::buildTaskButtons(Renderer& renderer) {
+         .activeIndicator = indicatorPtr,
+         .minimizeIndicator = minimizeIndicatorPtr,
+     });
++    if (m_configOptions.itemFrame) {
++      // Per-icon frame (fill + border from the palette) so light icons stay readable on a
++      // light bar. Drawn below the hover highlight (z -1) and the active indicator.
++      auto frame = ui::box({
++          .fill = m_configOptions.itemFrameColor,
++          .border = m_configOptions.itemFrameBorderColor,
++          .borderWidth = std::max(1.0F, Style::borderWidth * m_contentScale),
++          .radius = resolvedBarCapsuleRadius(tileWidthWithTitle, tileSize),
++          .width = tileWidthWithTitle,
++          .height = tileSize,
++          .configure = [](Box& box) { box.setZIndex(-2); },
++      });
++      frame->setHitTestVisible(false);
++      area->addChild(std::move(frame));
++    }
+     attachHover(*area, tileWidthWithTitle, tileSize);
+     return area;
+   };
+diff --git a/src/shell/bar/widgets/taskbar_widget.h b/src/shell/bar/widgets/taskbar_widget.h
+index 83bfb47..b82da97 100644
+--- a/src/shell/bar/widgets/taskbar_widget.h
++++ b/src/shell/bar/widgets/taskbar_widget.h
+@@ -56,6 +56,9 @@ struct TaskbarWidgetOptions {
+   bool groupSingleIconPerApp = false;
+   bool showActiveIndicator = true;
+   ColorSpec activeIndicatorColor = colorSpecFromRole(ColorRole::Primary);
++  bool itemFrame = false;
++  ColorSpec itemFrameColor = colorSpecFromRole(ColorRole::SurfaceContainerHighest);
++  ColorSpec itemFrameBorderColor = colorSpecFromRole(ColorRole::OutlineVariant);
+   float activeOpacity = 1.0F;
+   float inactiveOpacity = 1.0F;
+   float iconScale = 1.0F;
+diff --git a/src/shell/bar/widgets/taskbar_widget_definition.cpp b/src/shell/bar/widgets/taskbar_widget_definition.cpp
+index 9165387..b5d4ed9 100644
+--- a/src/shell/bar/widgets/taskbar_widget_definition.cpp
++++ b/src/shell/bar/widgets/taskbar_widget_definition.cpp
+@@ -57,6 +57,18 @@ const noctalia::bar::WidgetDefinition<TaskbarWidgetOptions>& taskbarWidgetDefini
+                               .presentation =
+                                   presentation("taskbar.windows", matches("show_active_indicator", {"true"})),
+                           }),
++                          field<&Options::itemFrame>({
++                              .key = "item_frame",
++                              .presentation = presentation("taskbar.windows"),
++                          }),
++                          field<&Options::itemFrameColor>({
++                              .key = "item_frame_color",
++                              .presentation = presentation("taskbar.windows", matches("item_frame", {"true"})),
++                          }),
++                          field<&Options::itemFrameBorderColor>({
++                              .key = "item_frame_border_color",
++                              .presentation = presentation("taskbar.windows", matches("item_frame", {"true"})),
++                          }),
+                           field<&Options::activeOpacity>({
+                               .key = "active_opacity",
+                               .minValue = 0.1,

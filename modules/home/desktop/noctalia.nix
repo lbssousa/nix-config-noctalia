@@ -183,8 +183,7 @@
               "noctalia/umbriel-companion:bar"
               "workspaces"
               "spacer-start"
-              # Menus do app em foco na barra, à moda do macOS/Unity.
-              "amancode22/global-menu:menubar"
+              "media"
             ];
             # À direita do relógio, depois de um respiro: área de transferência
             # e notificações ("group:inbox"), impressoras e status do NixOS. O
@@ -242,7 +241,7 @@
             position = lib.mkDefault "left";
             thickness = lib.mkDefault 48;
             scale = lib.mkDefault 2.0;
-            background_opacity = lib.mkDefault 1.0;
+            background_opacity = lib.mkDefault 0.8;
             margin_edge = lib.mkDefault 0;
             margin_ends = lib.mkDefault 0;
             radius = lib.mkDefault 0;
@@ -264,10 +263,10 @@
           widget = {
             # Alternador de espaços de trabalho no estilo GNOME:
             # pílulas animadas sem rótulos de texto, altura ajustada (~10 px).
-            # Usa papéis de cor semânticos da paleta para inversão automática
-            # entre modo claro e escuro:
-            #   - Painel escuro: on_surface (branco), on_surface_variant (cinza claro), outline_variant (cinza escuro);
-            #   - Painel claro:  on_surface (escuro/preto), on_surface_variant (cinza escuro), outline_variant (cinza claro).
+            # Todas as pílulas na cor do texto da barra (on_surface, a mesma do
+            # relógio e dos rótulos, que acompanha a paleta e o modo claro/escuro).
+            # O ativo se destaca pelo tamanho; os vazios ficam com 55% de
+            # opacidade (atenuação embutida no widget para empty_color).
             workspaces = {
               style = lib.mkDefault "regular";
               show_labels = lib.mkDefault false;
@@ -275,8 +274,8 @@
               active_pill_size = lib.mkDefault 3.2;
               inactive_pill_size = lib.mkDefault 1.0;
               focused_color = lib.mkDefault "on_surface";
-              occupied_color = lib.mkDefault "on_surface_variant";
-              empty_color = lib.mkDefault "outline_variant";
+              occupied_color = lib.mkDefault "on_surface";
+              empty_color = lib.mkDefault "on_surface";
             };
             clock = {
               format = lib.mkDefault "{:%a %d %b  %H:%M}";
@@ -306,6 +305,12 @@
               ];
               icon_scale = lib.mkDefault 1.0;
               item_spacing = lib.mkDefault 8;
+              # Quadro atrás de cada ícone (patch noctalia-taskbar-item-frame),
+              # como os tiles da Unity: ícones claros continuam visíveis com a
+              # barra clara. Cores da paleta, invertidas entre claro e escuro.
+              item_frame = lib.mkDefault true;
+              item_frame_color = lib.mkDefault "surface_container_highest";
+              item_frame_border_color = lib.mkDefault "outline_variant";
             };
             dock-launcher = {
               type = "launcher";
@@ -379,9 +384,6 @@
               "knyrps/nix-search"
               "muhammadessam/umbriel-monitor-control"
               "andrewdems/printers"
-              # Menu global na barra superior (daemon Python com dbus/PyGObject
-              # e wtype fixados no overlay, flake/packages.nix).
-              "amancode22/global-menu"
               # Pinentry do GnuPG e SSH_ASKPASS num painel da shell
               # (nixos/security/secret-prompts.nix aponta o gpg-agent e o
               # SSH_ASKPASS para os clientes, para todos os usuários).
