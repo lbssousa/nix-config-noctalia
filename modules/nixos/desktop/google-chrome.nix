@@ -148,6 +148,7 @@ in
         programs.chromium = {
           enable = true;
           extraOpts = {
+            BuiltInDnsClientEnabled = false;
             DefaultBrowserSettingEnabled = false;
             ExtensionSettings.${bitwarden} = {
               installation_mode = "normal_installed";

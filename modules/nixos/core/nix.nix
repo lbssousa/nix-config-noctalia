@@ -75,25 +75,26 @@
 
         networking.networkmanager.enable = true;
         # DNS pelo systemd-resolved (com o NetworkManager entregando o DNS de
-        # cada rede): cache local e reenvio em ~1 s, em vez do timeout de 5 s
-        # do glibc por consulta perdida (o DNS do roteador de casa perdia
-        # 10-20% delas). Os servidores globais abaixo são consultados junto
-        # com os da rede, e vence a primeira resposta positiva: nomes internos
-        # de redes corporativas continuam vindo do DNS delas.
+        # cada rede): cache local e reenvio rápido. O roteamento global "~."
+        # prioriza os servidores upstream confiáveis (Cloudflare e Google com DoT),
+        # evitando a perda de pacotes do DNS do roteador local, enquanto redes
+        # corporativas/VPNs continuam resolvendo seus domínios internos via search domains.
         networking.networkmanager.dns = "systemd-resolved";
         services.resolved = {
           enable = true;
           settings.Resolve = {
             DNS = [
               "1.1.1.1#cloudflare-dns.com"
-              "9.9.9.9#dns.quad9.net"
+              "8.8.8.8#dns.google"
               "2606:4700:4700::1111#cloudflare-dns.com"
-              "2620:fe::fe#dns.quad9.net"
+              "2001:4860:4860::8888#dns.google"
             ];
             FallbackDNS = [
               "1.0.0.1#cloudflare-dns.com"
-              "149.112.112.112#dns.quad9.net"
+              "8.8.4.4#dns.google"
             ];
+            DNSOverTLS = "opportunistic";
+            Domains = [ "~." ];
           };
         };
 
