@@ -1,8 +1,8 @@
 diff --git a/docs/user/configuration.md b/docs/user/configuration.md
-index 400d09b..ce09c6c 100644
+index c1bca11..4b50088 100644
 --- a/docs/user/configuration.md
 +++ b/docs/user/configuration.md
-@@ -56,6 +56,7 @@ Set these keys in `greeter.toml`. A command-line `--session` or `--user` value t
+@@ -61,6 +61,7 @@ Set these keys in `greeter.toml`. A command-line `--session` or `--user` value t
  | `[appearance].scheme` | Color scheme: `Synced` or a built-in name such as `Noctalia` |
  | `[appearance].password_style` | Password mask: `default` or `random` |
  | `[appearance].hide_logo` | Hide the Noctalia brand logo |
@@ -11,7 +11,7 @@ index 400d09b..ce09c6c 100644
  | `[appearance].scheme_selector_position` | Scheme picker: `top-right` (default), `top-left`, `bottom-left`, `bottom-right`, or `hidden` |
  | `[appearance].theme_mode` | Theme mode for the Synced appearance, such as `dark` |
 diff --git a/examples/greeter.toml b/examples/greeter.toml
-index 8669231..0e1f3f8 100644
+index 80ace2d..596f9d0 100644
 --- a/examples/greeter.toml
 +++ b/examples/greeter.toml
 @@ -27,6 +27,9 @@ scheme = "Synced"
@@ -49,10 +49,10 @@ index 10a5cc7..d568fae 100644
  
    // Users known to org.freedesktop.Accounts (ListCachedUsers), including
 diff --git a/src/greeter/greeter_config_io.cpp b/src/greeter/greeter_config_io.cpp
-index 3f078ca..6908f30 100644
+index 7d43340..64f1479 100644
 --- a/src/greeter/greeter_config_io.cpp
 +++ b/src/greeter/greeter_config_io.cpp
-@@ -66,6 +66,7 @@ namespace {
+@@ -67,6 +67,7 @@ namespace {
      return key == "scheme"
          || key == "password_style"
          || key == "hide_logo"
@@ -60,7 +60,7 @@ index 3f078ca..6908f30 100644
          || key == "power_buttons_position"
          || key == "scheme_selector_position"
          || key == "theme_mode"
-@@ -234,6 +235,10 @@ namespace {
+@@ -259,6 +260,10 @@ namespace {
              if (const auto value = entryNode.value<bool>()) {
                config.appearanceHideLogo = *value;
              }
@@ -71,7 +71,7 @@ index 3f078ca..6908f30 100644
            } else if (entryView == "power_buttons_position") {
              config.appearancePowerButtonsPosition = stringValue(entryNode);
            } else if (entryView == "scheme_selector_position") {
-@@ -535,6 +540,9 @@ namespace {
+@@ -597,6 +602,9 @@ namespace {
      if (config.appearanceHideLogo.has_value()) {
        appearance.insert_or_assign("hide_logo", *config.appearanceHideLogo);
      }
@@ -81,7 +81,7 @@ index 3f078ca..6908f30 100644
      insertString(
          appearance, "power_buttons_position", config.appearancePowerButtonsPosition,
          [](toml::table& table, std::string_view key, const std::string& value) {
-@@ -1001,8 +1009,8 @@ namespace greeter::config {
+@@ -1085,8 +1093,8 @@ namespace greeter::config {
      out << "# output.use_synced_settings is true (default). Session power actions/menu entries are\n";
      out << "# Sync-only (sync.toml [session.power]/[[session.actions]]) and are not settable here.\n";
      out << "# [session] default, [user] default\n";
@@ -89,14 +89,14 @@ index 3f078ca..6908f30 100644
 -           "theme_mode, corner_radius_scale, font_family\n";
 +    out << "# [appearance] scheme, password_style, hide_logo, show_real_names, power_buttons_position, "
 +           "scheme_selector_position, theme_mode, corner_radius_scale, font_family\n";
-     out << "# [appearance.palette] full color role table, [appearance.wallpaper] path/fill_mode/fill_color\n";
+     out << "# [appearance.palette] full color role table, [appearance.wallpaper] "
+            "path/fill_mode/fill_color/blur/tint\n";
      out << "# [appearance.wallpapers.<connector>] per-output wallpaper overrides\n";
-     out << "# [output] name/use_synced_settings/layout/scale/scales/width/height/refresh_rate/transforms, "
 diff --git a/src/greeter/greeter_config_store.h b/src/greeter/greeter_config_store.h
-index c2dcf84..c2658d9 100644
+index 0218515..7f40dba 100644
 --- a/src/greeter/greeter_config_store.h
 +++ b/src/greeter/greeter_config_store.h
-@@ -46,6 +46,7 @@ namespace greeter::config {
+@@ -49,6 +49,7 @@ namespace greeter::config {
      std::optional<std::string> appearanceScheme;
      std::optional<std::string> appearancePasswordStyle;
      std::optional<bool> appearanceHideLogo;
@@ -105,10 +105,10 @@ index c2dcf84..c2658d9 100644
      std::optional<std::string> appearancePowerButtonsPosition;
      std::optional<std::string> appearanceSchemeSelectorPosition;
 diff --git a/src/greeter/greeter_preferences.cpp b/src/greeter/greeter_preferences.cpp
-index 274e152..0385105 100644
+index 038d6f5..7a6712a 100644
 --- a/src/greeter/greeter_preferences.cpp
 +++ b/src/greeter/greeter_preferences.cpp
-@@ -430,6 +430,9 @@ namespace greeter {
+@@ -420,6 +420,9 @@ namespace greeter {
      if (file.appearanceHideLogo.has_value()) {
        prefs.hideLogo = *file.appearanceHideLogo;
      }
@@ -119,7 +119,7 @@ index 274e152..0385105 100644
      prefs.schemeSelectorPosition = file.appearanceSchemeSelectorPosition;
      if (file.clockEnabled.has_value()) {
 diff --git a/src/greeter/greeter_preferences.h b/src/greeter/greeter_preferences.h
-index b50841d..86dd100 100644
+index 9107b7f..19c3aee 100644
 --- a/src/greeter/greeter_preferences.h
 +++ b/src/greeter/greeter_preferences.h
 @@ -33,6 +33,7 @@ namespace greeter {
@@ -131,10 +131,10 @@ index b50841d..86dd100 100644
      std::optional<std::string> powerButtonsPosition;
      std::optional<std::string> schemeSelectorPosition;
 diff --git a/src/greeter/greeter_surface.cpp b/src/greeter/greeter_surface.cpp
-index c362af0..c9eebbb 100644
+index 8fc3a68..cb1df1c 100644
 --- a/src/greeter/greeter_surface.cpp
 +++ b/src/greeter/greeter_surface.cpp
-@@ -116,6 +116,23 @@ namespace {
+@@ -119,6 +119,23 @@ namespace {
              || sym == XKB_KEY_U);
    }
  
@@ -158,7 +158,7 @@ index c362af0..c9eebbb 100644
    void appendDummyUsers(std::vector<std::string>& users, std::vector<uid_t>& uids) {
      const char* dummyEnv = std::getenv("NOCTALIA_GREETER_DUMMY_USERS");
      if (dummyEnv == nullptr) {
-@@ -685,6 +702,7 @@ void GreeterSurface::applyInitialUserSelection() {
+@@ -688,6 +705,7 @@ void GreeterSurface::applyInitialUserSelection() {
      m_users.push_back(*initialUser);
      m_userUids.push_back(0);
      m_userIconPaths.push_back("");
@@ -166,7 +166,7 @@ index c362af0..c9eebbb 100644
      m_selectedUser = m_users.size() - 1;
      setUsername(*initialUser);
      m_passwordVisible = true;
-@@ -1143,7 +1161,7 @@ void GreeterSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
+@@ -1159,7 +1177,7 @@ void GreeterSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
    const float headerGlyphSize = Style::scaled(kHeaderUserIconBase) * glyphScale;
  
    if (m_passwordVisible && !m_users.empty() && m_selectedUser < m_users.size()) {
@@ -175,7 +175,7 @@ index c362af0..c9eebbb 100644
      m_formSubtitleLabel->setVisible(true);
    } else {
      m_formSubtitleLabel->setVisible(false);
-@@ -1754,10 +1772,12 @@ void GreeterSurface::loadUsers() {
+@@ -1815,10 +1833,12 @@ void GreeterSurface::loadUsers() {
    m_users.clear();
    m_userUids.clear();
    m_userIconPaths.clear();
@@ -188,7 +188,7 @@ index c362af0..c9eebbb 100644
    std::unordered_set<std::string> seen;
  
    // Prefer AccountsService cached users (same source as ReGreet) so FreeIPA /
-@@ -1774,6 +1794,7 @@ void GreeterSurface::loadUsers() {
+@@ -1835,6 +1855,7 @@ void GreeterSurface::loadUsers() {
      m_users.push_back(cached.username);
      m_userUids.push_back(cached.uid);
      m_userIconPaths.push_back(cached.iconPath);
@@ -196,7 +196,7 @@ index c362af0..c9eebbb 100644
    }
    if (!cachedUsers.empty()) {
      kLog.info("AccountsService: {} cached user(s), {} after filters", cachedUsers.size(), m_users.size());
-@@ -1809,6 +1830,14 @@ void GreeterSurface::loadUsers() {
+@@ -1870,6 +1891,14 @@ void GreeterSurface::loadUsers() {
      m_users.push_back(user);
      m_userUids.push_back(uid);
      m_userIconPaths.push_back(accounts::iconFileForUid(uid).value_or(""));
@@ -211,7 +211,7 @@ index c362af0..c9eebbb 100644
    }
    ::endpwent();
  
-@@ -1820,12 +1849,16 @@ void GreeterSurface::loadUsers() {
+@@ -1881,12 +1910,16 @@ void GreeterSurface::loadUsers() {
      m_users.push_back("greeter");
      m_userUids.push_back(0);
      m_userIconPaths.push_back("");
@@ -228,7 +228,7 @@ index c362af0..c9eebbb 100644
  
    m_selectedUser = 0;
    setUsername(m_users[m_selectedUser]);
-@@ -1838,7 +1871,9 @@ void GreeterSurface::loadSessions() {
+@@ -1899,7 +1932,9 @@ void GreeterSurface::loadSessions() {
  
  void GreeterSurface::refreshSelectionLabels() {
    if (m_userSelectLabel != nullptr) {
@@ -239,7 +239,7 @@ index c362af0..c9eebbb 100644
      m_userSelectLabel->setText(userLabel);
      m_userSelectLabel->setColor(colorForRole(ColorRole::OnSurface));
    }
-@@ -3455,7 +3490,7 @@ void GreeterSurface::refreshUserMenuRows() {
+@@ -3521,7 +3556,7 @@ void GreeterSurface::refreshUserMenuRows() {
  
    float contentW = anchorW;
    for (const std::size_t userIndex : m_userMenuFilteredIndices) {
@@ -248,7 +248,7 @@ index c362af0..c9eebbb 100644
      contentW = std::max(contentW, rowIconReserve + textW + 2.0f * kUserMenuPadding);
    }
    const float screenW = m_root.width();
-@@ -3582,7 +3617,7 @@ void GreeterSurface::refreshUserMenuRows() {
+@@ -3648,7 +3683,7 @@ void GreeterSurface::refreshUserMenuRows() {
  
      auto label = std::make_unique<Label>();
      auto* labelPtr = label.get();
@@ -258,10 +258,10 @@ index c362af0..c9eebbb 100644
      labelPtr->setColor(colorForRole(ColorRole::OnSurface));
      labelPtr->setZIndex(52);
 diff --git a/src/greeter/greeter_surface.h b/src/greeter/greeter_surface.h
-index e418d10..82f4314 100644
+index c2ad6b9..fc657d6 100644
 --- a/src/greeter/greeter_surface.h
 +++ b/src/greeter/greeter_surface.h
-@@ -310,6 +310,9 @@ private:
+@@ -319,6 +319,9 @@ private:
    std::vector<std::string> m_users;
    std::vector<uid_t> m_userUids;
    std::vector<std::string> m_userIconPaths;

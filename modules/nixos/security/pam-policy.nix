@@ -17,9 +17,11 @@
 #     30 s sem leitura), por isso não há pam_fprintd nas duas pilhas abaixo;
 #   - FIDO2: "noctalia-lock-u2f", só o pam_u2f; sem chave cadastrada conectada
 #     ou com o toque expirado, segue para a senha;
-#   - senha: "noctalia-lock" ([lockscreen].pam_service em
-#     home/desktop/noctalia.nix; o padrão seria o "login"). Com o campo vazio,
+#   - senha: "noctalia-lock" (o padrão seria o "login"). Com o campo vazio,
 #     plugar uma chave cadastrada (novo /dev/hidraw*) volta à FIDO2.
+# Os dois nomes vêm da compilação da Noctalia (-Dpam_service e
+# -Dpam_service_security_key, em flake/packages.nix): o noctalia-pam-helper
+# não aceita serviço vindo da configuração do usuário.
 # A sequência recomeça pela digital a cada bloqueio e a cada resume.
 #
 # No painel do polkit da Noctalia, o botão "Usar senha" cria o sinalizador

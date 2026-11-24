@@ -24,20 +24,6 @@ let
       # Auxiliar do plugin próprio da Noctalia (repositório em flake.nix).
       noctalia-secret-prompts = call "${inputs.noctalia-secret-prompts}/nix/package.nix";
 
-      # Plugins da comunidade da Noctalia com um patch local no Headroom (feito
-      # sobre a 0.3.0, a versão do flake.lock; uma atualização que mude esse
-      # arquivo faz o build falhar, para o patch ser revisto): o adapter do
-      # Antigravity mandava User-Agent "antigravity" e a API só devolvia o grupo
-      # "Claude and GPT models". A forma "antigravity/cli/<versão>" (versão lida
-      # de `agy --version`, com fallback) devolve também "Gemini Models" e
-      # "Gemini 4 Argon"; o patch mantém o rótulo do Argon em vez de juntá-lo
-      # ao "Gemini". Sem PR upstream.
-      noctalia-plugins-community = final.applyPatches {
-        name = "noctalia-plugins-community";
-        src = inputs.noctalia-plugins-community;
-        patches = [ ../packages/patches/noctalia-plugin-headroom-antigravity-cli-ua.patch ];
-      };
-
       # Senha expirada (pam_acct_mgmt: NEW_AUTHTOK_REQD) no login gráfico.
       # O greetd 0.10.3 só falhava; o patch chama pam_chauthtok na mesma
       # conversa, e os prompts (senha atual, nova, confirmação) chegam ao
@@ -55,21 +41,26 @@ let
       #  - último usuário que fez login em [user] last do sync.toml (ao lado
       #    de [session] last), pré-selecionado no boot seguinte; --user e
       #    [user].default continuam valendo mais. Patch local, sem PR upstream.
-      # Noctalia, patches nesta ordem:
-      #  - [lockscreen].pam_service: PR aberto
-      #    https://github.com/noctalia-dev/noctalia/pull/4132 (resolve a issue
-      #    #3277); remover quando chegar ao nixpkgs. O serviço "noctalia-lock"
-      #    (em vez do "login", que fica só com a senha) é escolhido em
-      #    home/desktop/noctalia.nix; ver security/pam-policy.nix;
+      # Noctalia. Desde a 5.6 o PAM da tela de bloqueio roda num auxiliar à
+      # parte (libexec/noctalia/noctalia-pam-helper), com o serviço fixado na
+      # compilação (upstream #4619, que substituiu o nosso antigo PR #4132):
+      #  - -Dpam_service=noctalia-lock, em vez do "login", que fica só com a
+      #    senha (security/pam-policy.nix);
+      #  - -Dpam_service_security_key=noctalia-lock-u2f, opção do patch
+      #    lock-security-key abaixo: segundo serviço, também fixado na
+      #    compilação, que o auxiliar roda com --security-key.
+      # Patches, nesta ordem:
       #  - digital com 3 tentativas no total (eram 4), como o max-tries=3 do
       #    pam_fprintd. Patch local, sem PR upstream.
       # Destaque no painel do polkit enquanto o PAM espera a digital ou o toque
       # na chave de segurança: ícone grande (impressão digital ou chave) com título e
       # descrição traduzidos, no lugar da mensagem crua do pam_fprintd/pam_u2f.
       # Patch local, sem PR upstream.
-      # Toque na chave de segurança desbloqueia a tela sem Enter, em paralelo com a digital
-      # e a senha: o helper PAM da Noctalia roda o serviço "noctalia-lock-u2f"
-      # em segundo plano ([lockscreen] security_key). Patch local, sem PR upstream.
+      # Toque na chave de segurança desbloqueia a tela sem Enter: o
+      # noctalia-pam-helper roda com --security-key o serviço de
+      # -Dpam_service_security_key em segundo plano e repassa no fd 3 o aviso
+      # PAM_TEXT_INFO do pam_u2f ("toque na chave"); [lockscreen] security_key
+      # liga e desliga. Patch local, sem PR upstream.
       # Na tela de bloqueio, um método por vez: digital (até 3 leituras ou 30 s),
       # depois FIDO2 (sem chave cadastrada ou com o toque expirado, segue), depois
       # senha. Nas duas primeiras etapas o campo de senha dá lugar a um destaque
@@ -98,8 +89,9 @@ let
       # github.com/lbssousa/noctalia-secret-prompts), com o auxiliar
       # noctalia-secret-prompts.
       #
-      # Os patches saem do fork lbssousa/noctalia: o branch base/nix-config-v5.4.1
-      # é a tag v5.4.1 mais os patches acima, um commit cada.
+      # Os patches saem do fork lbssousa/noctalia: o branch base/nix-config-v5.6.0
+      # é a tag v5.6.0 mais os patches acima, um commit cada (o security-hardware
+      # são os commits do fim, juntos num patch só).
       # Os templates dos emuladores de terminal são
       # remapeados de `.default` para `.dark`: assim eles usam sempre a variante
       # escura da paleta ativa, mesmo com [theme].mode = "auto". Os demais
@@ -111,8 +103,11 @@ let
       noctalia =
         let
           base = prev.noctalia.overrideAttrs (old: {
+            mesonFlags = (old.mesonFlags or [ ]) ++ [
+              "-Dpam_service=noctalia-lock"
+              "-Dpam_service_security_key=noctalia-lock-u2f"
+            ];
             patches = (old.patches or [ ]) ++ [
-              ../packages/patches/noctalia-lockscreen-pam-service-option.patch
               ../packages/patches/noctalia-lock-pam-service.patch
               ../packages/patches/noctalia-polkit-auth-cues.patch
               ../packages/patches/noctalia-lock-security-key.patch
@@ -230,7 +225,6 @@ in
         "pinentry-noctalia"
         "noctalia-askpass"
         "noctalia-secret-prompts"
-        "noctalia-plugins-community"
         "umbriel"
         "luciole"
       ];
@@ -245,7 +239,6 @@ in
           "luciole"
           "superwhisper"
           "noctalia-secret-prompts"
-          "noctalia-plugins-community"
           "greetd"
           "noctalia"
           "noctalia-greeter"

@@ -119,11 +119,6 @@
             started = "${wallpaperPairSync}";
           };
 
-          # Tela de bloqueio no serviço PAM próprio (security/pam-policy.nix),
-          # para o "login" ficar só com a senha. Chave do PR #4132 (patch em
-          # flake/packages.nix).
-          lockscreen.pam_service = lib.mkDefault "noctalia-lock";
-
           shell = {
             font_family = lib.mkDefault "Adwaita Sans";
             clipboard_enabled = lib.mkDefault true;
@@ -320,13 +315,10 @@
                 location = "${inputs.noctalia-plugins-official}";
                 enabled = true;
               }
-              # Plugins da comunidade com o patch local do Headroom (cota do
-              # Antigravity com os grupos do Gemini); ver
-              # flake/packages.nix.
               {
                 name = "nix-community";
                 kind = "path";
-                location = "${pkgs.noctalia-plugins-community}";
+                location = "${inputs.noctalia-plugins-community}";
                 enabled = true;
               }
               # Plugin próprio (github.com/lbssousa/noctalia-secret-prompts),

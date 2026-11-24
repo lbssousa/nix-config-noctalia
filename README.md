@@ -170,7 +170,7 @@ em [INSTALLATION.md › Manutenção](INSTALLATION.md#manutenção).
 ## Cache binário
 
 O overlay (`modules/flake/packages.nix`) aplica patches locais na Noctalia, no
-Noctalia Greeter, no Umbriel e nos plugins da comunidade, e empacota o
+Noctalia Greeter e no Umbriel, e empacota o
 auxiliar do `noctalia-secret-prompts` e o Luciole (que ainda não está no
 nixpkgs). Nada disso está no cache.nixos.org, e
 sem um cache próprio cada host compila tudo de novo a cada atualização. Esses
@@ -181,8 +181,7 @@ instalação.
 O que entra no cache é o pacote `.#noctalia-cache`, que agrega a lista
 `noctaliaCache` em `modules/flake/packages.nix`: `noctalia`,
 `noctalia-greeter`, `pinentry-noctalia`, `noctalia-askpass`,
-`noctalia-secret-prompts`, `noctalia-plugins-community`, `umbriel` e
-`luciole`. Para
+`noctalia-secret-prompts`, `umbriel` e `luciole`. Para
 incluir outro pacote da família, acrescente o nome dele nessa lista. O
 `cachix push` só envia o que ainda não está no cache.nixos.org.
 

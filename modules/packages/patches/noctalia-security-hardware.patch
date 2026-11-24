@@ -1,8 +1,8 @@
 diff --git a/assets/translations/en.json b/assets/translations/en.json
-index bad29c150..1c7f5d3a3 100644
+index c20ebdc4d..12c6b7414 100644
 --- a/assets/translations/en.json
 +++ b/assets/translations/en.json
-@@ -509,6 +509,7 @@
+@@ -523,6 +523,7 @@
        "notification": "DND",
        "power-profile": "Power",
        "screen-time": "Screen Time",
@@ -10,7 +10,7 @@ index bad29c150..1c7f5d3a3 100644
        "session": "Session",
        "system": "System",
        "wallpaper": "Wallpaper",
-@@ -1389,6 +1390,68 @@
+@@ -1420,6 +1421,68 @@
        "privacy-warning-title": "Exports may contain secrets",
        "title": "Export Config"
      },
@@ -79,7 +79,7 @@ index bad29c150..1c7f5d3a3 100644
      "idle": {
        "behavior": {
          "add": "Add Behavior",
-@@ -1446,6 +1509,7 @@
+@@ -1477,6 +1540,7 @@
          "display": "Display",
          "effects": "Effects",
          "filtering": "Filtering",
@@ -87,7 +87,7 @@ index bad29c150..1c7f5d3a3 100644
          "focus-styling": "Focus Styling",
          "formats": "Formats",
          "general": "General",
-@@ -1489,6 +1553,7 @@
+@@ -1520,6 +1584,7 @@
          "screenshot-capture": "Capture",
          "screenshot-output": "Output",
          "security": "Security",
@@ -95,7 +95,7 @@ index bad29c150..1c7f5d3a3 100644
          "session-panel": "Session Panel",
          "shape": "Shape",
          "system": "System",
-@@ -3860,6 +3925,169 @@
+@@ -3988,6 +4053,169 @@
          }
        }
      },
@@ -266,10 +266,10 @@ index bad29c150..1c7f5d3a3 100644
        "add": "Add Action",
        "clear-glyph": "Clear",
 diff --git a/assets/translations/pt-BR.json b/assets/translations/pt-BR.json
-index 7fe676ace..6c43a2863 100644
+index 53fc7469c..e962d01b3 100644
 --- a/assets/translations/pt-BR.json
 +++ b/assets/translations/pt-BR.json
-@@ -509,6 +509,7 @@
+@@ -523,6 +523,7 @@
        "notification": "Não Perturbe",
        "power-profile": "Energia",
        "screen-time": "Tempo de Tela",
@@ -277,7 +277,7 @@ index 7fe676ace..6c43a2863 100644
        "session": "Sessão",
        "system": "Sistema",
        "wallpaper": "Papel de Parede",
-@@ -1390,6 +1391,68 @@
+@@ -1420,6 +1421,68 @@
        "privacy-warning-title": "Exportações podem conter segredos",
        "title": "Exportar Configuração"
      },
@@ -346,7 +346,7 @@ index 7fe676ace..6c43a2863 100644
      "idle": {
        "behavior": {
          "add": "Adicionar Comportamento",
-@@ -1444,6 +1507,7 @@
+@@ -1477,6 +1540,7 @@
          "display": "Mostrar",
          "effects": "Efeitos",
          "filtering": "Filtragem",
@@ -354,7 +354,7 @@ index 7fe676ace..6c43a2863 100644
          "focus-styling": "Estilo de Foco",
          "formats": "Formatos",
          "general": "Geral",
-@@ -1487,6 +1551,7 @@
+@@ -1520,6 +1584,7 @@
          "screenshot-capture": "Captura",
          "screenshot-output": "Saída",
          "security": "Segurança",
@@ -362,7 +362,7 @@ index 7fe676ace..6c43a2863 100644
          "session-panel": "Sessão",
          "shape": "Forma",
          "system": "Sistema",
-@@ -3852,6 +3917,169 @@
+@@ -3983,6 +4048,169 @@
          }
        }
      },
@@ -533,10 +533,10 @@ index 7fe676ace..6c43a2863 100644
        "add": "Adicionar Ação",
        "clear-glyph": "Apagar",
 diff --git a/meson.build b/meson.build
-index f687d541b..228422c52 100644
+index 6cb554d06..9fafd8609 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -651,7 +651,11 @@ _noctalia_sources = files(
+@@ -588,7 +588,11 @@ _noctalia_sources = files(
    'src/scripting/script_worker_pool.cpp',
    'src/scripting/plugin_bindings.cpp',
    'src/security/encrypted_file_store.cpp',
@@ -548,7 +548,7 @@ index f687d541b..228422c52 100644
    'src/security/secure_buffer.cpp',
    'src/security/storage_key_provider.cpp',
    'src/system/battery_warning_monitor.cpp',
-@@ -769,6 +773,7 @@ _noctalia_sources = files(
+@@ -723,6 +727,7 @@ _noctalia_sources = files(
    'src/shell/settings/template_store_tile.cpp',
    'src/shell/settings/settings_control_factory.cpp',
    'src/shell/settings/settings_content_idle_behavior.cpp',
@@ -556,7 +556,7 @@ index f687d541b..228422c52 100644
    'src/shell/settings/settings_content_notification_filter.cpp',
    'src/shell/settings/settings_content_session_action.cpp',
    'src/shell/settings/settings_bar_management.cpp',
-@@ -786,6 +791,7 @@ _noctalia_sources = files(
+@@ -757,6 +762,7 @@ _noctalia_sources = files(
    'src/shell/settings/settings_window_popups.cpp',
    'src/shell/settings/settings_window_palette.cpp',
    'src/shell/settings/settings_window_scene.cpp',
@@ -564,16 +564,16 @@ index f687d541b..228422c52 100644
    'src/shell/settings/settings_window.cpp',
    'src/shell/test/test_panel.cpp',
    'src/shell/tray/tray_drawer_panel.cpp',
-@@ -1346,6 +1352,7 @@ if build_tests
-     'screenshot_backdrop',
+@@ -1355,6 +1361,7 @@ if build_tests
+     'screenshot_region_gesture',
      'scrollbar_geometry',
      'secret_store',
 +    'security_hardware_parsers',
      'security_primitives',
-     'state_store',
-     'string_utils',
+     'settings_search',
+     'smart_auto_hide',
 diff --git a/src/app/application.cpp b/src/app/application.cpp
-index b14d44086..37f4fb276 100644
+index b718157d4..31228acfe 100644
 --- a/src/app/application.cpp
 +++ b/src/app/application.cpp
 @@ -37,6 +37,8 @@
@@ -584,12 +584,12 @@ index b14d44086..37f4fb276 100644
 +#include "security/security_key_manager.h"
  #include "shell/clipboard/clipboard_panel.h"
  #include "shell/control_center/control_center_panel.h"
- #include "shell/greeter/greeter_appearance_sync.h"
+ #include "shell/dialogs/color_picker_dialog.h"
 diff --git a/src/app/application.h b/src/app/application.h
-index 61b58559a..9c8480e3b 100644
+index e6f6f9ef6..1155ed6ae 100644
 --- a/src/app/application.h
 +++ b/src/app/application.h
-@@ -143,6 +143,8 @@ class ScreenSaverService;
+@@ -144,6 +144,8 @@ class ScreenSaverService;
  class SessionBus;
  class SessionBusPollSource;
  class SoundPlayer;
@@ -598,7 +598,7 @@ index 61b58559a..9c8480e3b 100644
  class SystemBus;
  class SystemBusPollSource;
  class SystemMonitorService;
-@@ -311,6 +313,10 @@ private:
+@@ -322,6 +324,10 @@ private:
    std::unique_ptr<ModemManagerService> m_modemManagerService;
    Timer m_bluetoothResumeTimer;
    std::unique_ptr<PolkitAgent> m_polkitAgent;
@@ -610,11 +610,11 @@ index 61b58559a..9c8480e3b 100644
    bool m_notificationDaemonInitFailed = false;
    bool m_notificationShellRefreshScheduled = false;
 diff --git a/src/app/application_ui.cpp b/src/app/application_ui.cpp
-index e814ff5e3..9d3a62e5d 100644
+index d37a5aee5..aea5af27a 100644
 --- a/src/app/application_ui.cpp
 +++ b/src/app/application_ui.cpp
-@@ -28,6 +28,8 @@
- #include "render/text/font_weight_catalog.h"
+@@ -29,6 +29,8 @@
+ #include "render/text/system_font.h"
  #include "scripting/plugin_ipc.h"
  #include "scripting/plugin_runtime_context.h"
 +#include "security/fingerprint_manager.h"
@@ -622,7 +622,7 @@ index e814ff5e3..9d3a62e5d 100644
  #include "shell/clipboard/clipboard_panel.h"
  #include "shell/clipboard/clipboard_paste.h"
  #include "shell/control_center/control_center_panel.h"
-@@ -155,6 +157,11 @@ void Application::initUiRenderSurfacesAndSettings() {
+@@ -160,6 +162,11 @@ void Application::initUiRenderSurfacesAndSettings() {
      }
    });
    m_settingsWindow.setSyncGreeterAppearance([this] { performGreeterSync(); });
@@ -634,100 +634,6 @@ index e814ff5e3..9d3a62e5d 100644
    m_settingsWindow.setSaveWallpaperPaletteAsCustom([this] {
      std::string paletteName;
      std::string error;
-diff --git a/src/core/process/process.cpp b/src/core/process/process.cpp
-index 61aba1af0..a39048e25 100644
---- a/src/core/process/process.cpp
-+++ b/src/core/process/process.cpp
-@@ -378,18 +378,45 @@ namespace {
- 
-     // O_CLOEXEC atomically: a concurrent fork() on another thread must not inherit the write
-     // ends, or EOF is delayed for that unrelated child's lifetime. dup2() clears the flag.
-+    // Filled before fork(): the data sits in the pipe buffer and the write end closes right
-+    // away, so the child sees EOF and a child exiting early can never raise SIGPIPE here.
-+    int inPipe[2] = {-1, -1};
-+    if (options.stdinData.has_value()) {
-+      if (::pipe2(inPipe, O_CLOEXEC) != 0) {
-+        return {-1, {}, {}};
-+      }
-+      const std::string& data = *options.stdinData;
-+      std::size_t written = 0;
-+      (void)setNonBlocking(inPipe[1]);
-+      while (written < data.size()) {
-+        const ssize_t n = ::write(inPipe[1], data.data() + written, data.size() - written);
-+        if (n < 0 && errno == EINTR) {
-+          continue;
-+        }
-+        if (n <= 0) {
-+          closePipe(inPipe);
-+          return {-1, {}, {}};
-+        }
-+        written += static_cast<std::size_t>(n);
-+      }
-+      closeFd(inPipe[1]);
-+    }
-+
-     int outPipe[2] = {-1, -1};
-     int errPipe[2] = {-1, -1};
-     if (::pipe2(outPipe, O_CLOEXEC) != 0) {
-+      closeFd(inPipe[0]);
-       return {-1, {}, {}};
-     }
-     if (::pipe2(errPipe, O_CLOEXEC) != 0) {
-+      closeFd(inPipe[0]);
-       closePipe(outPipe);
-       return {-1, {}, {}};
-     }
- 
-     const pid_t pid = ::fork();
-     if (pid < 0) {
-+      closeFd(inPipe[0]);
-       closePipe(outPipe);
-       closePipe(errPipe);
-       return {-1, {}, {}};
-@@ -401,12 +428,19 @@ namespace {
-       ::setpgid(0, 0);
-       closeFd(outPipe[0]);
-       closeFd(errPipe[0]);
-+      if (inPipe[0] >= 0) {
-+        ::dup2(inPipe[0], STDIN_FILENO);
-+        closeFd(inPipe[0]);
-+      }
-       ::dup2(outPipe[1], STDOUT_FILENO);
-       ::dup2(errPipe[1], STDERR_FILENO);
-       closeFd(outPipe[1]);
-       closeFd(errPipe[1]);
- 
-       applyEnvOverrides(options.env);
-+      if (!options.workingDir.empty() && ::chdir(options.workingDir.c_str()) != 0) {
-+        ::_exit(127);
-+      }
-       std::vector<char*> argv = makeArgv(args);
- 
-       ::execvp(argv[0], argv.data());
-@@ -417,6 +451,7 @@ namespace {
-     // wins the race; harmless if the child has already exec'd.
-     ::setpgid(pid, pid);
- 
-+    closeFd(inPipe[0]);
-     closeFd(outPipe[1]);
-     closeFd(errPipe[1]);
-     (void)setNonBlocking(outPipe[0]);
-diff --git a/src/core/process/process.h b/src/core/process/process.h
-index ba7afdbdb..bec3afbf2 100644
---- a/src/core/process/process.h
-+++ b/src/core/process/process.h
-@@ -48,6 +48,11 @@ namespace process {
-     std::shared_ptr<std::atomic<bool>> cancel;
-     // Child-only environment changes. `nullopt` unsets the variable.
-     std::vector<EnvOverride> env;
-+    // Captured runs only: fed to the child's stdin, then EOF. Must fit in a pipe buffer (64 KiB);
-+    // larger input fails the run. Without it the child inherits the caller's stdin.
-+    std::optional<std::string> stdinData;
-+    // Captured runs only: the child's working directory (exit status 127 when it can't enter it).
-+    std::string workingDir;
-   };
- 
-   [[nodiscard]] bool commandExists(const char* name);
 diff --git a/src/security/fingerprint_manager.cpp b/src/security/fingerprint_manager.cpp
 new file mode 100644
 index 000000000..82a25ea77
@@ -3424,14 +3330,14 @@ index 000000000..d1fa4e88a
 +}
 diff --git a/src/security/security_key_manager.h b/src/security/security_key_manager.h
 new file mode 100644
-index 000000000..b8f4d6643
+index 000000000..f6778e0a3
 --- /dev/null
 +++ b/src/security/security_key_manager.h
 @@ -0,0 +1,298 @@
 +#pragma once
 +
 +#include "core/timer_manager.h"
-+#include "core/process/process.h"
++#include "system/process.h"
 +#include "security/security_hardware_parsers.h"
 +
 +#include <atomic>
@@ -4632,10 +4538,10 @@ index 000000000..a7735835f
 +  finishOp();
 +}
 diff --git a/src/shell/control_center/shortcut_registry.cpp b/src/shell/control_center/shortcut_registry.cpp
-index 8dab76c2f..9b51a6caa 100644
+index 39df55904..342e036fc 100644
 --- a/src/shell/control_center/shortcut_registry.cpp
 +++ b/src/shell/control_center/shortcut_registry.cpp
-@@ -450,6 +450,16 @@ namespace {
+@@ -474,6 +474,16 @@ namespace {
      void onClick() override { PanelManager::instance().togglePanel("clipboard"); }
    };
  
@@ -4652,8 +4558,8 @@ index 8dab76c2f..9b51a6caa 100644
    using ShortcutCreator = std::unique_ptr<Shortcut> (*)(const ShortcutServices& services);
    using ShortcutAvailability = bool (*)(const Config& config);
  
-@@ -541,6 +551,10 @@ namespace {
-           .labelKey = "control-center.shortcuts.clipboard",
+@@ -583,6 +593,10 @@ namespace {
+           .icon = ClipboardShortcut::kIcon,
            .isAvailable = [](const Config& config) { return config.shell.clipboardEnabled; },
        }),
 +      builtinShortcut<SecurityShortcut>({
@@ -4664,10 +4570,10 @@ index 8dab76c2f..9b51a6caa 100644
  
    const BuiltinShortcutDescriptor* findBuiltinShortcut(std::string_view type) {
 diff --git a/src/shell/settings/settings_content.cpp b/src/shell/settings/settings_content.cpp
-index 77ab1248a..f542b8857 100644
+index 97bb65c00..4fdfd6937 100644
 --- a/src/shell/settings/settings_content.cpp
 +++ b/src/shell/settings/settings_content.cpp
-@@ -1202,6 +1202,8 @@ namespace settings {
+@@ -1133,6 +1133,8 @@ namespace settings {
                return nullptr;
              } else if constexpr (std::is_same_v<T, NotificationFiltersSetting>) {
                return nullptr;
@@ -4676,7 +4582,7 @@ index 77ab1248a..f542b8857 100644
              } else if constexpr (std::is_same_v<T, ButtonSetting>) {
                if (control.glyph.empty()) {
                  return ui::button({
-@@ -1457,6 +1459,12 @@ namespace settings {
+@@ -1391,6 +1393,12 @@ namespace settings {
            makeIdleBehaviorsInlineBlock(*activeGroupBody, entry, *idle);
          } else if (const auto* filters = std::get_if<NotificationFiltersSetting>(&entry.control)) {
            makeNotificationFiltersInlineBlock(*activeGroupBody, entry, *filters);
@@ -4690,10 +4596,10 @@ index 77ab1248a..f542b8857 100644
            makeRow(*activeGroupBody, entry, makeSearchPickerButton(entry, *picker));
          } else if (const auto* multi = std::get_if<MultiSelectSetting>(&entry.control)) {
 diff --git a/src/shell/settings/settings_registry.h b/src/shell/settings/settings_registry.h
-index f5e241ea6..568aaaf90 100644
+index 5f5fe7009..945e5ebac 100644
 --- a/src/shell/settings/settings_registry.h
 +++ b/src/shell/settings/settings_registry.h
-@@ -273,11 +273,18 @@ namespace settings {
+@@ -289,12 +289,18 @@ namespace settings {
      std::string defaultAction;
    };
  
@@ -4705,11 +4611,11 @@ index f5e241ea6..568aaaf90 100644
 +
    using SettingControl = std::variant<
        ToggleSetting, SelectSetting, SliderSetting, RangeSliderSetting, TextSetting, OptionalNumberSetting,
-       OptionalStepperSetting, StepperSetting, ListSetting, StringMapSetting, ShortcutListSetting, KeybindListSetting,
-       SessionPanelActionsSetting, IdleBehaviorsSetting, NotificationFiltersSetting, MultiSelectSetting,
--      TemplateGridSetting, ButtonSetting, ColorSpecPickerSetting, SearchPickerSetting, GestureActionSetting>;
-+      TemplateGridSetting, ButtonSetting, ColorSpecPickerSetting, SearchPickerSetting, GestureActionSetting,
-+      CustomBlockSetting>;
+       OptionalStepperSetting, StepperSetting, LengthSetting, ListSetting, StringMapSetting, ShortcutListSetting,
+       KeybindListSetting, SessionPanelActionsSetting, IdleBehaviorsSetting, NotificationFiltersSetting,
+       MultiSelectSetting, TemplateGridSetting, ButtonSetting, ColorSpecPickerSetting, SearchPickerSetting,
+-      GestureActionSetting>;
++      GestureActionSetting, CustomBlockSetting>;
  
    // Visibility predicate, evaluated against the same Config the registry was built from
    // (the registry rebuilds on every config change). Capture snapshot values or read the
@@ -6034,7 +5940,7 @@ index 000000000..f3cf134d6
 +
 +} // namespace settings
 diff --git a/src/shell/settings/settings_sheet.cpp b/src/shell/settings/settings_sheet.cpp
-index 43bf529e2..717a4ca35 100644
+index f243c8a00..23dbc4e91 100644
 --- a/src/shell/settings/settings_sheet.cpp
 +++ b/src/shell/settings/settings_sheet.cpp
 @@ -35,6 +35,7 @@ namespace settings {
@@ -6045,7 +5951,7 @@ index 43bf529e2..717a4ca35 100644
      m_title = std::move(request.sheetTitle);
      m_removeAction = std::move(request.removeAction);
      m_createLeadingAction = std::move(request.createLeadingAction);
-@@ -188,6 +189,7 @@ namespace settings {
+@@ -190,6 +191,7 @@ namespace settings {
      m_onCloseRequested = nullptr;
      m_preDispatchKeyboard = nullptr;
      m_onClosed = nullptr;
@@ -6054,7 +5960,7 @@ index 43bf529e2..717a4ca35 100644
      m_dismissSelectDropdown = nullptr;
    }
 diff --git a/src/shell/settings/settings_sheet.h b/src/shell/settings/settings_sheet.h
-index b99d5ede6..02f7bbb91 100644
+index 00baf9a4f..78a674710 100644
 --- a/src/shell/settings/settings_sheet.h
 +++ b/src/shell/settings/settings_sheet.h
 @@ -37,6 +37,8 @@ namespace settings {
@@ -6069,9 +5975,9 @@ index b99d5ede6..02f7bbb91 100644
 @@ -55,6 +57,7 @@ namespace settings {
      void clearStatusMessage();
  
-     [[nodiscard]] bool preDispatchKeyboard(const KeyboardEvent& event) const;
-+    [[nodiscard]] InputArea* initialFocusArea() const { return m_initialFocusArea ? m_initialFocusArea() : nullptr; }
-     [[nodiscard]] float naturalHeight(Renderer& renderer, float width) const;
+     bool preDispatchKeyboard(const KeyboardEvent& event) const;
++    InputArea* initialFocusArea() const { return m_initialFocusArea ? m_initialFocusArea() : nullptr; }
+     float naturalHeight(Renderer& renderer, float width) const;
      void arrange(Renderer& renderer, float width, float height);
  
 @@ -76,6 +79,7 @@ namespace settings {
@@ -6096,10 +6002,10 @@ index 25caadc01..3eed4d13d 100644
              .requestClose =
                  [this, aliveGuard] {
 diff --git a/src/shell/settings/settings_window.cpp b/src/shell/settings/settings_window.cpp
-index 2cb7de798..f36e4543d 100644
+index 92ddfc480..c1bfc9be3 100644
 --- a/src/shell/settings/settings_window.cpp
 +++ b/src/shell/settings/settings_window.cpp
-@@ -19,6 +19,8 @@
+@@ -20,6 +20,8 @@
  #include "render/render_context.h"
  #include "render/text/font_weight_catalog.h"
  #include "scripting/plugin_registry.h"
@@ -6108,7 +6014,7 @@ index 2cb7de798..f36e4543d 100644
  #include "shell/settings/settings_content_plugins.h"
  #include "shell/settings/settings_dialog_presenter.h"
  #include "shell/tooltip/tooltip_manager.h"
-@@ -173,6 +175,8 @@ SettingsWindow::SettingsWindow() = default;
+@@ -174,6 +176,8 @@ SettingsWindow::SettingsWindow() = default;
  SettingsWindow::~SettingsWindow() {
    setCalendarService(nullptr);
    destroyWindow();
@@ -6117,7 +6023,7 @@ index 2cb7de798..f36e4543d 100644
  }
  
  void SettingsWindow::setCalendarService(CalendarService* service) {
-@@ -424,6 +428,18 @@ void SettingsWindow::open(std::string context) {
+@@ -434,6 +438,18 @@ void SettingsWindow::open(std::string context) {
      return;
    }
  
@@ -6136,7 +6042,7 @@ index 2cb7de798..f36e4543d 100644
    if (m_dependencies != nullptr) {
      m_dependencies->rescan();
    }
-@@ -589,6 +605,7 @@ void SettingsWindow::dismissOpenSelectDropdown() {
+@@ -600,6 +616,7 @@ void SettingsWindow::dismissOpenSelectDropdown() {
  }
  
  void SettingsWindow::destroyWindow() {
@@ -6145,10 +6051,10 @@ index 2cb7de798..f36e4543d 100644
    m_configExportDialogModal.reset();
    m_editorSheetModal.reset();
 diff --git a/src/shell/settings/settings_window.h b/src/shell/settings/settings_window.h
-index 6a181e533..499df11bd 100644
+index 6f0b6d0fc..df3a559d4 100644
 --- a/src/shell/settings/settings_window.h
 +++ b/src/shell/settings/settings_window.h
-@@ -10,6 +10,7 @@
+@@ -12,6 +12,7 @@
  #include "shell/settings/settings_control_factory.h"
  #include "shell/settings/settings_modal_host.h"
  #include "shell/settings/settings_registry.h"
@@ -6181,7 +6087,7 @@ index 6a181e533..499df11bd 100644
    void setResetLauncherUsage(std::function<void()> callback) { m_resetLauncherUsage = std::move(callback); }
    void setResetScreenTime(std::function<void()> callback) { m_resetScreenTime = std::move(callback); }
    void setResetEncryptedStorage(std::function<void()> callback) { m_resetEncryptedStorage = std::move(callback); }
-@@ -222,6 +227,17 @@ private:
+@@ -223,6 +228,17 @@ private:
    void openPluginSourceCreateEditor(std::optional<PluginSourceConfig> existing = std::nullopt);
    void openPluginSettingsEditor(std::string pluginId);
    void openPluginStore();
@@ -6199,7 +6105,7 @@ index 6a181e533..499df11bd 100644
    void openCommunityTemplateStore();
    void openPaletteInspector();
    void openBarWidgetEditorSheet(
-@@ -402,4 +418,15 @@ private:
+@@ -403,4 +419,15 @@ private:
    std::function<void()> m_resetScreenTime;
    std::function<void()> m_resetEncryptedStorage;
    std::function<void()> m_saveWallpaperPaletteAsCustom;
@@ -6216,10 +6122,10 @@ index 6a181e533..499df11bd 100644
 +  std::shared_ptr<void> m_securityAlive = std::make_shared<int>(0);
  };
 diff --git a/src/shell/settings/settings_window_scene.cpp b/src/shell/settings/settings_window_scene.cpp
-index d490fe15f..a5449de1f 100644
+index f191429c5..a0a30dcd3 100644
 --- a/src/shell/settings/settings_window_scene.cpp
 +++ b/src/shell/settings/settings_window_scene.cpp
-@@ -1843,6 +1843,8 @@ void SettingsWindow::refreshSettingsRegistry(const Config& cfg) {
+@@ -1846,6 +1846,8 @@ void SettingsWindow::refreshSettingsRegistry(const Config& cfg) {
      insertStorageRecovery(settings::SettingsSection::Shell, "clipboard");
    }
  
@@ -6227,14 +6133,14 @@ index d490fe15f..a5449de1f 100644
 +
    if (m_syncGreeterAppearance && env.greeterSyncAvailable) {
      auto it = std::ranges::find_if(m_settingsRegistry, [](const settings::SettingEntry& e) {
-       return e.section == settings::SettingsSection::Security
+       return e.section == settings::SettingsSection::LockScreen
 diff --git a/src/shell/settings/settings_window_security.cpp b/src/shell/settings/settings_window_security.cpp
 new file mode 100644
-index 000000000..510adf401
+index 000000000..6145abe6d
 --- /dev/null
 +++ b/src/shell/settings/settings_window_security.cpp
 @@ -0,0 +1,372 @@
-+#include "wayland/clipboard_service.h"
++#include "shell/wayland/clipboard_service.h"
 +#include "config/config_types.h"
 +#include "core/deferred_call.h"
 +#include "i18n/i18n.h"
@@ -6244,7 +6150,7 @@ index 000000000..510adf401
 +#include "shell/settings/settings_window.h"
 +#include "ui/controls/flex.h"
 +#include "ui/controls/input.h"
-+#include "ui/dialogs/file_dialog.h"
++#include "shell/dialogs/file_dialog.h"
 +
 +#include <algorithm>
 +#include <filesystem>
@@ -6606,54 +6512,65 @@ index 000000000..510adf401
 +  m_securitySheet = SecuritySheet::None;
 +  m_securityHardwareState = {};
 +}
+diff --git a/src/system/process.cpp b/src/system/process.cpp
+index d4e46e631..f82b0622e 100644
+--- a/src/system/process.cpp
++++ b/src/system/process.cpp
+@@ -488,6 +488,9 @@ namespace {
+       closeFd(errPipe[1]);
+ 
+       applyEnvOverrides(options.env);
++      if (!options.workingDir.empty() && ::chdir(options.workingDir.c_str()) != 0) {
++        ::_exit(127);
++      }
+       std::vector<char*> argv = makeArgv(args);
+ 
+       ::execvp(argv[0], argv.data());
+diff --git a/src/system/process.h b/src/system/process.h
+index 041c09b00..1d966f491 100644
+--- a/src/system/process.h
++++ b/src/system/process.h
+@@ -52,6 +52,8 @@ namespace process {
+     // before the child starts, so it must fit in a pipe buffer (64 KiB on Linux);
+     // larger input fails the run. Otherwise the child inherits our stdin.
+     std::optional<std::string> stdinData;
++    // Captured runs only: the child's working directory (exit status 127 when it can't enter it).
++    std::string workingDir;
+   };
+ 
+   bool commandExists(const char* name);
 diff --git a/tests/process_test.cpp b/tests/process_test.cpp
-index d72cced5a..3eccd99a0 100644
+index 832d89ede..a7e8720c9 100644
 --- a/tests/process_test.cpp
 +++ b/tests/process_test.cpp
-@@ -141,6 +141,34 @@ namespace {
-     return ok;
+@@ -193,6 +193,19 @@ namespace {
+     TEST_CHECK(rejected.exitCode == -1);
    }
  
-+  bool syncFeedsStdinData() {
-+    process::RunOptions options;
-+    options.stdinData = "1234\nsecond line\n";
-+    const auto result = process::runSync({"/bin/sh", "-c", "read -r first; printf '%s' \"$first\""}, options);
-+    bool ok = expect(result.exitCode == 0, "stdin data command failed");
-+    ok = expect(result.out == "1234", "stdin data was not visible in child") && ok;
-+
-+    // A child that never reads its stdin must not break the run (nor raise SIGPIPE here).
-+    options.stdinData = std::string(4096, 'x');
-+    const auto ignored = process::runSync(std::vector<std::string>{"true"}, options);
-+    ok = expect(ignored.exitCode == 0, "child ignoring stdin data failed") && ok;
-+    return ok;
-+  }
-+
-+  bool syncRunsInWorkingDir() {
++  void syncRunsInWorkingDir() {
 +    process::RunOptions options;
 +    options.workingDir = "/";
 +    const auto result = process::runSync({"/bin/sh", "-c", "pwd"}, options);
-+    bool ok = expect(result.exitCode == 0, "working dir command failed");
++    TEST_CHECK(result.exitCode == 0);
 +    // Captured output loses its trailing newline.
-+    ok = expect(result.out == "/", "child did not start in the working dir") && ok;
++    TEST_CHECK(result.out == "/");
 +
 +    options.workingDir = "/nonexistent/noctalia-process-test";
 +    const auto missing = process::runSync({"/bin/sh", "-c", "pwd"}, options);
-+    ok = expect(missing.exitCode == 127, "missing working dir did not fail the run") && ok;
-+    return ok;
++    TEST_CHECK(missing.exitCode == 127);
 +  }
 +
-   bool stringCommandsSupportShellComposition() {
+   void stringCommandsSupportShellComposition() {
      const auto result = process::runSync("printf first && printf second");
-     bool ok = expect(result.exitCode == 0, "composed shell command failed");
-@@ -249,6 +277,8 @@ int main() {
-   ok = capturedAsyncDeliversCallbacksAndResult() && ok;
-   ok = capturedAsyncDeliversCompletionOnly() && ok;
-   ok = syncAppliesEnvOverrides() && ok;
-+  ok = syncFeedsStdinData() && ok;
-+  ok = syncRunsInWorkingDir() && ok;
-   ok = stringCommandsSupportShellComposition() && ok;
-   ok = detachedAsyncInheritsLaunchEnvironment() && ok;
-   ok = detachedMissingBinaryReturnsFalse() && ok;
+     TEST_CHECK(result.exitCode == 0);
+@@ -377,6 +390,7 @@ int main() {
+   capturedAsyncDeliversCompletionOnly();
+   syncAppliesEnvOverrides();
+   syncFeedsStdinThenEof();
++  syncRunsInWorkingDir();
+   cancelStopsIdleStream();
+   cancelStopsChildThatClosedItsOutput();
+   timeoutStopsIdleChild();
 diff --git a/tests/security_hardware_parsers_test.cpp b/tests/security_hardware_parsers_test.cpp
 new file mode 100644
 index 000000000..c8b64811f
