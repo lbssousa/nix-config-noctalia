@@ -22,10 +22,10 @@
       noctalia = action: "spawn noctalia msg ${action}";
       calculator = once (noctalia "panel-toggle samuelskovbakke/calculator-plus:panel");
       # Janelas que o Omarchy deixa translúcidas: a tag "terminal" de
-      # default/hypr/apps/terminals.lua (mais o console Quake) e o Nautilus
-      # (mais o Strata, que o substitui aqui).
+      # default/hypr/apps/terminals.lua (mais o console Quake) e o gerenciador
+      # de arquivos (o Luciole, que aqui ocupa o lugar do Nautilus).
       terminalApps = "Alacritty|kitty|com\\.mitchellh\\.ghostty|foot|org\\.codeberg\\.dnkl\\.foot|wezterm|org\\.wezfurlong\\.wezterm|dev\\.lbssousa\\.console";
-      fileManagerApps = "org\\.gnome\\.Nautilus|io\\.github\\.lgse\\.Strata";
+      fileManagerApps = "dev\\.noctalia\\.luciole";
       transparentApps = "^(${terminalApps}|${fileManagerApps})$";
 
       # Modos de omarchy-hyprland-window-transparency (Omarchy 4.5):

@@ -17,8 +17,9 @@ let
       libfprint-goodix = call ../packages/_libfprint-goodix/package.nix;
       fprintd-goodix = call ../packages/_fprintd-goodix/package.nix;
       yubikey-gpg-import = call ../packages/_yubikey-gpg-import/package.nix;
-      # Strata pelo flake do próprio projeto (input em flake.nix).
-      strata = inputs.strata.packages.${final.stdenv.hostPlatform.system}.strata;
+      # Luciole pelo flake do próprio projeto (input em flake.nix), com o
+      # nixpkgs deste flake (follows): vai para o Cachix com a família Noctalia.
+      luciole = inputs.luciole.packages.${final.stdenv.hostPlatform.system}.default;
       superwhisper = call ../packages/_superwhisper/package.nix;
       # Auxiliar do plugin próprio da Noctalia (repositório em flake.nix).
       noctalia-secret-prompts = call "${inputs.noctalia-secret-prompts}/nix/package.nix";
@@ -220,23 +221,40 @@ in
         overlays = [ overlay ];
         config.allowUnfree = true;
       };
-    in
-    {
-      packages = lib.genAttrs [
-        "run0-sudo"
-        "libfprint-goodix"
-        "fprintd-goodix"
-        "yubikey-gpg-import"
-        "strata"
-        "superwhisper"
-        "noctalia-secret-prompts"
-        "noctalia-plugins-community"
-        "greetd"
+      # Família Noctalia com os patches deste overlay, que o cache.nixos.org
+      # não tem: vai para o Cachix lbssousa-noctalia (`just cache-push` e o
+      # job cache do CI; README, "Cache binário").
+      noctaliaCache = [
         "noctalia"
         "noctalia-greeter"
         "pinentry-noctalia"
         "noctalia-askpass"
+        "noctalia-secret-prompts"
+        "noctalia-plugins-community"
         "umbriel"
-      ] (n: pkgs'.${n});
+        "luciole"
+      ];
+    in
+    {
+      packages =
+        lib.genAttrs [
+          "run0-sudo"
+          "libfprint-goodix"
+          "fprintd-goodix"
+          "yubikey-gpg-import"
+          "luciole"
+          "superwhisper"
+          "noctalia-secret-prompts"
+          "noctalia-plugins-community"
+          "greetd"
+          "noctalia"
+          "noctalia-greeter"
+          "pinentry-noctalia"
+          "noctalia-askpass"
+          "umbriel"
+        ] (n: pkgs'.${n})
+        // {
+          noctalia-cache = pkgs'.linkFarmFromDrvs "noctalia-cache" (map (n: pkgs'.${n}) noctaliaCache);
+        };
     };
 }

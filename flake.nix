@@ -58,12 +58,13 @@
       flake = false;
     };
 
-    # Strata, gerenciador de arquivos do abutre, pelo flake do próprio projeto.
-    strata = {
-      url = "github:lgse/strata";
+    # Luciole, o gerenciador de arquivos da Noctalia (ainda fora do nixpkgs),
+    # pelo flake do próprio projeto.
+    luciole = {
+      url = "github:noctalia-dev/luciole";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Templates de tema da comunidade Noctalia (Strata e Chrome), fixados no
+    # Templates de tema da comunidade Noctalia (Chrome), fixados no
     # flake.lock e usados como templates de usuário (sem rede em tempo de
     # execução).
     noctalia-templates-community = {

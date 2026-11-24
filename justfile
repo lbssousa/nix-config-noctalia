@@ -109,6 +109,12 @@ upgrade host='' *args:
   echo "Packages changed in the next generation:"
   nvd diff /run/current-system "$next"
   echo ""
+  # With a Cachix token in the environment, publishes the Noctalia family just
+  # built (already in the store, so nothing is rebuilt); never blocks the upgrade.
+  if [[ -n "${CACHIX_AUTH_TOKEN:-}" ]]; then
+    just --justfile "{{justfile_file}}" cache-push || echo "warning: cache-push failed; the upgrade continues" >&2
+    echo ""
+  fi
   if [[ "$mode" == "auto" ]]; then
     if [[ "$host" != "$(hostname)" ]]; then
       echo "error: auto mode compares with the running system; use upgrade_mode=switch or boot for ${host}" >&2
@@ -176,6 +182,21 @@ gc period='30d':
       nix-collect-garbage --delete-older-than "$period_spec"
       ;;
   esac
+
+# Builds the Noctalia family with the overlay's patches (.#noctalia-cache) and
+# pushes it to the lbssousa-noctalia Cachix. Write token: CACHIX_AUTH_TOKEN
+# from the environment, or from secretspec (default profile).
+[group("maintenance")]
+cache-push:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cd "{{flake_root}}"
+  if [[ -z "${CACHIX_AUTH_TOKEN:-}" ]]; then
+    CACHIX_AUTH_TOKEN="$(nix shell nixpkgs#secretspec -c secretspec get CACHIX_AUTH_TOKEN)"
+  fi
+  export CACHIX_AUTH_TOKEN
+  out="$(nix build .#noctalia-cache --no-link --print-out-paths)"
+  nix run nixpkgs#cachix -- push lbssousa-noctalia "$out"
 
 [group("verification")]
 check *args:

@@ -21,13 +21,9 @@
         "application/x-ext-pdf"
       ];
       fileManagers = {
-        nautilus = {
-          appId = "org.gnome.Nautilus";
-          command = "nautilus --new-window";
-        };
-        strata = {
-          appId = "io.github.lgse.Strata";
-          command = "strata";
+        luciole = {
+          appId = "dev.noctalia.luciole";
+          command = "luciole";
         };
       };
       defaults = {
@@ -50,7 +46,7 @@
         };
         fileManager = lib.mkOption {
           type = lib.types.enum (lib.attrNames fileManagers);
-          default = "nautilus";
+          default = "luciole";
           description = "Gerenciador de arquivos padrão (pastas, FileManager1 e diálogo do portal).";
         };
         fileManagerApp = lib.mkOption {

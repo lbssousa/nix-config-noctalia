@@ -254,8 +254,11 @@ fi
 # The nix-community cache provides pre-built artifacts for various packages,
 # avoiding nixos-install having to compile from scratch and do
 # dependency downloads that can fail with a 500 error.
-NIX_COMMUNITY_SUBSTITUTER="https://nix-community.cachix.org"
-NIX_COMMUNITY_KEY="nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCUSeBs="
+# The project's own cache (lbssousa-noctalia) has Noctalia, the greeter,
+# umbriel and the plugins already built with the overlay's patches.
+# Both are whitespace-separated lists, as extra-substituters accepts them.
+NIX_COMMUNITY_SUBSTITUTER="https://nix-community.cachix.org https://lbssousa-noctalia.cachix.org"
+NIX_COMMUNITY_KEY="nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= lbssousa-noctalia.cachix.org-1:pzuER80zi7qmrqjkVy/2sifDJogy+QR9F9z/p4CBjF4="
 
 # ---------------------------------------------------------------------------
 # Argument parsing

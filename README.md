@@ -109,11 +109,12 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
   `BrowserThemeColor`, do template `chromium-based` da comunidade) e web apps
   instalados como PWAs pela política `WebAppInstallForceList` (`webapp <id>`):
   WhatsApp, Teams, YouTube, Google Maps/Photos/Messages/Contacts, Discord e X.
-- **Nautilus** é o gerenciador de arquivos padrão, e o **Strata** o do `abutre`
-  (`my.fileManager`): pastas, "Mostrar na pasta" (`org.freedesktop.FileManager1`)
-  e o diálogo de abrir/salvar (portal FileChooser), também nos apps Qt. O
-  Strata vem do flake do próprio projeto (`github:lgse/strata`) e segue a fonte
-  e as cores da Noctalia (template `strata` da comunidade, recolorido ao vivo).
+- **Luciole**, o gerenciador de arquivos da Noctalia, é o padrão de todos:
+  pastas, "Mostrar na pasta" (`org.freedesktop.FileManager1`) e o diálogo de
+  abrir/salvar (portal FileChooser, com o GTK de reserva), também nos apps Qt.
+  Ainda fora do nixpkgs, vem do flake do próprio projeto
+  (`github:noctalia-dev/luciole`), compilado no [cache binário](#cache-binário),
+  e segue as cores da Noctalia pelo template que vem no pacote.
 - **Apps de usuário nativos:** OnlyOffice, Xournal++, Papers, LocalSend,
   Zoom, OBS, Kdenlive, Pinta, Inkscape e FontForge, como pacotes Nix
   (`modules/nixos/desktop/apps.nix`); o mpv decodifica vídeo por hardware.
@@ -127,7 +128,7 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 |---|---|---|---|
 | `Super+Return` | terminal (ghostty) | `Super` (sozinho) | launcher |
 | `Super+Shift+B` | Chrome | `Super+Alt+Space` | central de controle |
-| `Super+Shift+F` | arquivos (Nautilus/Strata) | `Super+Escape` | menu de sessão |
+| `Super+Shift+F` | arquivos (Luciole) | `Super+Escape` | menu de sessão |
 | `Super+Shift+N` | neovim | `Super+K` | cheatsheet de atalhos |
 | `Super+Alt+Return` | tmux | `Super+Ctrl+V` | histórico do clipboard |
 | `Super+Ctrl+Return` | herdr | `Super+Ctrl+E` | emojis |
@@ -157,13 +158,63 @@ A tabela completa está em `modules/home/desktop/umbriel.nix`.
 (o sops-nix continua cuidando dos segredos do sistema).
 
 O CI (`.github/workflows/validate.yml`) precisa do secret
-`NIX_SECRETS_SSH_KEY` (deploy key somente leitura do `nix-secrets`).
+`NIX_SECRETS_SSH_KEY` (deploy key somente leitura do `nix-secrets`) e, para o
+job `cache`, do `CACHIX_AUTH_TOKEN` (ver [Cache binário](#cache-binário)).
 `just hooks` ativa o pre-commit (nixfmt, statix, deadnix).
 
 O sistema é reconstruído direto do clone de trabalho (`my.flakeDir`, para o qual
 `/etc/nixos` aponta), inclusive com alterações não commitadas, que marcam a
 geração como `-dirty`; commit e push vêm depois. Os comandos e aliases (`nrs`, `nru`, …) estão
 em [INSTALLATION.md › Manutenção](INSTALLATION.md#manutenção).
+
+## Cache binário
+
+O overlay (`modules/flake/packages.nix`) aplica patches locais na Noctalia, no
+Noctalia Greeter, no Umbriel e nos plugins da comunidade, e empacota o
+auxiliar do `noctalia-secret-prompts` e o Luciole (que ainda não está no
+nixpkgs). Nada disso está no cache.nixos.org, e
+sem um cache próprio cada host compila tudo de novo a cada atualização. Esses
+pacotes vão para o Cachix **lbssousa-noctalia**, que todos os hosts usam como
+substituter (`modules/nixos/core/nix.nix`) e que o `install.sh` também usa na
+instalação.
+
+O que entra no cache é o pacote `.#noctalia-cache`, que agrega a lista
+`noctaliaCache` em `modules/flake/packages.nix`: `noctalia`,
+`noctalia-greeter`, `pinentry-noctalia`, `noctalia-askpass`,
+`noctalia-secret-prompts`, `noctalia-plugins-community`, `umbriel` e
+`luciole`. Para
+incluir outro pacote da família, acrescente o nome dele nessa lista. O
+`cachix push` só envia o que ainda não está no cache.nixos.org.
+
+**Configuração (uma vez):**
+
+1. Em [app.cachix.org](https://app.cachix.org) › lbssousa-noctalia ›
+   Settings › Auth Tokens, crie um token com permissão de escrita.
+2. Guarde-o no cofre do secretspec (perfil `default`):
+   `secretspec set CACHIX_AUTH_TOKEN`.
+3. No GitHub, em Settings › Secrets and variables › Actions, crie o secret
+   `CACHIX_AUTH_TOKEN` com o mesmo token.
+
+**Envio:**
+
+- **CI:** o job `cache` do `validate.yml` roda depois do `flake-check` em
+  todo push no `main` (`.nix`, `flake.lock` ou patches) e também sob demanda
+  (Actions › Validate Nix Files › Run workflow). Ele compila
+  `.#noctalia-cache` e envia tudo o que compilou.
+- **Local:** `just cache-push` compila e envia. O token vem de
+  `CACHIX_AUTH_TOKEN` no ambiente ou, se a variável não existir, do
+  secretspec. Com o token no ambiente
+  (`CACHIX_AUTH_TOKEN=… just upgrade`, ou `secretspec run -- just upgrade`),
+  o `just upgrade` envia sozinho depois do build; se o envio falhar, o
+  upgrade continua.
+
+**Conferir** se um pacote está no cache:
+
+```bash
+nix path-info --store https://lbssousa-noctalia.cachix.org \
+  "$(nix build .#noctalia --no-link --print-out-paths)"
+nix config show substituters   # inclui https://lbssousa-noctalia.cachix.org
+```
 
 ## Créditos
 

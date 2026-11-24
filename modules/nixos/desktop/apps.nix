@@ -10,7 +10,7 @@
         kitty
         foot
 
-        # Arquivos (Nautilus e Strata: desktop/file-manager.nix), discos e mídia
+        # Arquivos (Luciole: desktop/file-manager.nix), discos e mídia
         gnome-disk-utility
         papers
         zathura
