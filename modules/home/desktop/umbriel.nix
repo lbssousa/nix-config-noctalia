@@ -112,7 +112,7 @@
             options = "caps:escape_shifted_capslock";
             numlock_toggle = true;
           };
-          focus.follows_mouse = true;
+          focus.follows_mouse = "sloppy";
           # Mesmo cursor do sistema (nixos/desktop/cursor.nix); o Umbriel o
           # exporta como XCURSOR_THEME/XCURSOR_SIZE para o que ele abre.
           cursor = {
