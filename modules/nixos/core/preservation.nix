@@ -50,6 +50,8 @@ in
           "/var/lib/systemd"
           "/var/lib/cups"
           "/var/lib/AccountsService"
+          # Flatpaks do sistema (desktop/flatpak.nix): apps, runtimes e remotos.
+          "/var/lib/flatpak"
           # sync.toml do greeter: último usuário, última sessão e tema escolhido
           # na tela de login. O greeter.toml é um symlink que o tmpfiles recria
           # a cada boot.

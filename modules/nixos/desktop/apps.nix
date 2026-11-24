@@ -1,37 +1,51 @@
 # Aplicativos gráficos e TUIs padrão — levantados a partir do sistema Omarchy
-# do usuário, todos como pacotes Nix nativos.
+# do usuário.
+#
+# Os aplicativos gráficos vêm do Flathub (services.flatpak.packages, ver
+# flatpak.nix). Ficam em Nix:
+#  - os que não estão no Flathub (ghostty, kitty, discos, imv, Superwhisper);
+#  - o foot, que existe no Flathub, mas num terminal em sandbox o shell perde
+#    as ferramentas do host;
+#  - os editores, FHS e com as toolchains do host, e o zathura, que o vimtex do
+#    nixvim usa com SyncTeX (o zathura chama o nvim de volta, o que o sandbox
+#    impede);
+#  - o que plugins e scripts chamam pela linha de comando (gpu-screen-recorder
+#    do plugin screen_recorder, as TUIs e os utilitários dos plugins).
 {
   flake.modules.nixos.apps =
     { pkgs, ... }:
     {
+      services.flatpak.packages = [
+        # PDF, imagens e vídeo
+        "org.gnome.Papers"
+        "io.mpv.Mpv"
+
+        # Escritório e notas
+        "org.onlyoffice.desktopeditors"
+        "com.github.xournalpp.xournalpp"
+
+        # Rede
+        "org.localsend.localsend_app"
+        "us.zoom.Zoom"
+
+        # Gráficos, áudio e vídeo
+        "com.obsproject.Studio"
+        "org.kde.kdenlive"
+        "com.github.PintaProject.Pinta"
+        "org.inkscape.Inkscape"
+        "org.fontforge.FontForge"
+      ];
+
       environment.systemPackages = with pkgs; [
         # Terminais
         ghostty
         kitty
         foot
 
-        # Arquivos (Luciole: desktop/file-manager.nix), discos e mídia
+        # Arquivos (Luciole: desktop/file-manager.nix), discos, imagens e PDF
         gnome-disk-utility
-        papers
-        zathura
         imv
-        mpv
-        mpvScripts.mpris
-
-        # Escritório e notas
-        onlyoffice-desktopeditors
-        xournalpp
-
-        # Rede e utilitários
-        localsend
-        zoom-us
-
-        # Gráficos, áudio e vídeo
-        obs-studio
-        kdePackages.kdenlive
-        pinta
-        inkscape
-        fontforge-gtk
+        zathura
 
         # Gravação de tela (usada pelo plugin screen_recorder da Noctalia)
         gpu-screen-recorder

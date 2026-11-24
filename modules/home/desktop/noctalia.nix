@@ -301,7 +301,7 @@
               "google-chrome"
               "com.mitchellh.ghostty"
               config.my.fileManagerApp.appId
-              "onlyoffice-desktopeditors"
+              "org.onlyoffice.desktopeditors"
             ];
           };
 

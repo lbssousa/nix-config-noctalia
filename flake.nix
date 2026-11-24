@@ -25,6 +25,9 @@
 
     preservation.url = "github:nix-community/preservation";
 
+    # Flatpaks declarativos (Flathub e o remoto OCI do ArtCraft): desktop/flatpak.nix.
+    nix-flatpak.url = "github:gmodena/nix-flatpak/v0.8.0";
+
     # Secure Boot: systemd-boot com UKIs assinados (security/secureboot.nix).
     lanzaboote = {
       url = "github:nix-community/lanzaboote/v1.2.0";

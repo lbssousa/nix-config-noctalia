@@ -36,6 +36,7 @@ in
       m.fonts
       m.cursor
       m.secret-service
+      m.flatpak
       m.google-chrome
       m.apps
       m.file-manager
