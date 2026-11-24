@@ -214,24 +214,27 @@ else
   ((_issues++)) || true
 fi
 
-# Check bootloader
-if [[ -d "$ROOT/boot/efi" ]]; then
-  ok "/boot/efi mounted"
-  if [[ -d "$ROOT/boot/efi/EFI/nixos" ]]; then
+# Check bootloader (the ESP is mounted at /boot, see modules/hosts/_disko-btrfs.nix)
+if [[ -d "$ROOT/boot/EFI" ]]; then
+  ok "ESP mounted at /boot"
+  if [[ -d "$ROOT/boot/EFI/nixos" ]]; then
     ok "NixOS EFI entries present"
-  elif [[ -d "$ROOT/boot/efi/EFI" ]]; then
+  elif [[ -d "$ROOT/boot/EFI" ]]; then
     warn "EFI directory exists but has no NixOS entries"
   else
     fail "No EFI entry found"
     ((_issues++)) || true
   fi
 else
-  warn "/boot/efi not mounted (bootloader not inspected)"
+  warn "ESP not mounted at /boot (bootloader not inspected)"
 fi
 
-# Limine / systemd-boot
-if [[ -f "$ROOT/boot/efi/EFI/limine/BOOTX64.EFI" || -f "$ROOT/boot/efi/EFI/BOOT/BOOTX64.EFI" ]]; then
-  ok "Limine: bootloader binary present on the ESP"
+# systemd-boot + lanzaboote
+if [[ -f "$ROOT/boot/EFI/systemd/systemd-bootx64.efi" ]]; then
+  ok "systemd-boot: bootloader binary present on the ESP"
+fi
+if compgen -G "$ROOT/boot/EFI/Linux/*.efi" >/dev/null; then
+  ok "lanzaboote: signed stubs present in /boot/EFI/Linux"
 fi
 
 # Secure Boot keys

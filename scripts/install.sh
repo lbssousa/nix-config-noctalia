@@ -966,28 +966,27 @@ git add "$CFG_FILE" "$HW_FILE"
 success "Host files registered in the git index."
 
 # ---------------------------------------------------------------------------
-# 6a. Create Secure Boot keys (every host uses Secure Boot via Limine)
+# 6a. Create Secure Boot keys (every host uses Secure Boot via lanzaboote)
 # ---------------------------------------------------------------------------
 
 echo
-info "==> Step 6a: Check Secure Boot support (Limine)"
+info "==> Step 6a: Check Secure Boot support (lanzaboote)"
 
 if true; then
-  # The boot.loader.limine module doesn't have a pkiBundle option: sbctl
-  # always looks for keys in /var/lib/sbctl. Each host with Secure Boot
-  # creates a /var/lib/sbctl -> /persist/etc/secureboot symlink via
-  # systemd.tmpfiles.rules (see modules/nixos/security/secureboot.nix) to survive
-  # the tmpfs root. This path needs to exist BEFORE the first boot for the
-  # Limine installer to sign the bootloader during nixos-install.
+  # boot.lanzaboote.pkiBundle points straight at /persist/etc/secureboot
+  # (see modules/nixos/security/secureboot.nix), so the keys need to exist
+  # there BEFORE nixos-install for lanzaboote to sign systemd-boot and the
+  # stubs. sbctl itself looks in /var/lib/sbctl, a symlink to the same
+  # directory created by systemd.tmpfiles.rules on every boot (tmpfs root).
   _SECUREBOOT_DIR="/mnt/persist/etc/secureboot"
 
-  info "Host '$HOST' uses Secure Boot via Limine. Keys at: /persist/etc/secureboot"
+  info "Host '$HOST' uses Secure Boot via lanzaboote. Keys at: /persist/etc/secureboot"
 
   if [ -f "${_SECUREBOOT_DIR}/GUID" ]; then
     info "Secure Boot keys already exist at ${_SECUREBOOT_DIR}."
   else
     info "Creating PKI keys for Secure Boot at ${_SECUREBOOT_DIR}..."
-    info "(Required for Limine to sign the bootloader during nixos-install)"
+    info "(Required for lanzaboote to sign the bootloader during nixos-install)"
     # Why --disable-landlock is needed:
     #   sbctl activates the Landlock sandbox (a Linux LSM) before processing
     #   the --export and --database-path flags. Landlock is configured based

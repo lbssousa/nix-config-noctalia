@@ -7,7 +7,9 @@ no lugar de Flatpaks. Sucessor do [nix-config](https://github.com/lbssousa/nix-c
 
 - Root efêmero (`/` em tmpfs) com [preservation](https://github.com/nix-community/preservation);
   btrfs sobre LVM sobre LUKS, swap com hibernação.
-- Secure Boot (Limine + sbctl) e desbloqueio do LUKS por TPM2 nos dois hosts.
+- Secure Boot (systemd-boot + lanzaboote, chaves do sbctl), boot sem
+  cintilação (sem menu, Plymouth desde o logo do firmware) e desbloqueio do
+  LUKS por TPM2 nos dois hosts.
 - Segredos no repositório privado `nix-secrets` (sops-nix); chaves age no `nix-keys`.
 - **Bitwarden** (app desktop e `bw`) é o gerenciador de senhas padrão. Para
   quem tem `my.bitwarden.enable` (por ora, o `abutre`), o agente SSH do app

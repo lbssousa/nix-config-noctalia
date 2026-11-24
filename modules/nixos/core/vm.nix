@@ -22,7 +22,7 @@
         boot = {
           initrd.luks.devices = lib.mkForce { };
           resumeDevice = lib.mkForce "";
-          loader.limine.secureBoot.enable = lib.mkForce false;
+          lanzaboote.enable = lib.mkForce false;
         };
         swapDevices = lib.mkForce [ ];
       };

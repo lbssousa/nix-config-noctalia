@@ -25,6 +25,12 @@
 
     preservation.url = "github:nix-community/preservation";
 
+    # Secure Boot: systemd-boot com UKIs assinados (security/secureboot.nix).
+    lanzaboote = {
+      url = "github:nix-community/lanzaboote/v1.2.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     sops-nix = {
       url = "github:mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";

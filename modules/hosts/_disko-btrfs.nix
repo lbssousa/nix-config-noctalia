@@ -30,7 +30,7 @@ in
       content = {
         type = "gpt";
         partitions = {
-          # EFI partition (Limine)
+          # EFI partition (systemd-boot + lanzaboote)
           esp = {
             name = "ESP";
             # partlabel fixo (o padrão do disko seria "disk-main-ESP")

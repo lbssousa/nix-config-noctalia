@@ -124,8 +124,10 @@ sudo bash scripts/install.sh --host bigodon --disk /dev/nvme0n1 \
 
 ## Secure Boot
 
-Os dois hosts usam o Secure Boot nativo do Limine com chaves próprias (sbctl).
-Não há shim/MOK: as chaves do projeto substituem as de fábrica no firmware.
+Os dois hosts usam o systemd-boot com o [lanzaboote](https://github.com/nix-community/lanzaboote)
+e chaves próprias (sbctl, em `/persist/etc/secureboot`). Não há shim/MOK: as
+chaves do projeto substituem as de fábrica no firmware. O menu do systemd-boot
+fica escondido (`timeout = 0`); segure Espaço durante o boot para vê-lo.
 
 1. No firmware, apague as chaves (Setup Mode) e mantenha o Secure Boot desligado.
 2. Inicie o sistema e rode:
@@ -134,6 +136,24 @@ Não há shim/MOK: as chaves do projeto substituem as de fábrica no firmware.
    just boot                                           # regrava os binários assinados
    ```
 3. Ligue o Secure Boot no firmware e reinicie; confira com `sudo sbctl status`.
+
+### Migração do Limine (hosts instalados antes do lanzaboote)
+
+As chaves já estão no firmware, e o lanzaboote assina com essas mesmas chaves:
+
+1. `df -h /boot`: os kernels do Limine ainda estão no ESP, então confira se
+   há espaço para as gerações do lanzaboote (se faltar, apague gerações antigas
+   antes com `sudo nix-collect-garbage --delete-older-than 7d`).
+2. `just upgrade_mode=boot upgrade` (ou `just boot`): instala o systemd-boot e
+   os stubs assinados.
+3. `sudo sbctl verify` (só `/boot/EFI/nixos/*` pode aparecer sem assinatura),
+   `bootctl status` e `efibootmgr`: "Linux Boot Manager" deve vir primeiro em
+   `BootOrder`.
+4. Reinicie com o Secure Boot ligado. Se o LUKS pedir a senha, o PCR 7 mudou
+   com o novo bootloader: rode `sudo bash /etc/nixos/scripts/enroll-tpm2.sh --wipe`.
+5. Já no systemd-boot, remova o Limine:
+   `sudo rm -rf /boot/EFI/limine /boot/limine` e
+   `sudo efibootmgr -b <num> -B` (a entrada "Limine" listada pelo `efibootmgr`).
 
 ## Desbloqueio do LUKS por TPM2
 

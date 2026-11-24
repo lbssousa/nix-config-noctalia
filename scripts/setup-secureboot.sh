@@ -2,7 +2,7 @@
 # setup-secureboot.sh — Configure Secure Boot and sign kernel modules (NVIDIA)
 #
 # This script performs the post-installation steps needed for Secure Boot
-# to work with Limine:
+# to work with systemd-boot + lanzaboote:
 #
 #   1. Check the current state of Secure Boot and sbctl
 #   2. Check the PKI key store (sbctl)
@@ -74,19 +74,16 @@ verify_signed_efi_binaries() {
 extract_unsigned_efi_paths() {
   local _verify_output="$1"
 
-  # Excludes from the "needs signing" set the artifacts that Limine does
+  # Excludes from the "needs signing" set the artifacts that lanzaboote does
   # NOT verify via PE/Authenticode signature:
-  #   • /boot/EFI/nixos/kernel-*.efi and initrd-*.efi: generic NixOS bootspec
-  #     artifacts, not used by Limine to boot (the firmware never loads
-  #     them directly).
-  #   • /boot/limine/kernels/*: the kernel/initrd Limine actually uses.
-  #     Their integrity is guaranteed by a BLAKE2B checksum embedded in
-  #     limine.conf (boot.loader.limine.validateChecksums), whose hash is
-  #     itself embedded in the signed Limine binary (enroll-config) — not
-  #     by an individual signature on each file.
-  # The only binary that MUST be signed for boot to work is the bootloader
-  # itself (/boot/EFI/limine/BOOTX64.EFI), and the Limine installer already
-  # signs it automatically on every nixos-rebuild switch/boot.
+  #   • /boot/EFI/nixos/*.efi: the kernel and initrd of each generation.
+  #     The firmware never loads them directly: the signed lanzaboote stub
+  #     (/boot/EFI/Linux/nixos-*.efi) loads them and checks them against the
+  #     SHA-256 hash embedded in the stub — not by an individual signature.
+  # What MUST be signed for boot to work is systemd-boot
+  # (/boot/EFI/systemd/systemd-bootx64.efi, /boot/EFI/BOOT/BOOTX64.EFI) and
+  # the stubs in /boot/EFI/Linux, and lanzaboote (lzbt) already signs them
+  # automatically on every nixos-rebuild switch/boot.
   echo "$_verify_output" \
     | grep -E 'not signed' \
     | grep -Eo '/[^[:space:]]+\.efi' \
@@ -104,13 +101,12 @@ sign_explicit_efi_path() {
   fi
 
   # No file in /boot/EFI/nixos/ should be signed by sbctl:
-  #   • kernel-*.efi: a generic NixOS bootspec artifact, not loaded
-  #     directly by the firmware under Limine.
-  #   • initrd-*.efi: not PE/COFF images, sbctl can't sign them.
-  # The bootloader (/boot/EFI/limine/BOOTX64.EFI) is already signed
-  # automatically by the Limine installer on every nixos-rebuild switch/boot.
+  #   • kernels: loaded by the lanzaboote stub, verified by hash.
+  #   • initrds: not PE/COFF images, sbctl can't sign them.
+  # systemd-boot and the stubs in /boot/EFI/Linux are already signed
+  # automatically by lanzaboote on every nixos-rebuild switch/boot.
   if [[ "$_path" =~ ^/boot/EFI/nixos/ ]]; then
-    warn "Skipping bootspec artifact not used by Limine (should not be signed by sbctl): $_path"
+    warn "Skipping kernel/initrd verified by the lanzaboote stub hash (should not be signed by sbctl): $_path"
     return 3
   fi
 
@@ -178,14 +174,13 @@ try_fix_unsigned_efi_binaries() {
 }
 
 # NOTE: The sign_nixos_efi_binaries_explicitly function was removed.
-# /boot/EFI/nixos/ contains generic NixOS bootspec artifacts that Limine
-# does NOT use to boot (the real kernel/initrd live in
-# /boot/limine/kernels/, verified by checksum, not signature), and
-# therefore must NOT be manually signed by sbctl:
-#   • kernel-*.efi: not loaded by the firmware under Limine.
-#   • initrd-*.efi: not PE/COFF, impossible to sign with sbctl.
-# The bootloader (/boot/EFI/limine/BOOTX64.EFI) is already signed
-# automatically by the Limine installer during nixos-rebuild. Only extra
+# /boot/EFI/nixos/ holds the kernels and initrds that the lanzaboote stubs
+# load and verify by hash (not signature), so they must NOT be manually
+# signed by sbctl:
+#   • kernels: never loaded directly by the firmware.
+#   • initrds: not PE/COFF, impossible to sign with sbctl.
+# systemd-boot and the stubs (/boot/EFI/Linux) are already signed
+# automatically by lanzaboote during nixos-rebuild. Only extra
 # bootloaders (e.g. fwupd-efi) may need manual signing via 'sbctl sign-all'.
 
 unlock_efivarfs_immutables() {
@@ -281,27 +276,27 @@ Steps to set up Secure Boot:
   4. Verify everything is correct:
        run0 bash scripts/setup-secureboot.sh --verify-only
 
-IMPORTANT NOTE — Limine vs. MOK/shim:
-  This configuration uses Limine, which does NOT use shim or MOK.
+IMPORTANT NOTE — lanzaboote vs. MOK/shim:
+  This configuration uses systemd-boot + lanzaboote, which does NOT use
+  shim or MOK.
   • There will be no blue MOKmanager screen during boot
   • You won't be asked for a MOK password
-  • The absence of MOK is EXPECTED and CORRECT with Limine
-  • The firmware only verifies the PE signature of the Limine binary
-    (PKI keys PK/KEK/db enrolled in the UEFI firmware via sbctl)
-  • Kernel/initrd integrity is guaranteed by a BLAKE2B checksum embedded
-    in limine.conf, whose hash is embedded in the signed binary
-    (enroll-config) — not by an individual signature on each file
-  • On every nixos-rebuild switch/boot, the Limine installer re-signs the
-    binary and re-enrolls the checksum of the updated config
+  • The absence of MOK is EXPECTED and CORRECT with lanzaboote
+  • The firmware verifies the PE signature of systemd-boot and of the
+    lanzaboote stub of each generation (PKI keys PK/KEK/db enrolled in the
+    UEFI firmware via sbctl)
+  • Kernel/initrd integrity is guaranteed by a hash embedded in the signed
+    stub — not by an individual signature on each file
+  • On every nixos-rebuild switch/boot, lanzaboote (lzbt) signs
+    systemd-boot and the stubs of the new generations
 
 Notes:
   • The PKI keys are created automatically during installation (install.sh)
-    and live in /persist/etc/secureboot (symlinked from /var/lib/sbctl, see
-    systemd.tmpfiles.rules on the host)
-  • Limine automatically signs its own binary on every nixos-rebuild
+    and live in /persist/etc/secureboot (boot.lanzaboote.pkiBundle;
+    symlinked from /var/lib/sbctl for sbctl, see systemd.tmpfiles.rules)
   • Use sbctl verify to check which binaries aren't signed
-    (kernel/initrd under /boot/limine/kernels/ show up as "not signed" by
-    design — they're verified by checksum, not signature)
+    (kernel/initrd under /boot/EFI/nixos/ show up as "not signed" by
+    design — they're verified by the stub's hash, not signature)
 EOF
       exit 0 ;;
     *) die "Unknown option: $1. Use --help to see the available options." ;;
@@ -319,7 +314,7 @@ fi
 
 echo
 echo -e "${BOLD}╔══════════════════════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}║              Secure Boot Configuration (Limine)              ║${RESET}"
+echo -e "${BOLD}║            Secure Boot Configuration (lanzaboote)            ║${RESET}"
 echo -e "${BOLD}╚══════════════════════════════════════════════════════════════╝${RESET}"
 echo
 
@@ -328,7 +323,7 @@ echo
 # ---------------------------------------------------------------------------
 
 if ! command -v sbctl >/dev/null 2>&1; then
-  die "sbctl not found. Make sure boot.loader.limine.secureBoot.enable
+  die "sbctl not found. Make sure boot.lanzaboote.enable
   is active and the system was rebuilt with 'nixos-rebuild switch'."
 fi
 
@@ -396,7 +391,7 @@ if [[ "$OPT_ENROLL_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
         error "There are EFI binaries without a valid signature after the automatic fix attempt."
         warn "Secure Boot will fail if the firmware is configured now."
         warn "Run the following commands to fix it and try again:"
-        warn "  1. run0 nixos-rebuild switch   (regenerates and signs the Limine binary)"
+        warn "  1. run0 nixos-rebuild switch   (regenerates and signs systemd-boot and the stubs)"
         warn "  2. run0 sbctl sign-all         (signs additional binaries)"
         warn "  3. run0 bash scripts/setup-secureboot.sh   (run this script again)"
         die "Incomplete signatures. Fix this before enrolling the keys in the firmware."
@@ -405,7 +400,7 @@ if [[ "$OPT_ENROLL_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
       error "There are EFI binaries without a valid signature."
       warn "Secure Boot will fail if the firmware is configured now."
       warn "Run the following commands to fix it and try again:"
-      warn "  1. run0 nixos-rebuild switch   (regenerates and signs the Limine binary)"
+      warn "  1. run0 nixos-rebuild switch   (regenerates and signs systemd-boot and the stubs)"
       warn "  2. run0 sbctl sign-all         (signs additional binaries)"
       warn "  3. run0 bash scripts/setup-secureboot.sh   (run this script again)"
       die "Incomplete signatures. Fix this before enrolling the keys in the firmware."
@@ -424,8 +419,8 @@ if [[ "$OPT_SIGN_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
   echo
 
   # Check whether the firmware is in Setup Mode (a precondition for enroll-keys)
-  # With Limine, there is NO MOK password or MOKmanager screen.
-  # Limine uses its own PKI keys (PK/KEK/db) — it doesn't use shim/MOK.
+  # With lanzaboote, there is NO MOK password or MOKmanager screen.
+  # lanzaboote uses our own PKI keys (PK/KEK/db) — it doesn't use shim/MOK.
   # Uses an EFI efivars check for robustness (independent of sbctl's locale/encoding).
   _in_setup_mode=false
   # GUID of the global EFI variable (EFI_GLOBAL_VARIABLE) — UEFI Spec Appendix B standard
@@ -457,9 +452,9 @@ if [[ "$OPT_SIGN_ONLY" != "true" && "$OPT_VERIFY_ONLY" != "true" ]]; then
     warn "  4. Save the settings and reboot the system"
     warn "  5. Run this script again"
     echo
-    warn "IMPORTANT NOTE: This configuration uses Limine — it does NOT use shim/MOK."
+    warn "IMPORTANT NOTE: This configuration uses lanzaboote — it does NOT use shim/MOK."
     warn "There will be no MOKmanager screen or MOK password prompt."
-    warn "Limine signs its own binary directly with its own PKI keys."
+    warn "lanzaboote signs systemd-boot and the stubs directly with our own PKI keys."
     echo
     die "Firmware is not in Setup Mode. Fix this and run the script again."
   fi
