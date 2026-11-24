@@ -108,12 +108,8 @@ upgrade host='' *args:
   # (github.com/lbssousa/noctalia-nix). If any of it would be compiled here,
   # something is off (cache unreachable, a local override): stop, unless
   # ALLOW_LOCAL_NOCTALIA_BUILD=1.
-  local_builds="$(nix build "$toplevel" --dry-run 2>&1 \
-    | sed -n '/will be built/,/will be fetched/p' \
-    | grep -E -- '-(noctalia|noctalia-greeter|umbriel|xdg-desktop-portal-umbriel|luciole|noctalia-secret-prompts)-[0-9]' || true)"
-  if [[ -n "$local_builds" && "${ALLOW_LOCAL_NOCTALIA_BUILD:-0}" != 1 ]]; then
-    echo "error: these Noctalia packages would be compiled locally instead of fetched from Cachix:" >&2
-    sed 's/^/  /' <<< "$local_builds" >&2
+  if [[ "${ALLOW_LOCAL_NOCTALIA_BUILD:-0}" != 1 ]] \
+    && ! bash "{{flake_root}}/scripts/check-noctalia-cache.sh" "{{flake_root}}" "$host"; then
     echo "Check the noctalia-nix CI and the cache; ALLOW_LOCAL_NOCTALIA_BUILD=1 builds anyway." >&2
     exit 1
   fi

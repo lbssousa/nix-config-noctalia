@@ -46,17 +46,8 @@ jobs:
 
       - name: The Noctalia family must come from Cachix
         run: |
-          for host in $(nix eval --json .#nixosConfigurations --apply builtins.attrNames | jq -r '.[]'); do
-            plan=$(nix build ".#nixosConfigurations.$host.config.system.build.toplevel" --dry-run 2>&1)
-            builds=$(sed -n '/will be built/,/will be fetched/p' <<< "$plan" \
-              | grep -E -- '-(noctalia|noctalia-greeter|umbriel|xdg-desktop-portal-umbriel|luciole|noctalia-secret-prompts)-[0-9]' || true)
-            if [[ -n $builds ]]; then
-              echo "::error::$host would compile Noctalia packages locally:"
-              echo "$builds"
-              exit 1
-            fi
-            echo "$host: Noctalia family fetched from the cache"
-          done
+          bash scripts/check-noctalia-cache.sh \
+            $(nix eval --json .#nixosConfigurations --apply builtins.attrNames | jq -r '.[]')
 
       - name: Commit the lock
         run: |
