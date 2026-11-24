@@ -121,6 +121,25 @@ sudo bash scripts/install.sh --host bigodon --disk /dev/nvme0n1 \
   pelo cofre. Na instalação pelo `nix-keys`, clone-o e desbloqueie-o em
   `~/Projetos/lbssousa/nix-keys` e rode `just switch`: a ativação copia a
   chave.
+- Os apps gráficos de usuário são Flatpaks (Flathub e o remoto OCI do
+  ArtCraft). O serviço `flatpak-managed-install` os baixa no primeiro boot com
+  rede, o que pode levar alguns minutos (`journalctl -u flatpak-managed-install`).
+  Depois disso eles atualizam todo dia. `/var/lib/flatpak` persiste em
+  `/persist`, e os dados de cada app ficam em `~/.var/app/<id>`.
+
+### Migração de um host com os apps nativos
+
+Na primeira ativação depois da migração para Flatpak, o home-manager copia
+uma vez os dados dos apps nativos para `~/.var/app/<id>`:
+- Bitwarden (`~/.config/Bitwarden`);
+- OBS, Inkscape, Kdenlive, Xournal++, Zoom, OnlyOffice, Pinta, FontForge e LocalSend.
+
+Os originais ficam; apague-os quando conferir os apps. O Firefox começa com um
+perfil novo. O Brave e o Firefox podem importar do perfil do Chrome
+(`~/.config/google-chrome`), que não é apagado. No Bitwarden, a extensão do
+navegador precisa do app aberto para o desbloqueio integrado. O agente SSH
+passa a ser `~/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock`;
+abra uma sessão nova depois do switch.
 
 ## Secure Boot
 

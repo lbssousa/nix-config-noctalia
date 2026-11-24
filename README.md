@@ -2,8 +2,8 @@
 
 Configuração NixOS (flake) com o compositor **Umbriel**, a shell **Noctalia** e
 o **Noctalia Greeter**, inspirada no [Omarchy](https://omarchy.org): atalhos,
-tema Tokyo Night, web apps, prompt e TUIs do Omarchy, com pacotes Nix nativos
-no lugar de Flatpaks. Sucessor do [nix-config](https://github.com/lbssousa/nix-config).
+tema Tokyo Night, web apps, prompt e TUIs do Omarchy, com os apps gráficos de
+usuário do Flathub e o resto em Nix. Sucessor do [nix-config](https://github.com/lbssousa/nix-config).
 
 - Root efêmero (`/` em tmpfs) com [preservation](https://github.com/nix-community/preservation);
   btrfs sobre LVM sobre LUKS, swap com hibernação.
@@ -11,7 +11,7 @@ no lugar de Flatpaks. Sucessor do [nix-config](https://github.com/lbssousa/nix-c
   cintilação (sem menu, Plymouth desde o logo do firmware) e desbloqueio do
   LUKS por TPM2 nos dois hosts.
 - Segredos no repositório privado `nix-secrets` (sops-nix); chaves age no `nix-keys`.
-- **Bitwarden** (app desktop e `bw`) é o gerenciador de senhas padrão. Para
+- **Bitwarden** (app desktop em Flatpak e `bw` nativo) é o gerenciador de senhas padrão. Para
   quem tem `my.bitwarden.enable` (por ora, o `abutre`), o agente SSH do app
   fica no `SSH_AUTH_SOCK` da sessão (ex.: a chave do GitHub/`nix-secrets`), o
   app sobe na bandeja com a sessão e as preferências dele são declaradas no
@@ -68,7 +68,8 @@ lugar para ajustes locais do próprio usuário, que o Nix nunca apaga:
 | starship | `~/.config/starship.toml.local` | mescla na ativação (`my.mutableConfigs`; `config-diff starship.toml`) |
 | herdr | o próprio `~/.config/herdr/config.toml` (gravável) | `programs.herdr.mutableSettings` |
 | apps padrão (PDF, pastas, navegador) | `~/.config/mimeapps.list` / `xdg-mime default` | defaults via `XDG_CONFIG_DIRS` |
-| Chrome (web apps) | os declarados são PWAs forçadas (não removíveis); outras se instalam no próprio Chrome | `WebAppInstallForceList` (nixos/desktop/google-chrome.nix) |
+| Firefox (web apps) | o próprio Firefox; os web apps declarados voltam a ter URL e container | `firefox-webapps` (home/desktop/firefox.nix) |
+| Flatpaks (permissões) | `flatpak override --user` ou o Flatseal | `services.flatpak.overrides` (nixos/desktop/flatpak.nix) |
 | agente SSH | `~/.config/environment.d/*.conf` posterior ou `IdentityAgent` em `~/.ssh/config.d/` | `SSH_AUTH_SOCK` do Bitwarden (`home/security/bitwarden.nix`) |
 
 Overrides **declarativos** por usuário ficam em `modules/users/<nome>.nix`
@@ -103,21 +104,25 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
   do GDM, toda conta nova nasce sem senha e expirada: ao escolher o usuário,
   o greeter pede direto a nova senha e a confirmação (`nullresetok` no PAM:
   senha vazia só entra enquanto expirada).
-- **Google Chrome** é o navegador padrão, com a extensão do Bitwarden
-  (native messaging declarativo com o app; as demais extensões vêm da
-  sincronização com a conta Google), as cores da Noctalia (política
-  `BrowserThemeColor`, do template `chromium-based` da comunidade) e web apps
-  instalados como PWAs pela política `WebAppInstallForceList` (`webapp <id>`):
-  WhatsApp, Teams, YouTube, Google Maps/Photos/Messages/Contacts, Discord e X.
+- **Firefox** (Flatpak) é o navegador padrão de todos.
+  - **Políticas:** vão na extensão `org.mozilla.firefox.systemconfig`. Instalam o Bitwarden, o Multi-Account Containers e os "<empresa> Container" (Facebook, Google, Microsoft, Twitter, Discord, Amazon e TikTok). As demais extensões vêm da sincronização com a conta Mozilla.
+  - **Web apps:** são Taskbar Tabs, cada um no container da sua empresa, abertos por `webapp <id>`: WhatsApp (Facebook), Teams (Microsoft), YouTube e Google Maps/Photos/Messages/Contacts (Google), Discord e X (Twitter).
+- **Brave** (Flatpak) é o segundo navegador.
+  - **Políticas** (`/etc/brave/policies`): extensão do Bitwarden e as cores da Noctalia (`BrowserThemeColor`, do template `chromium-based` da comunidade).
+  - **Bitwarden:** o app em Flatpak não suporta o Brave em Flatpak. O native messaging funciona por um ajuste declarado (`modules/home/desktop/brave.nix`).
+  - **PWAs:** o `brave-pwa-fix` corrige os lançadores que o Brave em Flatpak grava errado no Wayland (sem ícone e com a janela agrupada ao Brave; brave/brave-browser#60360).
 - **Luciole**, o gerenciador de arquivos da Noctalia, é o padrão de todos:
   pastas, "Mostrar na pasta" (`org.freedesktop.FileManager1`) e o diálogo de
   abrir/salvar (portal FileChooser, com o GTK de reserva), também nos apps Qt.
   Ainda fora do nixpkgs, vem do flake do próprio projeto
   (`github:noctalia-dev/luciole`), compilado no [cache binário](#cache-binário),
   e segue as cores da Noctalia pelo template que vem no pacote.
-- **Apps de usuário nativos:** OnlyOffice, Xournal++, Papers, LocalSend,
-  Zoom, OBS, Kdenlive, Pinta, Inkscape e FontForge, como pacotes Nix
-  (`modules/nixos/desktop/apps.nix`); o mpv decodifica vídeo por hardware.
+- **Apps de usuário do Flathub** (nix-flatpak, `modules/nixos/desktop/flatpak.nix` e `apps.nix`):
+  - **Apps:** Papers, mpv (decodificação por hardware), OnlyOffice, Xournal++, LocalSend, Zoom, OBS, Kdenlive, Pinta, Inkscape, FontForge e o Dropbox (de quem tem `my.dropbox.enable`), além de Flatseal, Warehouse e Bazaar para gerenciar os Flatpaks.
+  - **Atualização:** os apps instalam no switch e atualizam todo dia, com os dados em `~/.var/app/<id>`.
+  - **Aparência:** seguem a da Noctalia (`gtk.css` e ícones do usuário).
+  - **Ficam em Nix:** o que não está no Flathub, os terminais, os editores (FHS, com as toolchains do host), o zathura (vimtex com SyncTeX) e o que plugins e scripts chamam pela linha de comando.
+- **ArtCraft Launcher e ArtCraft** (storytold) vêm do remoto Flatpak OCI oficial do projeto (`getartcraft.com/artcraft-oci.flatpakrepo`, assinado), em `modules/nixos/desktop/artcraft.nix`. Atualizam com os demais Flatpaks.
 - Do Omarchy 4.5: TCP BBR com fq e o escalonador kyber nos discos
   (`modules/nixos/core/kernel-tuning.nix`).
 - Agentes de IA para todos: Claude Code, OpenCode e Antigravity CLI (Antigravity IDE no perfil de abutre).
@@ -127,7 +132,7 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 | Atalho | Ação | Atalho | Ação |
 |---|---|---|---|
 | `Super+Return` | terminal (ghostty) | `Super` (sozinho) | launcher |
-| `Super+Shift+B` | Chrome | `Super+Alt+Space` | central de controle |
+| `Super+Shift+B` | Firefox | `Super+Alt+Space` | central de controle |
 | `Super+Shift+F` | arquivos (Luciole) | `Super+Escape` | menu de sessão |
 | `Super+Shift+N` | neovim | `Super+K` | cheatsheet de atalhos |
 | `Super+Alt+Return` | tmux | `Super+Ctrl+V` | histórico do clipboard |
