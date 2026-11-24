@@ -10,7 +10,17 @@
 #    home/desktop/brave.nix. As demais extensões vêm da sincronização de
 #    cada usuário;
 #  - sem o resolvedor DNS próprio (fica o systemd-resolved) e sem o aviso de
-#    navegador padrão.
+#    navegador padrão;
+#  - "Brave Origin" (my.brave.origin, ligado por padrão), em origin.json: os
+#    mesmos recursos que a página Settings › System › Brave Origin desliga
+#    (kBraveOriginBrowserMetadata e kBraveOriginProfileMetadata em
+#    brave-core/browser/brave_origin/brave_origin_service_factory.cc). O
+#    upgrade para o Origin só se ativa pela interface; pelas políticas, o
+#    efeito é o mesmo, mas todas ficam travadas: as que o Origin deixa o
+#    usuário religar (P3A, ping de uso, IA local, Wayback Machine,
+#    Speedreader, Playlist, Web Discovery) não aceitam o nível
+#    "recommended" (can_be_recommended: false), o que deixa o resultado mais
+#    perto do Origin avulso, em que os recursos nem existem no binário.
 #
 # Cores da Noctalia: o template "chromium-based" da comunidade grava
 # BrowserThemeColor em noctalia-color.json, que vale para a máquina inteira;
@@ -41,6 +51,17 @@ in
       policyDir = "brave/policies/managed";
     in
     {
+      options.my.brave.origin = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Brave como o Brave Origin para todos: sem Rewards e anúncios do
+          navegador, Wallet, VPN, Leo AI e IA local, News, Talk, Tor,
+          Speedreader, Playlist, Wayback Machine, Web Discovery, aliases de
+          e-mail, PSST, P3A e ping de uso (políticas travadas).
+        '';
+      };
+
       options.my.brave.themeOwner = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = firstAdmin;
@@ -68,6 +89,32 @@ in
               installation_mode = "normal_installed";
               update_url = "https://clients2.google.com/service/update2/crx";
             };
+          };
+        };
+
+        # Os 16 recursos da página Brave Origin, com os valores que ela aplica.
+        environment.etc."${policyDir}/origin.json" = lib.mkIf cfg.origin {
+          mode = "0644";
+          text = builtins.toJSON {
+            # Travados também no Origin.
+            TorDisabled = true;
+            BraveRewardsDisabled = true;
+            BraveWalletDisabled = true;
+            BraveAIChatEnabled = false;
+            BraveNewsDisabled = true;
+            BraveVPNDisabled = true;
+            BraveTalkDisabled = true;
+            EmailAliasesEnabled = false;
+            PsstEnabled = false;
+            # Só desligados por padrão no Origin; aqui travados (não aceitam
+            # o nível recommended).
+            BraveStatsPingEnabled = false;
+            BraveP3AEnabled = false;
+            BraveLocalAIEnabled = false;
+            BraveWaybackMachineEnabled = false;
+            BraveSpeedreaderEnabled = false;
+            BravePlaylistEnabled = false;
+            BraveWebDiscoveryEnabled = false;
           };
         };
 
