@@ -13,7 +13,12 @@
 #    do plugin screen_recorder, as TUIs e os utilitários dos plugins).
 {
   flake.modules.nixos.apps =
-    { pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       services.flatpak.packages = [
         # PDF, imagens e vídeo
@@ -34,7 +39,12 @@
         "com.github.PintaProject.Pinta"
         "org.inkscape.Inkscape"
         "org.fontforge.FontForge"
-      ];
+      ]
+      # Dropbox, só se algum usuário o ligar (my.dropbox.enable,
+      # home/desktop/dropbox.nix).
+      ++ lib.optional (lib.any (u: u.my.dropbox.enable) (
+        lib.attrValues config.home-manager.users
+      )) "com.dropbox.Client";
 
       environment.systemPackages = with pkgs; [
         # Terminais
