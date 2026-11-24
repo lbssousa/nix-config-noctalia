@@ -60,41 +60,73 @@
         fi
         exec ${lib.getExe firefox-webapps} launch "$@"
       '';
+      nativeProfile = "${config.home.homeDirectory}/.mozilla/firefox/${profile}";
+      flatpakProfile = "${config.home.homeDirectory}/${config.programs.firefox.configPath}/${profile}";
     in
     {
-      home.packages = [
-        firefox-webapps
-        webapp
-      ];
+      options.my.firefox.migrateNativeProfile = lib.mkEnableOption ''
+        cópia única do perfil do Firefox nativo (~/.mozilla/firefox/default:
+        extensões instaladas, favoritos, logins, containers) para o perfil do
+        Flatpak, enquanto o Firefox em Flatpak ainda não tiver aberto o dele.
+        O perfil nativo fica onde está'';
 
-      programs.firefox = {
-        enable = true;
-        # O Firefox é o Flatpak do sistema; aqui só o perfil.
-        package = null;
-        configPath = ".var/app/${appId}/.mozilla/firefox";
-        profiles.${profile} = {
-          id = 0;
-          isDefault = true;
-          # Taskbar Tabs (web apps em janela própria): desligadas no Linux, e a
-          # preferência não é aceita nas políticas nem há autoconfig do sistema
-          # no Flatpak; o user.js a liga a cada início.
-          settings."browser.taskbarTabs.enabled" = true;
+      config = {
+        home = {
+          packages = [
+            firefox-webapps
+            webapp
+          ];
+
+          activation = {
+            # Antes do firefox-webapps, que grava as Taskbar Tabs no perfil. Só
+            # copia se o Flatpak ainda não usou o perfil (sem prefs.js) e nunca
+            # sobrescreve: o user.js e o profiles.ini do home-manager ficam. Sem
+            # os arquivos de trava e sem o compatibility.ini (caminhos do Firefox
+            # nativo): o Firefox do Flatpak revalida as extensões no primeiro início.
+            firefoxMigrateNativeProfile = lib.mkIf config.my.firefox.migrateNativeProfile (
+              lib.hm.dag.entryBetween [ "firefoxWebapps" ] [ "writeBoundary" ] ''
+                old=${lib.escapeShellArg nativeProfile}
+                new=${lib.escapeShellArg flatpakProfile}
+                if [[ -f $old/prefs.js && ! -e $new/prefs.js ]]; then
+                  run mkdir -p "$new"
+                  run cp -a --reflink=auto --no-clobber "$old/." "$new/"
+                  run rm -f "$new/lock" "$new/.parentlock" "$new/parent.lock" "$new/compatibility.ini"
+                  noteEcho "Perfil do Firefox nativo copiado para o Flatpak ($new)."
+                fi
+              ''
+            );
+
+            # Na ativação (no boot, antes do login, o Firefox está fechado).
+            firefoxWebapps = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+              run ${lib.getExe firefox-webapps} apply || warnEcho "firefox-webapps apply falhou."
+            '';
+          };
         };
-      };
 
-      # Na ativação (no boot, antes do login, o Firefox está fechado).
-      home.activation.firefoxWebapps = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        run ${lib.getExe firefox-webapps} apply || warnEcho "firefox-webapps apply falhou."
-      '';
-
-      # No login: o mesmo, mais os ícones (que precisam de rede).
-      systemd.user.services.firefox-webapps = {
-        Unit.Description = "Taskbar Tabs do Firefox";
-        Service = {
-          Type = "oneshot";
-          ExecStart = "${lib.getExe firefox-webapps} sync";
+        programs.firefox = {
+          enable = true;
+          # O Firefox é o Flatpak do sistema; aqui só o perfil.
+          package = null;
+          configPath = ".var/app/${appId}/.mozilla/firefox";
+          profiles.${profile} = {
+            id = 0;
+            isDefault = true;
+            # Taskbar Tabs (web apps em janela própria): desligadas no Linux, e a
+            # preferência não é aceita nas políticas nem há autoconfig do sistema
+            # no Flatpak; o user.js a liga a cada início.
+            settings."browser.taskbarTabs.enabled" = true;
+          };
         };
-        Install.WantedBy = [ "default.target" ];
+
+        # No login: o mesmo, mais os ícones (que precisam de rede).
+        systemd.user.services.firefox-webapps = {
+          Unit.Description = "Taskbar Tabs do Firefox";
+          Service = {
+            Type = "oneshot";
+            ExecStart = "${lib.getExe firefox-webapps} sync";
+          };
+          Install.WantedBy = [ "default.target" ];
+        };
       };
     };
 }

@@ -23,6 +23,9 @@
           nixvim.enable = true;
           # Zathura como leitor de PDF padrão (Papers para os demais).
           pdfViewer = "org.pwmt.zathura.desktop";
+          # Leva para o Firefox em Flatpak o perfil do Firefox nativo, com as
+          # extensões que ele tinha (as da conta Mozilla inclusive).
+          firefox.migrateNativeProfile = true;
           # Bitwarden: agente SSH, autostart na bandeja e preferências do app
           # (desligado para os demais usuários, por ora).
           bitwarden.enable = true;
