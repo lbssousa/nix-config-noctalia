@@ -248,6 +248,12 @@ validate:
 store-age-keys *args:
   bash "{{flake_root}}/scripts/store-age-keys.sh" {{args}}
 
+# CI secrets of lbssousa/noctalia-nix (CACHIX_AUTH_TOKEN, FORKS_TOKEN) from
+# Bitwarden via secretspec; a token missing from the vault is asked once.
+[group("secrets")]
+noctalia-nix-secrets *args:
+  bash "{{flake_root}}/scripts/noctalia-nix-secrets.sh" {{args}}
+
 # Registers a YubiKey in the user's authfile (~/.config/Yubico/u2f_keys; default: current user).
 # First key: creates the line. Additional key: appends to the existing line.
 # Another user's file is written as that user (run0 --user).
