@@ -92,11 +92,6 @@ let
       # reconhecidos). Patch local, sem PR upstream: SCOPE.md manda controles de
       # hardware para plugins.
       #
-      # Taskbar com quadro por ícone ([widget.<taskbar>] item_frame, com
-      # item_frame_color e item_frame_border_color): fundo e borda da paleta
-      # atrás de cada app, para ícones claros não sumirem numa barra clara.
-      # Patch local, sem PR upstream.
-      #
       # O pinentry/askpass não é patch: os mantenedores não aceitam segredos no
       # core (PR #4951). É o plugin lbssousa/secret-prompts (repositório
       # github.com/lbssousa/noctalia-secret-prompts), com o auxiliar
@@ -123,7 +118,6 @@ let
               ../packages/patches/noctalia-lock-auth-sequence.patch
               ../packages/patches/noctalia-polkit-use-password.patch
               ../packages/patches/noctalia-security-hardware.patch
-              ../packages/patches/noctalia-taskbar-item-frame.patch
             ];
           });
         in

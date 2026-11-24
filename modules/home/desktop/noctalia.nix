@@ -163,8 +163,6 @@
             };
           };
 
-          bar.order = lib.mkDefault [ "default" "dock" ];
-
           # Barra padrão da Noctalia com os widgets dos plugins abaixo, que não
           # entram na barra só por estarem habilitados. Cada lista substitui a
           # padrão inteira, por isso os widgets nativos estão repetidos aqui.
@@ -232,31 +230,6 @@
             ];
           };
 
-          # Barra vertical na lateral esquerda emulando a Unity Dock:
-          # preenche 100% da altura da tela, sempre visível (sem ocultação),
-          # reserva espaço exclusivo e posiciona o launcher no final.
-          # Escala 2.0 define os ícones para 32 px (baseGlyphSize 16 px * 2.0).
-          bar.dock = {
-            enabled = lib.mkDefault true;
-            position = lib.mkDefault "left";
-            thickness = lib.mkDefault 48;
-            scale = lib.mkDefault 2.0;
-            background_opacity = lib.mkDefault 0.8;
-            margin_edge = lib.mkDefault 0;
-            margin_ends = lib.mkDefault 0;
-            radius = lib.mkDefault 0;
-            auto_hide = lib.mkDefault false;
-            smart_auto_hide = lib.mkDefault false;
-            reserve_space = lib.mkDefault true;
-            start = lib.mkDefault [
-              "dock-taskbar"
-            ];
-            center = lib.mkDefault [ ];
-            end = lib.mkDefault [
-              "dock-launcher"
-            ];
-          };
-
           # Rede e volume na barra só com o ícone, sem o nome da rede nem a
           # porcentagem; relógio com dia da semana e data (strftime, no idioma
           # do LC_TIME: "dom 18 out 20:15").
@@ -293,29 +266,6 @@
             spacer-clock-right.type = "spacer";
             spacer-tray.type = "spacer";
             usage.type = "ayagmar/headroom:usage";
-
-            # Widgets da barra vertical (emulação da Unity Dock)
-            dock-taskbar = {
-              type = "taskbar";
-              pinned = lib.mkDefault [
-                "google-chrome"
-                "com.mitchellh.ghostty"
-                config.my.fileManagerApp.appId
-                "onlyoffice-desktopeditors"
-              ];
-              icon_scale = lib.mkDefault 1.0;
-              item_spacing = lib.mkDefault 8;
-              # Quadro atrás de cada ícone (patch noctalia-taskbar-item-frame),
-              # como os tiles da Unity: ícones claros continuam visíveis com a
-              # barra clara. Cores da paleta, invertidas entre claro e escuro.
-              item_frame = lib.mkDefault true;
-              item_frame_color = lib.mkDefault "surface_container_highest";
-              item_frame_border_color = lib.mkDefault "outline_variant";
-            };
-            dock-launcher = {
-              type = "launcher";
-              glyph = lib.mkDefault "grid-dots";
-            };
           };
 
           # Atalhos padrão da central de controle mais os blocos dos plugins.
@@ -335,9 +285,29 @@
             ]
           );
 
-          # Desativa o componente dock nativo (substituído por bar.dock para preencher 100% da altura).
+          # Habilitado para todos os usuários.
           dock = {
-            enabled = lib.mkDefault false;
+            enabled = lib.mkDefault true;
+            position = lib.mkDefault "bottom";
+            # Ocultação inteligente: visível com o workspace vazio, escondida
+            # quando ele tem janelas (reaparece na borda). auto_hide é o modo
+            # que só esconde quando o ponteiro sai da dock.
+            auto_hide = lib.mkDefault false;
+            smart_auto_hide = lib.mkDefault true;
+            # Sem zona exclusiva: escondida, a dock não deixa a faixa vazia
+            # embaixo das janelas lado a lado. Revelada, fica por cima delas.
+            reserve_space = lib.mkDefault false;
+            # Flutuante: afastada da borda de baixo da tela.
+            margin_edge = lib.mkDefault 8;
+            # Botão do launcher no fim da dock e pontos nos apps abertos.
+            launcher_position = lib.mkDefault "end";
+            show_dots = lib.mkDefault true;
+            pinned = lib.mkDefault [
+              "google-chrome"
+              "com.mitchellh.ghostty"
+              config.my.fileManagerApp.appId
+              "onlyoffice-desktopeditors"
+            ];
           };
 
           plugins = {
