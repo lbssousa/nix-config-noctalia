@@ -37,6 +37,7 @@ in
       m.cursor
       m.secret-service
       m.flatpak
+      m.artcraft
       m.google-chrome
       m.apps
       m.file-manager
