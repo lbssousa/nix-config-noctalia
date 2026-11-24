@@ -2,7 +2,15 @@
   description = "NixOS com Umbriel + Noctalia, inspirado no Omarchy (btrfs, root efêmero, Secure Boot, TPM2)";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    # Família Noctalia (Noctalia, greeter, Umbriel, Luciole, secret-prompts)
+    # com os patches dos forks de lbssousa, compilada e publicada no Cachix
+    # lbssousa-noctalia pelo CI diário do próprio flake
+    # (github.com/lbssousa/noctalia-nix).
+    noctalia-nix.url = "github:lbssousa/noctalia-nix";
+    # O nixpkgs do sistema é o do noctalia-nix: só avança para revisões que o
+    # CI dele já compilou, e as derivações da família Noctalia batem com as
+    # do cache (nada de compilação local).
+    nixpkgs.follows = "noctalia-nix/nixpkgs";
 
     # Composição dendritica: todo arquivo em ./modules é um módulo flake-parts,
     # carregado automaticamente pelo import-tree (arquivos/pastas com prefixo
@@ -54,19 +62,9 @@
       url = "github:noctalia-dev/community-plugins";
       flake = false;
     };
-    # Plugin próprio, com o seu auxiliar (nix/package.nix, chamado pelo overlay
-    # em flake/packages.nix sobre o nixpkgs deste flake).
-    noctalia-secret-prompts = {
-      url = "github:lbssousa/noctalia-secret-prompts";
-      flake = false;
-    };
+    # Plugin próprio: a mesma revisão cujo auxiliar o noctalia-nix compila.
+    noctalia-secret-prompts.follows = "noctalia-nix/noctalia-secret-prompts";
 
-    # Luciole, o gerenciador de arquivos da Noctalia (ainda fora do nixpkgs),
-    # pelo flake do próprio projeto.
-    luciole = {
-      url = "github:noctalia-dev/luciole";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     # Templates de tema da comunidade Noctalia (Chrome), fixados no
     # flake.lock e usados como templates de usuário (sem rede em tempo de
     # execução).

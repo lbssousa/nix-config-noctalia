@@ -154,15 +154,16 @@
     "luciole": {
       "inputs": {
         "nixpkgs": [
+          "noctalia-nix",
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1795535994,
-        "narHash": "sha256-tOPg4tXL89L6Pb01B8ATdbsF6Hzb+tSODeP+eUaL0PE=",
+        "lastModified": 1795552651,
+        "narHash": "sha256-6kzO+WtDb1oV8KSwe66SESNVQbbZEuIR/7CzKsS63x0=",
         "owner": "noctalia-dev",
         "repo": "luciole",
-        "rev": "25262ef4b4eced39658e02acf84b6b9739013eeb",
+        "rev": "5505f60d28a3919d4e0ec25d61db040e82151f0c",
         "type": "github"
       },
       "original": {
@@ -238,6 +239,73 @@
       "original": {
         "owner": "nix-community",
         "repo": "nixvim",
+        "type": "github"
+      }
+    },
+    "noctalia": {
+      "inputs": {
+        "nixpkgs": [
+          "noctalia-nix",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1795546886,
+        "narHash": "sha256-bG4ymSzY7A0RROSyPyA6BOjmX8B9rhfSpALGx8JhaaU=",
+        "owner": "lbssousa",
+        "repo": "noctalia",
+        "rev": "c3b096d5e42d20b32824ce4dea4e31f90b6b70af",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lbssousa",
+        "ref": "nix-config",
+        "repo": "noctalia",
+        "type": "github"
+      }
+    },
+    "noctalia-greeter": {
+      "inputs": {
+        "nixpkgs": [
+          "noctalia-nix",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1795554130,
+        "narHash": "sha256-+Zs/DgaEcWnUA+aks0QOtRH3IvnZTjcNIArdfRbG3qg=",
+        "owner": "lbssousa",
+        "repo": "noctalia-greeter",
+        "rev": "8e2c551ad842defbe09fc48be6eb43907daeefb4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lbssousa",
+        "ref": "nix-config",
+        "repo": "noctalia-greeter",
+        "type": "github"
+      }
+    },
+    "noctalia-nix": {
+      "inputs": {
+        "luciole": "luciole",
+        "nixpkgs": "nixpkgs",
+        "noctalia": "noctalia",
+        "noctalia-greeter": "noctalia-greeter",
+        "noctalia-secret-prompts": "noctalia-secret-prompts",
+        "umbriel": "umbriel"
+      },
+      "locked": {
+        "lastModified": 1795554449,
+        "narHash": "sha256-exdaZBTR6FYhRq2phGL0plt2TU5eUYjM1LgUZF71A3I=",
+        "owner": "lbssousa",
+        "repo": "noctalia-nix",
+        "rev": "7995c4ec9ffeb019602ce007fc93c55382411a54",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lbssousa",
+        "repo": "noctalia-nix",
         "type": "github"
       }
     },
@@ -349,14 +417,20 @@
         "home-manager": "home-manager",
         "import-tree": "import-tree",
         "lanzaboote": "lanzaboote",
-        "luciole": "luciole",
         "nix-flatpak": "nix-flatpak",
         "nix-secrets": "nix-secrets",
-        "nixpkgs": "nixpkgs",
+        "nixpkgs": [
+          "noctalia-nix",
+          "nixpkgs"
+        ],
         "nixvim": "nixvim",
+        "noctalia-nix": "noctalia-nix",
         "noctalia-plugins-community": "noctalia-plugins-community",
         "noctalia-plugins-official": "noctalia-plugins-official",
-        "noctalia-secret-prompts": "noctalia-secret-prompts",
+        "noctalia-secret-prompts": [
+          "noctalia-nix",
+          "noctalia-secret-prompts"
+        ],
         "noctalia-templates-community": "noctalia-templates-community",
         "preservation": "preservation",
         "sops-nix": "sops-nix"
@@ -417,6 +491,50 @@
         "owner": "nix-systems",
         "ref": "future-26.11",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "umbriel": {
+      "inputs": {
+        "nixpkgs": [
+          "noctalia-nix",
+          "nixpkgs"
+        ],
+        "xdg-desktop-portal-umbriel": "xdg-desktop-portal-umbriel"
+      },
+      "locked": {
+        "lastModified": 1795554156,
+        "narHash": "sha256-5eNIv7uWyTBhjMkW0ocADFsIIQdj9iafF7Bj9zocptI=",
+        "owner": "lbssousa",
+        "repo": "umbriel",
+        "rev": "743e9faab348c27b49251854cd98c9e7888d33eb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lbssousa",
+        "ref": "nix-config",
+        "repo": "umbriel",
+        "type": "github"
+      }
+    },
+    "xdg-desktop-portal-umbriel": {
+      "inputs": {
+        "nixpkgs": [
+          "noctalia-nix",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1795004725,
+        "narHash": "sha256-7VbiRCkqW8buIC7YXzWHnoS0w4qVUwbxlcsrA2OsvUU=",
+        "owner": "noctalia-dev",
+        "repo": "xdg-desktop-portal-umbriel",
+        "rev": "32b8ee4ff0675c3f819c13b3f4b8651c1b887a43",
+        "type": "github"
+      },
+      "original": {
+        "owner": "noctalia-dev",
+        "repo": "xdg-desktop-portal-umbriel",
         "type": "github"
       }
     }

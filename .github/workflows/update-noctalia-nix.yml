@@ -1,0 +1,71 @@
+# Follows lbssousa/noctalia-nix: when its daily CI has built and cached a new
+# lock (repository_dispatch "noctalia-nix-updated"), update the noctalia-nix
+# input here (it brings nixpkgs along), check that the flake still evaluates
+# and that the hosts would fetch the whole Noctalia family from the
+# lbssousa-noctalia Cachix, and commit the lock to main.
+name: Update noctalia-nix
+
+on:
+  repository_dispatch:
+    types: [noctalia-nix-updated]
+  workflow_dispatch:
+
+concurrency:
+  group: update-noctalia-nix
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH for nix-secrets
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.NIX_SECRETS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            substituters = https://cache.nixos.org https://nix-community.cachix.org https://lbssousa-noctalia.cachix.org
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= lbssousa-noctalia.cachix.org-1:pzuER80zi7qmrqjkVy/2sifDJogy+QR9F9z/p4CBjF4=
+
+      - name: Update the noctalia-nix input
+        run: nix flake update noctalia-nix
+
+      - name: Evaluate
+        run: nix flake check --show-trace .
+
+      - name: The Noctalia family must come from Cachix
+        run: |
+          for host in $(nix eval --json .#nixosConfigurations --apply builtins.attrNames | jq -r '.[]'); do
+            plan=$(nix build ".#nixosConfigurations.$host.config.system.build.toplevel" --dry-run 2>&1)
+            builds=$(sed -n '/will be built/,/will be fetched/p' <<< "$plan" \
+              | grep -E -- '-(noctalia|noctalia-greeter|umbriel|xdg-desktop-portal-umbriel|luciole|noctalia-secret-prompts)-[0-9]' || true)
+            if [[ -n $builds ]]; then
+              echo "::error::$host would compile Noctalia packages locally:"
+              echo "$builds"
+              exit 1
+            fi
+            echo "$host: Noctalia family fetched from the cache"
+          done
+
+      - name: Commit the lock
+        run: |
+          if git diff --quiet flake.lock; then
+            echo "flake.lock unchanged" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "flake: update noctalia-nix (built and cached by its CI)" flake.lock
+          git push origin HEAD:main
+          echo "noctalia-nix updated: $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"

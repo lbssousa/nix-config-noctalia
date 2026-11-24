@@ -6,8 +6,6 @@ on:
     paths:
       - "**.nix"
       - "flake.lock"
-      # Patches of the Noctalia family (job cache).
-      - "modules/packages/patches/**"
   pull_request:
     paths:
       - "**.nix"
@@ -113,44 +111,3 @@ jobs:
         # sources from nix-community.cachix.org. nixosConfigurations are always only
         # evaluated (not built) by nix flake check.
         run: nix flake check --show-trace .
-
-  cache:
-    # Builds the Noctalia family with the overlay's patches (.#noctalia-cache)
-    # and pushes it to the lbssousa-noctalia Cachix (README, "Cache binário").
-    # Needs the CACHIX_AUTH_TOKEN repository secret (a write token).
-    name: Build and push the Noctalia family to Cachix
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    needs: flake-check
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup SSH for nix-secrets
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.NIX_SECRETS_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v30
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-            substituters = https://cache.nixos.org https://nix-community.cachix.org
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
-
-      # Also adds lbssousa-noctalia as a substituter (only what changed is
-      # rebuilt) and pushes every path built in this job at the end.
-      - name: Setup Cachix
-        uses: cachix/cachix-action@v15
-        with:
-          name: lbssousa-noctalia
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-
-      - name: Build the Noctalia family
-        run: nix build .#noctalia-cache -L --no-link

@@ -60,8 +60,8 @@
             substituters = [
               "https://cache.nixos.org"
               "https://nix-community.cachix.org"
-              # Noctalia, greeter, umbriel e plugins com os patches do overlay
-              # (`just cache-push` e o job cache do CI; README, "Cache binário").
+              # Família Noctalia com os patches dos forks, compilada e publicada
+              # pelo CI do noctalia-nix (README, "Cache binário").
               "https://lbssousa-noctalia.cachix.org"
             ];
             trusted-public-keys = [

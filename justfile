@@ -103,18 +103,26 @@ upgrade host='' *args:
   just --justfile "{{justfile_file}}" auto_commit="{{auto_commit}}" update
   host="{{host}}"
   host="${host:-$(hostname)}"
+  toplevel="{{flake_root}}#nixosConfigurations.${host}.config.system.build.toplevel"
+  # The Noctalia family comes built from the lbssousa-noctalia Cachix
+  # (github.com/lbssousa/noctalia-nix). If any of it would be compiled here,
+  # something is off (cache unreachable, a local override): stop, unless
+  # ALLOW_LOCAL_NOCTALIA_BUILD=1.
+  local_builds="$(nix build "$toplevel" --dry-run 2>&1 \
+    | sed -n '/will be built/,/will be fetched/p' \
+    | grep -E -- '-(noctalia|noctalia-greeter|umbriel|xdg-desktop-portal-umbriel|luciole|noctalia-secret-prompts)-[0-9]' || true)"
+  if [[ -n "$local_builds" && "${ALLOW_LOCAL_NOCTALIA_BUILD:-0}" != 1 ]]; then
+    echo "error: these Noctalia packages would be compiled locally instead of fetched from Cachix:" >&2
+    sed 's/^/  /' <<< "$local_builds" >&2
+    echo "Check the noctalia-nix CI and the cache; ALLOW_LOCAL_NOCTALIA_BUILD=1 builds anyway." >&2
+    exit 1
+  fi
   echo "Building the next generation of ${host}..."
-  next="$(nix build "{{flake_root}}#nixosConfigurations.${host}.config.system.build.toplevel" --no-link --print-out-paths)"
+  next="$(nix build "$toplevel" --no-link --print-out-paths)"
   echo ""
   echo "Packages changed in the next generation:"
   nvd diff /run/current-system "$next"
   echo ""
-  # With a Cachix token in the environment, publishes the Noctalia family just
-  # built (already in the store, so nothing is rebuilt); never blocks the upgrade.
-  if [[ -n "${CACHIX_AUTH_TOKEN:-}" ]]; then
-    just --justfile "{{justfile_file}}" cache-push || echo "warning: cache-push failed; the upgrade continues" >&2
-    echo ""
-  fi
   if [[ "$mode" == "auto" ]]; then
     if [[ "$host" != "$(hostname)" ]]; then
       echo "error: auto mode compares with the running system; use upgrade_mode=switch or boot for ${host}" >&2
@@ -182,23 +190,6 @@ gc period='30d':
       nix-collect-garbage --delete-older-than "$period_spec"
       ;;
   esac
-
-# Builds the Noctalia family with the overlay's patches (.#noctalia-cache) and
-# pushes it to the lbssousa-noctalia Cachix. Write token: CACHIX_AUTH_TOKEN
-# from the environment, or from secretspec in Bitwarden (bw://, profile default).
-[group("maintenance")]
-cache-push:
-  #!/usr/bin/env bash
-  set -euo pipefail
-  cd "{{flake_root}}"
-  if [[ -z "${CACHIX_AUTH_TOKEN:-}" ]]; then
-    # Stored in Bitwarden (bw://, needs BW_SESSION); SECRETSPEC_PROVIDER overrides.
-    CACHIX_AUTH_TOKEN="$(nix shell nixpkgs#secretspec -c secretspec get CACHIX_AUTH_TOKEN \
-      --provider "${SECRETSPEC_PROVIDER:-bw://}" --profile default)"
-  fi
-  export CACHIX_AUTH_TOKEN
-  out="$(nix build .#noctalia-cache --no-link --print-out-paths)"
-  nix run nixpkgs#cachix -- push lbssousa-noctalia "$out"
 
 [group("verification")]
 check *args:

@@ -162,9 +162,9 @@ A tabela completa está em `modules/home/desktop/umbriel.nix`.
 `secretspec` e `bitwarden-cli`. O `secretspec.toml` declara os segredos de desenvolvimento/CI
 (o sops-nix continua cuidando dos segredos do sistema).
 
-O CI (`.github/workflows/validate.yml`) precisa do secret
-`NIX_SECRETS_SSH_KEY` (deploy key somente leitura do `nix-secrets`) e, para o
-job `cache`, do `CACHIX_AUTH_TOKEN` (ver [Cache binário](#cache-binário)).
+O CI (`.github/workflows/validate.yml` e `update-noctalia-nix.yml`) precisa
+do secret `NIX_SECRETS_SSH_KEY` (deploy key somente leitura do `nix-secrets`);
+o cache é do noctalia-nix (ver [Cache binário](#cache-binário)).
 `just hooks` ativa o pre-commit (nixfmt, statix, deadnix).
 
 O sistema é reconstruído direto do clone de trabalho (`my.flakeDir`, para o qual
@@ -174,52 +174,46 @@ em [INSTALLATION.md › Manutenção](INSTALLATION.md#manutenção).
 
 ## Cache binário
 
-O overlay (`modules/flake/packages.nix`) aplica patches locais na Noctalia, no
-Noctalia Greeter e no Umbriel, e empacota o
-auxiliar do `noctalia-secret-prompts` e o Luciole (que ainda não está no
-nixpkgs). Nada disso está no cache.nixos.org, e
-sem um cache próprio cada host compila tudo de novo a cada atualização. Esses
-pacotes vão para o Cachix **lbssousa-noctalia**, que todos os hosts usam como
-substituter (`modules/nixos/core/nix.nix`) e que o `install.sh` também usa na
-instalação.
+A família Noctalia vem do flake
+[**noctalia-nix**](https://github.com/lbssousa/noctalia-nix): Noctalia, Noctalia
+Greeter, Umbriel (com o portal), Luciole e o auxiliar do `noctalia-secret-prompts`.
+Os patches deste repositório são commits nos branches `nix-config` dos forks:
+- [lbssousa/noctalia](https://github.com/lbssousa/noctalia/tree/nix-config): PAM da tela de bloqueio, chave de segurança, polkit e página Segurança;
+- [lbssousa/noctalia-greeter](https://github.com/lbssousa/noctalia-greeter/tree/nix-config): nomes completos, prompts PAM e último usuário;
+- [lbssousa/umbriel](https://github.com/lbssousa/umbriel/tree/nix-config): fullscreen no tile.
 
-O que entra no cache é o pacote `.#noctalia-cache`, que agrega a lista
-`noctaliaCache` em `modules/flake/packages.nix`: `noctalia`,
-`noctalia-greeter`, `pinentry-noctalia`, `noctalia-askpass`,
-`noctalia-secret-prompts`, `umbriel` e `luciole`. Para
-incluir outro pacote da família, acrescente o nome dele nessa lista. O
-`cachix push` só envia o que ainda não está no cache.nixos.org.
+O `flake.nix` daqui segue o nixpkgs do noctalia-nix (`nixpkgs.follows`), e o
+overlay (`modules/flake/packages.nix`) só acrescenta o que é deste repositório:
+o wrapper da Noctalia (templates e ferramentas da página Segurança), o pinentry,
+o askpass e o patch do greetd. Assim as derivações são as mesmas que o CI do
+noctalia-nix publica no Cachix **lbssousa-noctalia**, que todos os hosts e o
+`install.sh` usam como substituter.
 
-**Configuração (uma vez):**
+**Fluxo diário (CI do noctalia-nix):**
+1. Os branches `nix-config` dos forks são rebaseados sobre a release mais nova
+   do upstream (o `main`, no Umbriel). O estado anterior fica numa tag
+   `nix-config-<base>`; um conflito vira issue no noctalia-nix e não toca no
+   branch.
+2. `nix flake update`, build de tudo (com os testes da Noctalia) e envio ao
+   Cachix. Só se tudo passar o `flake.lock` dele é commitado.
+3. Um `repository_dispatch` dispara o `update-noctalia-nix.yml` daqui. Ele
+   atualiza o input, avalia os hosts, confere que nada da família Noctalia
+   seria compilado localmente e commita o lock no `main`.
 
-1. Em [app.cachix.org](https://app.cachix.org) › lbssousa-noctalia ›
-   Settings › Auth Tokens, crie um token com permissão de escrita.
-2. Guarde-o no Bitwarden pelo secretspec (perfil `default`; com `BW_SESSION`
-   de `bw unlock --raw`):
-   `secretspec set CACHIX_AUTH_TOKEN --provider bw:// --profile default`.
-3. Crie o secret do GitHub com o mesmo token:
-   `gh secret set CACHIX_AUTH_TOKEN -R lbssousa/nix-config-noctalia`.
+**Na máquina:** o `just upgrade` só baixa. Antes de compilar, ele confere
+(`--dry-run`) que nenhum pacote da família Noctalia seria compilado
+localmente; se algum fosse, ele para (`ALLOW_LOCAL_NOCTALIA_BUILD=1` força).
 
-**Envio:**
-
-- **CI:** o job `cache` do `validate.yml` roda depois do `flake-check` em
-  todo push no `main` (`.nix`, `flake.lock` ou patches) e também sob demanda
-  (Actions › Validate Nix Files › Run workflow). Ele compila
-  `.#noctalia-cache` e envia tudo o que compilou.
-- **Local:** `just cache-push` compila e envia. O token vem de
-  `CACHIX_AUTH_TOKEN` no ambiente ou, se a variável não existir, do
-  secretspec no Bitwarden (`bw://`, com `BW_SESSION`; outro provider em
-  `SECRETSPEC_PROVIDER`). Com o token no ambiente
-  (`CACHIX_AUTH_TOKEN=… just upgrade`, ou `secretspec run -- just upgrade`),
-  o `just upgrade` envia sozinho depois do build; se o envio falhar, o
-  upgrade continua.
+**Segredos:**
+- no noctalia-nix: `CACHIX_AUTH_TOKEN` e `FORKS_TOKEN`, cadastrados a partir
+  do Bitwarden com `just noctalia-nix-secrets`;
+- aqui: `NIX_SECRETS_SSH_KEY`.
 
 **Conferir** se um pacote está no cache:
 
 ```bash
 nix path-info --store https://lbssousa-noctalia.cachix.org \
   "$(nix build .#noctalia --no-link --print-out-paths)"
-nix config show substituters   # inclui https://lbssousa-noctalia.cachix.org
 ```
 
 ## Créditos

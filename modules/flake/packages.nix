@@ -17,12 +17,7 @@ let
       libfprint-goodix = call ../packages/_libfprint-goodix/package.nix;
       fprintd-goodix = call ../packages/_fprintd-goodix/package.nix;
       yubikey-gpg-import = call ../packages/_yubikey-gpg-import/package.nix;
-      # Luciole pelo flake do próprio projeto (input em flake.nix), com o
-      # nixpkgs deste flake (follows): vai para o Cachix com a família Noctalia.
-      luciole = inputs.luciole.packages.${final.stdenv.hostPlatform.system}.default;
       superwhisper = call ../packages/_superwhisper/package.nix;
-      # Auxiliar do plugin próprio da Noctalia (repositório em flake.nix).
-      noctalia-secret-prompts = call "${inputs.noctalia-secret-prompts}/nix/package.nix";
 
       # Senha expirada (pam_acct_mgmt: NEW_AUTHTOK_REQD) no login gráfico.
       # O greetd 0.10.3 só falhava; o patch chama pam_chauthtok na mesma
@@ -32,90 +27,35 @@ let
         patches = (old.patches or [ ]) ++ [ ../packages/patches/greetd-change-expired-authtok.patch ];
       });
 
-      # Noctalia Greeter, três patches (nesta ordem):
-      #  - nome completo na tela de login: PR aberto
-      #    https://github.com/noctalia-dev/noctalia-greeter/pull/131
-      #    ([appearance] show_real_names); remover quando chegar ao nixpkgs;
-      #  - prompts PAM seguintes (troca de senha expirada) no placeholder do
-      #    campo, sem apagar o aviso do PAM no status; patch local;
-      #  - último usuário que fez login em [user] last do sync.toml (ao lado
-      #    de [session] last), pré-selecionado no boot seguinte; --user e
-      #    [user].default continuam valendo mais. Patch local, sem PR upstream.
-      # Noctalia. Desde a 5.6 o PAM da tela de bloqueio roda num auxiliar à
-      # parte (libexec/noctalia/noctalia-pam-helper), com o serviço fixado na
-      # compilação (upstream #4619, que substituiu o nosso antigo PR #4132):
-      #  - -Dpam_service=noctalia-lock, em vez do "login", que fica só com a
-      #    senha (security/pam-policy.nix);
-      #  - -Dpam_service_security_key=noctalia-lock-u2f, opção do patch
-      #    lock-security-key abaixo: segundo serviço, também fixado na
-      #    compilação, que o auxiliar roda com --security-key.
-      # Patches, nesta ordem:
-      #  - digital com 3 tentativas no total (eram 4), como o max-tries=3 do
-      #    pam_fprintd. Patch local, sem PR upstream.
-      # Destaque no painel do polkit enquanto o PAM espera a digital ou o toque
-      # na chave de segurança: ícone grande (impressão digital ou chave) com título e
-      # descrição traduzidos, no lugar da mensagem crua do pam_fprintd/pam_u2f.
-      # Patch local, sem PR upstream.
-      # Toque na chave de segurança desbloqueia a tela sem Enter: o
-      # noctalia-pam-helper roda com --security-key o serviço de
-      # -Dpam_service_security_key em segundo plano e repassa no fd 3 o aviso
-      # PAM_TEXT_INFO do pam_u2f ("toque na chave"); [lockscreen] security_key
-      # liga e desliga. Patch local, sem PR upstream.
-      # Na tela de bloqueio, um método por vez: digital (até 3 leituras ou 30 s),
-      # depois FIDO2 (sem chave cadastrada ou com o toque expirado, segue), depois
-      # senha. Nas duas primeiras etapas o campo de senha dá lugar a um destaque
-      # como o do polkit e a um botão "Usar senha"; plugar a chave com o campo
-      # vazio volta à FIDO2, e a sequência recomeça a cada resume. Aplicado sobre
-      # o anterior; patch local, sem PR upstream.
-      # No painel do polkit, o mesmo botão "Usar senha" (também Enter/Espaço) ao
-      # lado do destaque da digital ou da chave: cria o sinalizador
-      # /run/user/<uid>/noctalia-polkit-use-password e reinicia a sessão, e a
-      # pilha polkit-1 pula direto para a senha (security/pam-policy.nix).
-      # Aplicado sobre o anterior; patch local, sem PR upstream.
-      # Configurações > Segurança com digitais (fprintd por D-Bus: leitor, cadastrar,
-      # testar, excluir), login com a chave de segurança (pam_u2f: registra onde o
-      # sudo e o polkit leem as chaves, remove por key handle, testa no serviço
-      # "noctalia-lock-u2f"), a chave OpenPGP do cartão (importar/atualizar, ligar,
-      # confiar, remover do chaveiro) e as chaves SSH residentes (importar, criar,
-      # remover cópia, apagar da chave, ~/.ssh/config.d/<host>.conf com reuso de
-      # conexão), com diálogo de PIN e detecção de plug/unplug; mais o atalho
-      # "security" da central de controle. Substitui o antigo plugin
-      # lbssousa/security-hardware (os drop-ins que ele escreveu continuam
-      # reconhecidos). Patch local, sem PR upstream: SCOPE.md manda controles de
-      # hardware para plugins.
+      # Família Noctalia (noctalia, noctalia-greeter, umbriel,
+      # xdg-desktop-portal-umbriel, luciole, noctalia-secret-prompts): do
+      # overlay do flake noctalia-nix (github.com/lbssousa/noctalia-nix),
+      # aplicado antes deste. Os patches são commits nos branches nix-config
+      # dos forks lbssousa/noctalia, lbssousa/noctalia-greeter e
+      # lbssousa/umbriel, rebaseados todo dia sobre o upstream; o CI do
+      # noctalia-nix compila e publica tudo no Cachix lbssousa-noctalia, com o
+      # mesmo nixpkgs deste flake (nixpkgs.follows em flake.nix).
+      #
+      # Na Noctalia, o branch nix-config já compila com
+      # -Dpam_service=noctalia-lock e -Dpam_service_security_key=noctalia-lock-u2f
+      # (security/pam-policy.nix) e traz a digital com 3 tentativas, os
+      # destaques e o "Usar senha" do polkit, a chave de segurança e a sequência
+      # digital → FIDO2 → senha na tela de bloqueio, e a página Segurança.
       #
       # O pinentry/askpass não é patch: os mantenedores não aceitam segredos no
-      # core (PR #4951). É o plugin lbssousa/secret-prompts (repositório
-      # github.com/lbssousa/noctalia-secret-prompts), com o auxiliar
+      # core (PR #4951). É o plugin lbssousa/secret-prompts, com o auxiliar
       # noctalia-secret-prompts.
       #
-      # Os patches saem do fork lbssousa/noctalia: o branch base/nix-config-v5.6.0
-      # é a tag v5.6.0 mais os patches acima, um commit cada (o security-hardware
-      # são os commits do fim, juntos num patch só).
-      # Os templates dos emuladores de terminal são
-      # remapeados de `.default` para `.dark`: assim eles usam sempre a variante
-      # escura da paleta ativa, mesmo com [theme].mode = "auto". Os demais
-      # templates (GTK, Qt, Umbriel) continuam seguindo o modo global.
-      #
-      # Reempacotar os assets (em vez de usar overrideAttrs/postInstall) evita
+      # Aqui, só o que é deste nix-config: os templates dos emuladores de
+      # terminal remapeados de `.default` para `.dark` (sempre a variante
+      # escura da paleta ativa, mesmo com [theme].mode = "auto"; os demais
+      # templates seguem o modo global) e as ferramentas da página Segurança no
+      # PATH. Reempacotar os assets (em vez de overrideAttrs/postInstall) evita
       # recompilar a Noctalia: basta copiar a saída já construída, ajustar os
       # templates e apontar NOCTALIA_ASSETS_DIR para a cópia.
       noctalia =
         let
-          base = prev.noctalia.overrideAttrs (old: {
-            mesonFlags = (old.mesonFlags or [ ]) ++ [
-              "-Dpam_service=noctalia-lock"
-              "-Dpam_service_security_key=noctalia-lock-u2f"
-            ];
-            patches = (old.patches or [ ]) ++ [
-              ../packages/patches/noctalia-lock-pam-service.patch
-              ../packages/patches/noctalia-polkit-auth-cues.patch
-              ../packages/patches/noctalia-lock-security-key.patch
-              ../packages/patches/noctalia-lock-auth-sequence.patch
-              ../packages/patches/noctalia-polkit-use-password.patch
-              ../packages/patches/noctalia-security-hardware.patch
-            ];
-          });
+          base = prev.noctalia;
         in
         final.runCommand "noctalia-${base.version}"
           {
@@ -171,40 +111,18 @@ let
         mkdir -p $out/bin
         ln -s ${final.noctalia-secret-prompts}/bin/noctalia-askpass $out/bin/noctalia-askpass
       '';
-
-      # Umbriel, dois patches:
-      #  - ação window-toggle-windowed-fullscreen, como o "fullscreenstate 0 2"
-      #    do Hyprland: o aplicativo recebe o estado fullscreen (o navegador esconde
-      #    a interface, players escondem os controles), mas fica no espaço do
-      #    tile, com gaps, bordas e a barra; o unfullscreen do próprio aplicativo
-      #    (Esc no vídeo, F11) sai do modo. PR aberto
-      #    https://github.com/noctalia-dev/umbriel/pull/644 (substitui o nosso
-      #    antigo fullscreen-in-tile); remover quando chegar ao nixpkgs;
-      #  - regra default_windowed_fullscreen, que abre a janela nesse modo
-      #    (default_fullscreen vence). Patch local, sem PR upstream; fonte no
-      #    branch feat/windowed-fullscreen-rule do fork lbssousa/umbriel, sobre o
-      #    e0da106 do nixpkgs mais os commits do PR #644.
-      umbriel = prev.umbriel.overrideAttrs (old: {
-        patches = (old.patches or [ ]) ++ [
-          ../packages/patches/umbriel-windowed-fullscreen.patch
-          ../packages/patches/umbriel-windowed-fullscreen-rule.patch
-        ];
-      });
-
-      noctalia-greeter = prev.noctalia-greeter.overrideAttrs (old: {
-        patches = (old.patches or [ ]) ++ [
-          ../packages/patches/noctalia-greeter-show-real-names.patch
-          ../packages/patches/noctalia-greeter-pam-prompts.patch
-          ../packages/patches/noctalia-greeter-remember-last-user.patch
-        ];
-      });
     };
 in
 {
   flake.overlays.default = overlay;
 
+  # A família Noctalia do noctalia-nix primeiro; este overlay embrulha a
+  # Noctalia dele e acrescenta os pacotes próprios.
   flake.modules.nixos.overlay = {
-    nixpkgs.overlays = [ config.flake.overlays.default ];
+    nixpkgs.overlays = [
+      inputs.noctalia-nix.overlays.default
+      config.flake.overlays.default
+    ];
     nixpkgs.config.allowUnfree = true;
   };
 
@@ -213,41 +131,24 @@ in
     let
       pkgs' = import pkgs.path {
         inherit system;
-        overlays = [ overlay ];
+        overlays = [
+          inputs.noctalia-nix.overlays.default
+          overlay
+        ];
         config.allowUnfree = true;
       };
-      # Família Noctalia com os patches deste overlay, que o cache.nixos.org
-      # não tem: vai para o Cachix lbssousa-noctalia (`just cache-push` e o
-      # job cache do CI; README, "Cache binário").
-      noctaliaCache = [
-        "noctalia"
-        "noctalia-greeter"
-        "pinentry-noctalia"
-        "noctalia-askpass"
-        "noctalia-secret-prompts"
-        "umbriel"
-        "luciole"
-      ];
     in
     {
-      packages =
-        lib.genAttrs [
-          "run0-sudo"
-          "libfprint-goodix"
-          "fprintd-goodix"
-          "yubikey-gpg-import"
-          "luciole"
-          "superwhisper"
-          "noctalia-secret-prompts"
-          "greetd"
-          "noctalia"
-          "noctalia-greeter"
-          "pinentry-noctalia"
-          "noctalia-askpass"
-          "umbriel"
-        ] (n: pkgs'.${n})
-        // {
-          noctalia-cache = pkgs'.linkFarmFromDrvs "noctalia-cache" (map (n: pkgs'.${n}) noctaliaCache);
-        };
+      packages = lib.genAttrs [
+        "run0-sudo"
+        "libfprint-goodix"
+        "fprintd-goodix"
+        "yubikey-gpg-import"
+        "superwhisper"
+        "greetd"
+        "noctalia"
+        "pinentry-noctalia"
+        "noctalia-askpass"
+      ] (n: pkgs'.${n});
     };
 }
