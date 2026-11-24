@@ -185,14 +185,16 @@ gc period='30d':
 
 # Builds the Noctalia family with the overlay's patches (.#noctalia-cache) and
 # pushes it to the lbssousa-noctalia Cachix. Write token: CACHIX_AUTH_TOKEN
-# from the environment, or from secretspec (default profile).
+# from the environment, or from secretspec in Bitwarden (bw://, profile default).
 [group("maintenance")]
 cache-push:
   #!/usr/bin/env bash
   set -euo pipefail
   cd "{{flake_root}}"
   if [[ -z "${CACHIX_AUTH_TOKEN:-}" ]]; then
-    CACHIX_AUTH_TOKEN="$(nix shell nixpkgs#secretspec -c secretspec get CACHIX_AUTH_TOKEN)"
+    # Stored in Bitwarden (bw://, needs BW_SESSION); SECRETSPEC_PROVIDER overrides.
+    CACHIX_AUTH_TOKEN="$(nix shell nixpkgs#secretspec -c secretspec get CACHIX_AUTH_TOKEN \
+      --provider "${SECRETSPEC_PROVIDER:-bw://}" --profile default)"
   fi
   export CACHIX_AUTH_TOKEN
   out="$(nix build .#noctalia-cache --no-link --print-out-paths)"

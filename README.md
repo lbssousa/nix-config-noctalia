@@ -190,10 +190,11 @@ incluir outro pacote da família, acrescente o nome dele nessa lista. O
 
 1. Em [app.cachix.org](https://app.cachix.org) › lbssousa-noctalia ›
    Settings › Auth Tokens, crie um token com permissão de escrita.
-2. Guarde-o no cofre do secretspec (perfil `default`):
-   `secretspec set CACHIX_AUTH_TOKEN`.
-3. No GitHub, em Settings › Secrets and variables › Actions, crie o secret
-   `CACHIX_AUTH_TOKEN` com o mesmo token.
+2. Guarde-o no Bitwarden pelo secretspec (perfil `default`; com `BW_SESSION`
+   de `bw unlock --raw`):
+   `secretspec set CACHIX_AUTH_TOKEN --provider bw:// --profile default`.
+3. Crie o secret do GitHub com o mesmo token:
+   `gh secret set CACHIX_AUTH_TOKEN -R lbssousa/nix-config-noctalia`.
 
 **Envio:**
 
@@ -203,7 +204,8 @@ incluir outro pacote da família, acrescente o nome dele nessa lista. O
   `.#noctalia-cache` e envia tudo o que compilou.
 - **Local:** `just cache-push` compila e envia. O token vem de
   `CACHIX_AUTH_TOKEN` no ambiente ou, se a variável não existir, do
-  secretspec. Com o token no ambiente
+  secretspec no Bitwarden (`bw://`, com `BW_SESSION`; outro provider em
+  `SECRETSPEC_PROVIDER`). Com o token no ambiente
   (`CACHIX_AUTH_TOKEN=… just upgrade`, ou `secretspec run -- just upgrade`),
   o `just upgrade` envia sozinho depois do build; se o envio falhar, o
   upgrade continua.
