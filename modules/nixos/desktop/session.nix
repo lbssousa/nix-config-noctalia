@@ -16,18 +16,22 @@
       services.displayManager.noctalia-greeter = {
         enable = true;
         settings = {
-          keyboard.layout = "br";
-          keyboard.variant = "abnt2";
-          # Caps Lock = Esc, Shift + Caps Lock = Caps Lock (core/locale.nix).
-          keyboard.options = "caps:escape_shifted_capslock";
-          # Patch do PR noctalia-greeter#131 (ver modules/flake/packages.nix):
-          # mostra o nome completo (AccountsService RealName/GECOS).
-          appearance.show_real_names = true;
-          # Mesmo tema da shell. Esquemas embutidos usam sempre a variante
-          # escura no greeter; fixado aqui, vence a última escolha feita na
-          # tela de login (F7), que fica em /var/lib/noctalia-greeter/sync.toml
-          # (persistente; guarda também o último usuário e a última sessão).
-          appearance.scheme = "Nord";
+          keyboard = {
+            layout = "br";
+            variant = "abnt2";
+            # Caps Lock = Esc, Shift + Caps Lock = Caps Lock (core/locale.nix).
+            options = "caps:escape_shifted_capslock";
+          };
+          appearance = {
+            # Patch do PR noctalia-greeter#131 (ver modules/flake/packages.nix):
+            # mostra o nome completo (AccountsService RealName/GECOS).
+            show_real_names = true;
+            # Mesmo tema da shell. Esquemas embutidos usam sempre a variante
+            # escura no greeter; fixado aqui, vence a última escolha feita na
+            # tela de login (F7), que fica em /var/lib/noctalia-greeter/sync.toml
+            # (persistente; guarda também o último usuário e a última sessão).
+            scheme = "Nord";
+          };
           # Enter com o campo vazio envia: é o primeiro login de uma conta sem
           # senha (security/first-login.nix). Quem decide é o PAM, que só
           # aceita senha vazia em conta expirada. O patch do greeter já começa
