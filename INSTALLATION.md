@@ -160,11 +160,32 @@ As chaves já estão no firmware, e o lanzaboote assina com essas mesmas chaves:
 Depois do Secure Boot ativo (o PCR 7 mede o estado dele):
 
 ```bash
-sudo bash /etc/nixos/scripts/enroll-tpm2.sh             # PCRs 0+2+7 em /dev/disk/by-partlabel/luks
+sudo bash /etc/nixos/scripts/enroll-tpm2.sh             # PCRs 0+2+7+15 em /dev/disk/by-partlabel/luks
 sudo bash /etc/nixos/scripts/enroll-tpm2.sh --wipe      # refaz o cadastro (ex.: após atualizar o firmware)
 ```
 
 Se as medições mudarem, o initrd (systemd) pede a senha do LUKS como antes.
+
+**PCR 15.** O initrd mede a chave do volume no PCR 15 logo depois de abrir o
+disco (`tpm2-measure-pcr=yes`, em `modules/nixos/security/tpm2.nix`), e o
+cadastro exige o PCR 15 ainda zerado. Assim o TPM só entrega a chave uma vez
+por boot, antes de qualquer volume ser aberto. Isso barra dois casos:
+
+- um volume LUKS forjado posto no lugar do verdadeiro, que o initrd abriria
+  com a chave do atacante para depois pedir a chave real ao TPM;
+- o sistema já em execução pedindo a chave ao TPM.
+
+O script confere que o PCR 15 já foi medido no boot atual e recusa o cadastro
+enquanto o initrd não fizer essa medição (`--force` ignora a checagem).
+Também avisa se o disco ainda não tem chave de recuperação.
+
+Migração de um host cadastrado só com 0+2+7:
+
+1. `just boot` e reinicie: o initrd passa a medir o PCR 15, e o desbloqueio
+   continua pelo cadastro antigo.
+2. `systemd-analyze pcrs 15` não pode mais mostrar só zeros.
+3. `sudo bash /etc/nixos/scripts/enroll-tpm2.sh --wipe` (pede a senha do LUKS).
+4. Reinicie e confira que o disco abre sozinho.
 
 ## Leitor de digital (barbudus)
 
