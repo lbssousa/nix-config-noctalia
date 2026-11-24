@@ -51,7 +51,7 @@
         sessionVariables = {
           EDITOR = lib.mkDefault "nvim";
           VISUAL = lib.mkDefault "nvim";
-          BROWSER = lib.mkDefault "google-chrome-stable";
+          BROWSER = lib.mkDefault "org.mozilla.firefox";
         };
       };
 

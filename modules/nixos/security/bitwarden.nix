@@ -1,70 +1,47 @@
-# Bitwarden como gerenciador de senhas padrão: app desktop e CLI (`bw`) para
-# todos os usuários. Ícone na bandeja, autostart, agente SSH e preferências do
-# app são de cada usuário (home/security/bitwarden.nix, my.bitwarden.enable).
-# O Secret Service continua sendo o oo7 (desktop/secret-service.nix).
+# Bitwarden como gerenciador de senhas padrão: app desktop (Flatpak
+# com.bitwarden.desktop) e CLI (`bw`, nativo) para todos os usuários. Ícone na
+# bandeja, autostart, agente SSH e preferências do app são de cada usuário
+# (home/security/bitwarden.nix, my.bitwarden.enable). O Secret Service
+# continua sendo o oo7 (desktop/secret-service.nix), que o app alcança pela
+# permissão org.freedesktop.secrets do Flatpak.
 #
-# Desbloqueio biométrico: o pacote bitwarden-desktop já instala a ação polkit
-# "com.bitwarden.Bitwarden.unlock" (auth_self) em share/polkit-1/actions, que o
-# polkitd lê de /run/current-system/sw; a autenticação segue a pilha PAM
-# "polkit-1" (digital, chave de segurança ou senha).
+# Desbloqueio biométrico: o app pede a ação polkit "com.bitwarden.Bitwarden.unlock"
+# (auth_self), que precisa estar no host; a política vem de
+# apps/desktop/resources/com.bitwarden.desktop.policy (bitwarden/clients),
+# guardada em _bitwarden/. A autenticação segue a pilha PAM "polkit-1"
+# (digital, chave de segurança ou senha).
 #
-# O app só oferece o desbloqueio se achar um Secret Service (oo7, no Rust).
-# O ashpd que ele embute trata GTK_USE_PORTAL=1 (nixos/desktop/file-manager.nix)
-# como sandbox, e aí o oo7 tenta o portal Secret, que recusa o Electron (não
-# consegue abrir /proc/<pid>/root): sem segredos, o app esconde a biometria. O
-# bitwarden fica num wrapper sem essa variável; o Electron usa o portal de
-# arquivos por conta própria.
-#
-# Native messaging com a extensão do Chrome (nixos/desktop/google-chrome.nix):
-# o manifesto com.8bit.bitwarden vai para o diretório do sistema do Chrome
-# (/etc/opt/chrome/native-messaging-hosts) e aponta para o desktop_proxy do
-# pacote, que conversa com o app em execução. O app ainda grava a própria
-# cópia em ~/.config/google-chrome/NativeMessagingHosts quando a integração
-# com o navegador é ligada nele; as duas levam ao mesmo app.
+# Native messaging: o próprio app, em Flatpak, grava o manifesto, o proxy e o
+# socket IPC nos navegadores em Flatpak que conhece (o Firefox, aqui); o Brave
+# precisa de ajustes (home/desktop/brave.nix). A integração com o navegador
+# vem sempre ligada no app.
 {
   flake.modules.nixos.bitwarden =
     { pkgs, ... }:
     let
-      bitwarden-desktop = pkgs.symlinkJoin {
-        name = "bitwarden-desktop-${pkgs.bitwarden-desktop.version}";
-        paths = [ pkgs.bitwarden-desktop ];
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        postBuild = ''
-          wrapProgram $out/bin/bitwarden --unset GTK_USE_PORTAL
-        '';
-      };
-
+      policy = ./_bitwarden/com.bitwarden.Bitwarden.policy;
+      # O polkitd lê as ações de share/polkit-1/actions do perfil do sistema.
+      polkitActions = pkgs.runCommand "bitwarden-polkit-actions" { } ''
+        install -Dm644 ${policy} $out/share/polkit-1/actions/com.bitwarden.Bitwarden.policy
+      '';
     in
     {
-      environment = {
-        systemPackages = [
-          bitwarden-desktop
-          pkgs.bitwarden-cli
-        ];
+      services.flatpak.packages = [ "com.bitwarden.desktop" ];
 
-        etc = {
-          "opt/chrome/native-messaging-hosts/com.8bit.bitwarden.json".text = builtins.toJSON {
-            name = "com.8bit.bitwarden";
-            description = "Bitwarden desktop <-> browser bridge";
-            path = "${pkgs.bitwarden-desktop}/libexec/desktop_proxy";
-            type = "stdio";
-            allowed_origins = [ "chrome-extension://nngceckbapebfimnlniiiahkandclblb/" ];
-          };
-
-          # Bitwarden's Linux biometrics expects the polkit policy in /usr/share/polkit-1/actions/
-          "polkit-1/actions/com.bitwarden.Bitwarden.policy".source =
-            "${pkgs.bitwarden-desktop}/share/polkit-1/actions/com.bitwarden.Bitwarden.policy";
-        };
-      };
+      environment.systemPackages = [
+        pkgs.bitwarden-cli
+        polkitActions
+      ];
 
       # Sem ssh-agent do sistema: o agente SSH é o do próprio Bitwarden
       # (home/security/bitwarden.nix).
       programs.ssh.startAgent = false;
 
+      # O app também procura a política em /usr/share/polkit-1/actions.
       system.activationScripts.bitwardenPolkitUsr = {
         text = ''
           mkdir -p /usr/share/polkit-1/actions
-          ln -sf ${pkgs.bitwarden-desktop}/share/polkit-1/actions/com.bitwarden.Bitwarden.policy /usr/share/polkit-1/actions/com.bitwarden.Bitwarden.policy
+          ln -sf ${policy} /usr/share/polkit-1/actions/com.bitwarden.Bitwarden.policy
         '';
         deps = [ ];
       };

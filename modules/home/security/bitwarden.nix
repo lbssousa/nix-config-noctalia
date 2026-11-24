@@ -1,8 +1,10 @@
 # Bitwarden de cada usuário com my.bitwarden.enable (por ora, só o abutre):
-# agente SSH, autostart na bandeja e preferências do app. O app e o `bw` são
-# do sistema (nixos/security/bitwarden.nix).
+# agente SSH, autostart na bandeja e preferências do app. O app (Flatpak
+# com.bitwarden.desktop) e o `bw` são do sistema (nixos/security/bitwarden.nix);
+# os dados do app ficam em ~/.var/app/com.bitwarden.desktop.
 #
-# Agente SSH: o app escuta em ~/.bitwarden-ssh-agent.sock. O SSH_AUTH_SOCK é
+# Agente SSH: em Flatpak, o app escuta em
+# ~/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock. O SSH_AUTH_SOCK é
 # exportado nos shells (home.sessionVariables) e no environment.d do
 # systemd --user (systemd.user.sessionVariables, 10-home-manager.conf): o
 # Umbriel, a Noctalia, os terminais e tudo o que eles abrem já o herdam, mesmo
@@ -10,7 +12,9 @@
 # desbloqueio quando o ssh pede uma chave.
 #
 # Preferências: o app guarda tudo (inclusive o cofre criptografado) em
-# ~/.config/Bitwarden/data.json, que ele reescreve inteiro enquanto roda. As
+# ~/.var/app/com.bitwarden.desktop/config/Bitwarden/data.json, que ele
+# reescreve inteiro enquanto roda. Na primeira ativação, o ~/.config/Bitwarden
+# do app nativo é copiado para lá (o original fica). As
 # opções my.bitwarden.settings (globais) e my.bitwarden.userSettings (de cada
 # conta logada) entram por cima do arquivo, no formato do app
 # (global_<estado>_<chave> e user_<id>_<estado>_<chave>), antes de cada
@@ -35,8 +39,10 @@
     }:
     let
       cfg = config.my.bitwarden;
-      sock = "${config.home.homeDirectory}/.bitwarden-ssh-agent.sock";
-      dataFile = "${config.xdg.configHome}/Bitwarden/data.json";
+      appId = "com.bitwarden.desktop";
+      appDir = "${config.home.homeDirectory}/.var/app/${appId}";
+      sock = "${appDir}/data/.bitwarden-ssh-agent.sock";
+      dataFile = "${appDir}/config/Bitwarden/data.json";
 
       # { estado.chave = valor; } → { "<prefixo><estado>_<chave>" = valor; }
       flatten =
@@ -59,13 +65,14 @@
         name = "bitwarden-apply-settings";
         runtimeInputs = [
           pkgs.coreutils
+          pkgs.flatpak
+          pkgs.gnugrep
           pkgs.jq
-          pkgs.procps
         ];
         text = ''
           data=${lib.escapeShellArg dataFile}
 
-          if pgrep -u "$(id -u)" -f '/opt/Bitwarden/resources/app\.asar' >/dev/null; then
+          if flatpak ps --columns=application 2>/dev/null | grep -qx ${appId}; then
             echo "Bitwarden aberto: as preferências do Nix entram no próximo início dele." >&2
             exit 0
           fi
@@ -119,8 +126,8 @@
       autostartEntry = pkgs.makeDesktopItem {
         name = "com.bitwarden.desktop";
         desktopName = "Bitwarden";
-        exec = "bitwarden --autostart";
-        icon = "bitwarden";
+        exec = "flatpak run ${appId} --autostart";
+        icon = appId;
         noDisplay = true;
       };
 
@@ -197,6 +204,18 @@
           sessionVariables.SSH_AUTH_SOCK = sock;
 
           activation = {
+            # Uma vez: os dados do app nativo (cofre local, contas, preferências)
+            # para o diretório do Flatpak, se ele ainda não tiver os seus. O
+            # original fica, para o usuário apagar quando quiser.
+            bitwardenMigrateToFlatpak = lib.hm.dag.entryBefore [ "bitwardenSettings" ] ''
+              old="${config.xdg.configHome}/Bitwarden"
+              new="${appDir}/config/Bitwarden"
+              if [[ -d $old && ! -e $new ]]; then
+                run mkdir -p "$(dirname "$new")"
+                run cp -a --reflink=auto "$old" "$new"
+              fi
+            '';
+
             bitwardenSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
               run ${lib.getExe applySettings}
             '';

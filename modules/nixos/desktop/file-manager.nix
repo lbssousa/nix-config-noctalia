@@ -8,7 +8,7 @@
 # só é usado quando escolhido no portals.conf; o GTK fica de reserva. Os apps
 # só usam o portal quando pedido: GTK_USE_PORTAL no GTK3, GDK_DEBUG=portals no
 # GTK4 e o tema xdgdesktopportal no Qt (OBS...); sem ele, o Qt abre o próprio
-# diálogo. O Chrome (nixos/desktop/google-chrome.nix) e o Electron já o usam.
+# diálogo. Os Flatpaks (Firefox, Brave, Bitwarden...) e o Electron já o usam.
 #
 # FileManager1: o serviço D-Bus do pacote
 # (dev.noctalia.luciole.FileManager1.service, Name=org.freedesktop.FileManager1)

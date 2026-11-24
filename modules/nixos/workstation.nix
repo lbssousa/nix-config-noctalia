@@ -38,7 +38,8 @@ in
       m.secret-service
       m.flatpak
       m.artcraft
-      m.google-chrome
+      m.firefox
+      m.brave
       m.apps
       m.file-manager
       # periféricos e rede
