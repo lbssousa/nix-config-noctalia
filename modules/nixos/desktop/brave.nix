@@ -202,6 +202,8 @@ in
                 hash = "26b538e7e72ebca50af5cb59e147320da83669309c6e2978855b7c41a77384e8";
               };
             };
+            # Manifest em https://teams.cloud.microsoft/manifest.json (id
+            # ?clientType=pwa, escopo https://teams.cloud.microsoft/).
             teams = {
               name = "Microsoft Teams";
               url = "https://teams.cloud.microsoft/";
@@ -282,6 +284,9 @@ in
               # O Better Microsoft Container do Firefox inclui o GitHub.
               domains = [
                 "microsoft.com"
+                # Domínio dos apps do Microsoft 365 (teams.cloud.microsoft, a
+                # PWA do Teams em my.brave.webapps.teams; outlook., m365.).
+                "cloud.microsoft"
                 "microsoftonline.com"
                 "outlook.com"
                 "live.com"
