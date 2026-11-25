@@ -1,0 +1,223 @@
+From b3805c3c7502fbe7a2e9165b8f17a6531002823a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?La=C3=A9rcio=20de=20Sousa?= <lbsousajr@gmail.com>
+Date: Thu, 12 Nov 2026 16:17:12 -0300
+Subject: [PATCH] device: Emit VerifyMatchedFinger with the finger that matched
+
+On identify, VerifyStart("any") reports "any" through
+VerifyFingerSelected, and VerifyStatus only says verify-match, so a
+client cannot tell which enrolled finger the user touched the reader
+with, although libfprint hands fprintd the matching print.
+
+Emit a new VerifyMatchedFinger signal with that print's finger right
+before VerifyStatus reports verify-match, on verify as well as on
+identify. Clients that do not know the signal are unaffected.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/device.c                          | 31 +++++++++++++++++++++------
+ src/net.reactivated.Fprint.Device.xml | 25 +++++++++++++++++++++
+ tests/fprintd.py                      | 18 +++++++++++++++-
+ 3 files changed, 66 insertions(+), 8 deletions(-)
+
+diff --git a/src/device.c b/src/device.c
+index 4de4a10..2e8ffab 100644
+--- a/src/device.c
++++ b/src/device.c
+@@ -135,6 +135,7 @@ enum fprint_device_properties {
+ enum fprint_device_signals {
+   SIGNAL_VERIFY_STATUS,
+   SIGNAL_VERIFY_FINGER_SELECTED,
++  SIGNAL_VERIFY_MATCHED_FINGER,
+   SIGNAL_ENROLL_STATUS,
+   NUM_SIGNALS,
+ };
+@@ -434,6 +435,8 @@ fprint_device_class_init (FprintDeviceClass *klass)
+     g_signal_lookup ("enroll-status", FPRINT_TYPE_DEVICE);
+   signals[SIGNAL_VERIFY_FINGER_SELECTED] =
+     g_signal_lookup ("verify-finger-selected", FPRINT_TYPE_DEVICE);
++  signals[SIGNAL_VERIFY_MATCHED_FINGER] =
++    g_signal_lookup ("verify-matched-finger", FPRINT_TYPE_DEVICE);
+ 
+   quark_auth_user = g_quark_from_static_string ("authorized-user");
+ }
+@@ -1262,11 +1265,11 @@ load_all_prints (FprintDevice *rdev)
+ 
+ static void
+ report_verify_status (FprintDevice *rdev,
+-                      gboolean      match,
++                      FpPrint      *match,
+                       GError       *error)
+ {
+   FprintDevicePrivate *priv = fprint_device_get_instance_private (rdev);
+-  const char *result = verify_result_to_name (match, error);
++  const char *result = verify_result_to_name (match != NULL, error);
+ 
+   g_autoptr(SessionData) session = NULL;
+   gboolean done;
+@@ -1284,6 +1287,22 @@ report_verify_status (FprintDevice *rdev,
+       return;
+     }
+ 
++  /* Tell the front-end which finger matched before the result, so that
++   * it knows it when verify-match arrives. This matters on identify, where
++   * VerifyFingerSelected only said "any". */
++  if (match != NULL && error == NULL)
++    {
++      FpFinger finger = fp_print_get_finger (match);
++
++      if (finger != FP_FINGER_UNKNOWN)
++        {
++          g_debug ("report_verify_status: matched finger %s",
++                   fp_finger_to_name (finger));
++          g_signal_emit (rdev, signals[SIGNAL_VERIFY_MATCHED_FINGER],
++                         0, fp_finger_to_name (finger));
++        }
++    }
++
+   g_debug ("report_verify_status: result %s", result);
+   g_signal_emit (rdev, signals[SIGNAL_VERIFY_STATUS], 0, result, done);
+ 
+@@ -1544,15 +1563,13 @@ match_cb (FpDevice *device,
+ {
+   FprintDevice *rdev = user_data;
+   FprintDevicePrivate *priv = fprint_device_get_instance_private (rdev);
+-  gboolean matched;
+   gboolean cancelled;
+ 
+   g_assert_true (error == NULL || error->domain == FP_DEVICE_RETRY);
+ 
+   cancelled = g_cancellable_is_cancelled (priv->current_cancellable);
+-  matched = match != NULL && cancelled == FALSE;
+ 
+-  report_verify_status (rdev, matched, error);
++  report_verify_status (rdev, cancelled ? NULL : match, error);
+ }
+ 
+ static void
+@@ -1587,7 +1604,7 @@ verify_cb (FpDevice *dev, GAsyncResult *res, void *user_data)
+ 
+       if (error)
+         {
+-          report_verify_status (rdev, FALSE, error);
++          report_verify_status (rdev, NULL, error);
+ 
+           if (!g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+             g_warning ("Device reported an error during verify: %s",
+@@ -1632,7 +1649,7 @@ identify_cb (FpDevice *dev, GAsyncResult *res, void *user_data)
+ 
+       if (error)
+         {
+-          report_verify_status (rdev, FALSE, error);
++          report_verify_status (rdev, NULL, error);
+ 
+           if (!g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+             g_warning ("Device reported an error during identify: %s",
+diff --git a/src/net.reactivated.Fprint.Device.xml b/src/net.reactivated.Fprint.Device.xml
+index 809ab53..cf1c290 100644
+--- a/src/net.reactivated.Fprint.Device.xml
++++ b/src/net.reactivated.Fprint.Device.xml
+@@ -489,6 +489,31 @@
+ 			</doc:doc>
+ 		</signal>
+ 
++		<signal name="VerifyMatchedFinger">
++			<arg type="s" name="finger_name">
++				<doc:doc>
++					<doc:summary>
++						<doc:para>
++							A string representing the enrolled finger that matched.
++						</doc:para>
++					</doc:summary>
++				</doc:doc>
++			</arg>
++			<doc:doc>
++				<doc:description>
++					<doc:para>
++						Emitted right before <doc:ref type="signal" to="Device::VerifyStatus">Device::VerifyStatus</doc:ref>
++						reports verify-match, with the finger whose print matched. Unlike
++						<doc:ref type="signal" to="Device::VerifyFingerSelected">Device::VerifyFingerSelected</doc:ref>,
++						it names the actual finger when "any" was verified against several enrolled prints.
++					</doc:para>
++				</doc:description>
++				<doc:seealso>
++					<doc:ref type="description" to="fingerprint-names">Fingerprint names</doc:ref>.
++				</doc:seealso>
++			</doc:doc>
++		</signal>
++
+ 		<!-- ************************************************************ -->
+ 
+ 		<signal name="VerifyStatus">
+diff --git a/tests/fprintd.py b/tests/fprintd.py
+index a1fef1c..588548d 100644
+--- a/tests/fprintd.py
++++ b/tests/fprintd.py
+@@ -654,6 +654,8 @@ class FPrintdVirtualDeviceBaseTest(FPrintdVirtualImageDeviceBaseTests):
+                     print('Unexpected signal values')
+             elif signal == 'VerifyFingerSelected':
+                 self._selected_finger = params[0]
++            elif signal == 'VerifyMatchedFinger':
++                self._matched_finger = params[0]
+             elif signal == 'VerifyStatus':
+                 self._abort = True
+                 self._last_result = params[0]
+@@ -692,6 +694,7 @@ class FPrintdVirtualDeviceBaseTest(FPrintdVirtualImageDeviceBaseTests):
+         self._last_result = None
+         self._verify_stopped = False
+         self._selected_finger = None
++        self._matched_finger = None
+         self._abort = False
+ 
+         if max_wait > 0:
+@@ -879,13 +882,16 @@ class FPrintdVirtualDeviceBaseTest(FPrintdVirtualImageDeviceBaseTests):
+ 
+         return bus, dev
+ 
+-    def assertVerifyMatch(self, selected_finger=None):
++    def assertVerifyMatch(self, selected_finger=None, matched_finger=None):
+         self.wait_for_result(expected='verify-match')
+         self.assertTrue(self._verify_stopped)
+ 
+         if selected_finger:
+             self.assertEqual(selected_finger, self._selected_finger)
+ 
++        if matched_finger:
++            self.assertEqual(matched_finger, self._matched_finger)
++
+     def assertVerifyNoMatch(self, selected_finger=None):
+         self.wait_for_result(expected='verify-no-match')
+         self.assertTrue(self._verify_stopped)
+@@ -1989,6 +1995,7 @@ class FPrintdVirtualDeviceClaimedTest(FPrintdVirtualDeviceBaseTest):
+         self.assertTrue(self._verify_stopped)
+         self.assertEqual(self._last_result, 'verify-match')
+         self.assertEqual(self._selected_finger, 'left-thumb')
++        self.assertEqual(self._matched_finger, 'left-thumb')
+         self.device.VerifyStop()
+ 
+     def test_verify_finger_no_match(self):
+@@ -2041,6 +2048,14 @@ class FPrintdVirtualDeviceClaimedTest(FPrintdVirtualDeviceBaseTest):
+         self.assertEqual(self._selected_finger, 'any')
+         self.device.VerifyStop()
+ 
++    def test_verify_any_finger_reports_matched_finger(self):
++        enrolled, enroll_map = self.enroll_multiple_images()
++        for finger in enrolled:
++            self.device.VerifyStart('(s)', 'any')
++            self.send_image(enroll_map[finger])
++            self.assertVerifyMatch(selected_finger='any', matched_finger=finger)
++            self.device.VerifyStop()
++
+     def test_verify_any_finger_no_match(self, selected_finger='any'):
+         enrolled, _map = self.enroll_multiple_images()
+         verify_image = 'tented_arch'
+@@ -2048,6 +2063,7 @@ class FPrintdVirtualDeviceClaimedTest(FPrintdVirtualDeviceBaseTest):
+         self.device.VerifyStart('(s)', 'any')
+         self.send_image(verify_image)
+         self.assertVerifyNoMatch(selected_finger)
++        self.assertIsNone(self._matched_finger)
+         self.device.VerifyStop()
+ 
+     def test_verify_any_finger_multiple_users(self):
+-- 
+2.56.0
+

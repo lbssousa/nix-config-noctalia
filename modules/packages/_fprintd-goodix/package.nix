@@ -1,5 +1,12 @@
 # fprintd 1.94.5 built against the lbssousa fork of libfprint (1.94.10).
 # Version 1.94.5 requires libfprint >= 1.94.9, compatible with the new fork.
+#
+# Patch: the VerifyMatchedFinger signal, with the finger whose print matched,
+# right before VerifyStatus reports verify-match. On identify (VerifyStart
+# "any" with several fingers enrolled), VerifyFingerSelected only says "any",
+# and the fingerprint test of the Noctalia Security page could not name the
+# finger. Commit b3805c3 of lbssousa/fprintd (branch verify-matched-finger),
+# the same one fingerprint-omarchy uses.
 {
   lib,
   stdenv,
@@ -36,6 +43,8 @@ stdenv.mkDerivation (finalAttrs: {
     tag = "v${finalAttrs.version}";
     hash = "sha256-aGIz50S0zfE3rV6QJp8iQz3uUVn8WAL68KU70j8GyOU=";
   };
+
+  patches = [ ../patches/fprintd-verify-matched-finger.patch ];
 
   postPatch = ''
     patchShebangs \
