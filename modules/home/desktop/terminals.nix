@@ -2,6 +2,7 @@
 # Noctalia (themes/noctalia*), sempre na variante escura da paleta ativa: os
 # templates de alacritty, foot, ghostty, kitty e wezterm (e o do btop) são
 # remapeados de `.default` para `.dark` no pacote Noctalia (flake/packages.nix).
+# São os únicos aplicativos translúcidos (umbriel.nix).
 #
 # Os arquivos gerados aqui já contêm as linhas que os scripts de "apply" dos
 # templates acrescentariam, então esses scripts não tentam reescrevê-los

@@ -21,39 +21,35 @@
 
       noctalia = action: "spawn noctalia msg ${action}";
       calculator = once (noctalia "panel-toggle samuelskovbakke/calculator-plus:panel");
-      # Janelas que o Omarchy deixa translúcidas: a tag "terminal" de
-      # default/hypr/apps/terminals.lua (mais o console Quake) e o gerenciador
-      # de arquivos (o Luciole, que aqui ocupa o lugar do Nautilus).
+      # Só os terminais são translúcidos: a tag "terminal" do Omarchy
+      # (default/hypr/apps/terminals.lua) mais o console Quake. Os demais
+      # aplicativos, o gerenciador de arquivos (Luciole) inclusive, ficam
+      # opacos e sem blur.
       terminalApps = "Alacritty|kitty|com\\.mitchellh\\.ghostty|foot|org\\.codeberg\\.dnkl\\.foot|wezterm|org\\.wezfurlong\\.wezterm|dev\\.lbssousa\\.console";
-      fileManagerApps = "dev\\.noctalia\\.luciole";
-      transparentApps = "^(${terminalApps}|${fileManagerApps})$";
+      transparentApps = "^(${terminalApps})$";
 
-      # Modos de omarchy-hyprland-window-transparency (Omarchy 4.5):
+      # Modos de omarchy-hyprland-window-transparency (Omarchy 4.5), só nos
+      # terminais:
       #  - transparent (o padrão do Omarchy): o.transparent_window com
-      #    "0.985 0.96" (ativa/inativa) nos apps acima;
+      #    "0.985 0.96" (ativa/inativa);
       #  - glassy: o mesmo, mais o fundo dos terminais a 0.65 (terminals.nix)
-      #    e sem o do btop (btop.nix),
-      #    os gerenciadores de arquivos inteiros a 0.75 ("0.75 0.75", pois o
-      #    GTK desenha o fundo sólido) e o blur de default/hypr/glass.lua;
+      #    e sem o do btop (btop.nix), e o blur de default/hypr/glass.lua;
       #  - opaque: nenhuma translucência.
       # A transição de foco é suave ([animation.windows_opacity], ligada por
-      # padrão). O blur das janelas já vem da primeira regra de window_rule.
-      transparencyRules =
-        lib.optionals (cfg.transparency != "opaque") [
-          {
-            match.app_id = transparentApps;
-            opacity = 0.985;
-          }
-          {
-            match.app_id = transparentApps;
-            match.is_focused = false;
-            opacity = 0.96;
-          }
-        ]
-        ++ lib.optional (cfg.transparency == "glassy") {
-          match.app_id = "^(${fileManagerApps})$";
-          opacity = 0.75;
-        };
+      # padrão).
+      transparencyRules = lib.optionals (cfg.transparency != "opaque") [
+        {
+          match.app_id = transparentApps;
+          blur = true;
+          blur_optimized = false;
+          opacity = 0.985;
+        }
+        {
+          match.app_id = transparentApps;
+          match.is_focused = false;
+          opacity = 0.96;
+        }
+      ];
 
       # glass.lua: size 4, passes 2, contrast 1.0, brightness 0.75,
       # noise 0.01 (vibrancy não tem equivalente no Umbriel).
@@ -285,13 +281,7 @@
         }
         // workspaceBinds;
 
-        window_rule = [
-          {
-            blur = true;
-            blur_optimized = false;
-          }
-        ]
-        ++ transparencyRules
+        window_rule = transparencyRules
         ++ [
           {
             match.app_id = "^dev.noctalia.Noctalia$";
@@ -373,7 +363,7 @@
             "glassy"
           ];
           default = "glassy";
-          description = "Translucência das janelas, como os modos do Omarchy 4.5 (omarchy-hyprland-window-transparency).";
+          description = "Translucência dos terminais (os demais aplicativos são sempre opacos), como os modos do Omarchy 4.5 (omarchy-hyprland-window-transparency).";
         };
         extraSettings = lib.mkOption {
           inherit (toml) type;
