@@ -2,6 +2,8 @@
 # lbssousa/secret-prompts, habilitado por padrão em home/desktop/noctalia.nix),
 # para todos os usuários. Sem a shell ou sem o plugin, o pinentry cai no
 # pinentry-curses e o askpass falha (o ssh volta a perguntar no TTY).
+# O painel é modal (`modal = true` no plugin): a Noctalia escurece as telas
+# atrás dele e o Umbriel as desfoca (home/desktop/umbriel.nix), como no polkit.
 {
   flake.modules.nixos.secret-prompts =
     { lib, pkgs, ... }:

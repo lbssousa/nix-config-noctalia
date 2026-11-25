@@ -339,6 +339,16 @@
             blur_popups = true;
             blur_optimized = false;
           }
+          # Fundo modal da Noctalia (patch do fork lbssousa/noctalia): camada em
+          # tela cheia, já escurecida pela própria shell (shell.panel.modal_dim),
+          # atrás do polkit e dos prompts do plugin secret-prompts (pinentry do
+          # GnuPG, SSH_ASKPASS), como o dimaround + blur do Omarchy. Blur não
+          # otimizado: desfoca as janelas, não só o wallpaper.
+          {
+            match.namespace = "^noctalia-panel-backdrop$";
+            blur = true;
+            blur_optimized = false;
+          }
         ];
       };
 
