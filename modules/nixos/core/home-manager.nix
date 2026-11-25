@@ -108,6 +108,8 @@ in
               wants = [ "nix-daemon.socket" ];
               after = [ "nix-daemon.socket" ];
               unitConfig.ConditionPathExists = "!${hc.config.home.homeDirectory}/.local/state/nix/profiles/home-manager";
+              # O activate chama nix-build/nix-env para instalar o perfil.
+              path = [ config.nix.package ];
               environment.HOME_MANAGER_BACKUP_EXT = "bkp";
               serviceConfig = {
                 Type = "oneshot";
