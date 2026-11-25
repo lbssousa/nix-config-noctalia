@@ -250,6 +250,8 @@
           # console Quake usa a tecla na mesma posição, o apóstrofo.
           "Mod+Tab" = "workspace-next";
           "Mod+Shift+Tab" = "workspace-previous";
+          "Mod+Ctrl+Up" = "workspace-next";
+          "Mod+Ctrl+Down" = "workspace-previous";
           "Mod+Ctrl+Tab" = "workspace-focus-last";
           "Mod+S" = "scratchpad-toggle scratchpad";
           "Mod+Alt+S" = once "window-move-to-scratchpad scratchpad";
