@@ -320,23 +320,6 @@
               anchor = "top";
             };
           }
-          # Janelas destacadas da extensão do Bitwarden no Firefox (o pop-up
-          # de passkey, o "pop out" do cofre): flutuantes e centralizadas, em
-          # vez de dividir o tile com a página. Sem tamanho na regra, a janela
-          # flutuante herdava a altura do tile; 400×620 é o que a extensão
-          # pede (popup de 380 px de largura e 570 px de altura no de
-          # passkey), mais a barra de endereço da janela popup. O título é
-          # "<Extensão|Extension>: (Bitwarden Password Manager) - Bitwarden
-          # — Mozilla Firefox", com o prefixo no idioma do Firefox.
-          {
-            match.app_id = "^org\\.mozilla\\.firefox$";
-            match.title = "^[^:]+: \\(Bitwarden Password Manager\\) - ";
-            default_floating = true;
-            default_floating_size_px = {
-              width = 400;
-              height = 620;
-            };
-          }
           {
             match.title = "^(Picture-in-Picture|Picture in picture)$";
             default_floating = true;
