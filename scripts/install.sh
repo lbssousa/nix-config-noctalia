@@ -1383,6 +1383,10 @@ fi
 # expressions and re-run the same activation scripts — doubling the RAM
 # consumed by Nix evaluation for zero additional benefit.
 #
+# Users with a standalone Home Manager (my.users.<u>.standaloneHome) are not
+# activated by nixos-install: the home-manager-bootstrap-<user> system service
+# does their first activation on the first boot, before the greeter.
+#
 # If any managed dotfiles are missing after the first boot, run:
 #   just switch
 

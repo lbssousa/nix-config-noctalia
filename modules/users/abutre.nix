@@ -4,6 +4,8 @@
   my.users.abutre = {
     uid = 1000;
     sudo = true;
+    # home-manager standalone: `just home switch` (hms), sem rebuild do sistema.
+    standaloneHome = true;
 
     home =
       {

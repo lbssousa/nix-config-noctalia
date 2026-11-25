@@ -258,6 +258,24 @@ nrr                # volta para a geração anterior
 ngl / ngc          # lista as gerações / coleta de lixo
 ```
 
+### home-manager standalone
+
+Usuários com `standaloneHome = true` em `modules/users/<usuário>.nix` (o
+`abutre`) têm o home-manager fora do `nixos-rebuild`: o NixOS só avalia o
+perfil (com o mesmo `pkgs` e o `osConfig` do host) e o publica em
+`homeConfigurations."<usuário>@<host>"`. O próprio usuário o aplica, sem run0
+nem rebuild do sistema. O `just switch` aplica também o perfil standalone de
+quem o chama; na instalação nova, o serviço `home-manager-bootstrap-<usuário>`
+faz a primeira ativação antes do greeter.
+
+```bash
+just home switch   # hms: aplica o perfil standalone
+just home build    # hmb: só constrói
+just home news     # hmn: notícias do home-manager
+just home-rollback # hmr: volta para a geração anterior do perfil
+home-manager generations  # hmg
+```
+
 Logo após a instalação, o clone tem um commit local com os arquivos do host e
 dos usuários; envie-o com `git -C /etc/nixos push` (o `origin` é o mesmo do
 clone usado na instalação).

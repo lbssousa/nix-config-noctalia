@@ -56,7 +56,23 @@ _rebuild action host='' *args:
       echo "Packages changed in this switch:"
       nvd diff "$old_system" "$new_system"
     fi
+    # Users with a standalone Home Manager (my.users.<u>.standaloneHome) are
+    # not activated by nixos-rebuild: apply the caller's own profile too.
+    if [[ "$host" == "$(hostname)" ]] && just --justfile "{{justfile_file}}" _has_home; then
+      echo ""
+      echo "Applying the standalone Home Manager of ${USER}..."
+      just --justfile "{{justfile_file}}" home switch
+    fi
   fi
+
+# Succeeds when homeConfigurations."$USER@<hostname>" exists (standalone HM).
+[private]
+_has_home:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  name="${USER}@$(hostname)"
+  [[ "$(nix eval --raw "{{flake_root}}#homeConfigurations" \
+    --apply "c: if builtins.hasAttr \"$name\" c then \"yes\" else \"no\"" 2>/dev/null)" == yes ]]
 
 default:
   @just --justfile "{{justfile_file}}" --list --unsorted
@@ -69,7 +85,8 @@ show:
 systems:
   cd "{{flake_root}}" && nix eval --json .#nixosConfigurations --apply builtins.attrNames | jq -r '.[]'
 
-# Applies NixOS + Home Manager (HM is a NixOS module) from the working clone.
+# Applies NixOS from the working clone, with the Home Manager of the users
+# managed as a NixOS module and, after it, the caller's standalone one.
 switch host='' *args:
   just --justfile "{{justfile_file}}" _rebuild switch "{{host}}" {{args}}
 
@@ -81,6 +98,45 @@ test host='' *args:
 
 build host='' *args:
   just --justfile "{{justfile_file}}" _rebuild build "{{host}}" {{args}}
+
+# homeConfigurations."$USER@<hostname>" (my.users.<u>.standaloneHome), applied
+# without run0 or a system rebuild. Actions: switch, build, news, generations...
+# Applies the caller's standalone Home Manager (just home switch / build / ...).
+[group("home")]
+home action='switch' *args:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  target="{{flake_root}}#${USER}@$(hostname)"
+  hm=(home-manager)
+  # Before the first activation the command is not installed yet: run the
+  # revision pinned in flake.lock.
+  command -v home-manager >/dev/null || hm=(nix run --inputs-from "{{flake_root}}" home-manager --)
+  case "{{action}}" in
+    switch|build|news|instantiate)
+      old_home="$(readlink -f "${XDG_STATE_HOME:-$HOME/.local/state}/nix/profiles/home-manager" 2>/dev/null || true)"
+      "${hm[@]}" "{{action}}" -b bkp --flake "$target" {{args}}
+      new_home="$(readlink -f "${XDG_STATE_HOME:-$HOME/.local/state}/nix/profiles/home-manager" 2>/dev/null || true)"
+      if [[ "{{action}}" == switch && -n "$old_home" && "$old_home" != "$new_home" ]]; then
+        echo ""
+        echo "Packages changed in this Home Manager switch:"
+        nvd diff "$old_home" "$new_home"
+      fi
+      ;;
+    *) "${hm[@]}" "{{action}}" {{args}} ;;
+  esac
+
+# Activates the previous standalone Home Manager generation.
+[group("home")]
+home-rollback:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  profile="${XDG_STATE_HOME:-$HOME/.local/state}/nix/profiles/home-manager"
+  current="$(readlink "$profile")"
+  n="$(sed 's/.*-\([0-9]*\)-link$/\1/' <<< "$current")"
+  prev="$(ls -d "$profile"-*-link 2>/dev/null | sed 's/.*-\([0-9]*\)-link$/\1/' | sort -n | awk -v n="$n" '$1 < n' | tail -1)"
+  [[ -n "$prev" ]] || { echo "error: no generation before ${n}" >&2; exit 1; }
+  echo "Activating Home Manager generation ${prev}..."
+  "$profile-${prev}-link/activate"
 
 # Shows the package diff between the running system and the current config.
 diff host='':

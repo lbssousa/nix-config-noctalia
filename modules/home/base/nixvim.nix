@@ -1608,9 +1608,15 @@
                       nixos.expr = ''(builtins.getFlake "/etc/nixos").nixosConfigurations.${
                         osConfig.networking.hostName or "barbudus"
                       }.options'';
-                      home_manager.expr = ''(builtins.getFlake "/etc/nixos").nixosConfigurations.${
-                        osConfig.networking.hostName or "barbudus"
-                      }.options.home-manager.users.abutre'';
+                      home_manager.expr =
+                        let
+                          host = osConfig.networking.hostName or "barbudus";
+                          user = config.home.username;
+                        in
+                        if config.my.standaloneHome then
+                          ''(builtins.getFlake "/etc/nixos").homeConfigurations."${user}@${host}".options''
+                        else
+                          ''(builtins.getFlake "/etc/nixos").nixosConfigurations.${host}.options.home-manager.users.type.getSubOptions [ ]'';
                     };
                   };
                 };

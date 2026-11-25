@@ -51,6 +51,15 @@ in
               default = false;
               description = "Membro do grupo wheel.";
             };
+            standaloneHome = mkOption {
+              type = types.bool;
+              default = false;
+              description = ''
+                home-manager standalone (homeConfigurations."<usuário>@<host>"),
+                ativado pelo próprio usuário com `just home switch`, em vez de
+                módulo NixOS ativado pelo nixos-rebuild.
+              '';
+            };
             home = mkOption {
               type = types.deferredModule;
               default = { };

@@ -44,6 +44,15 @@
         nfs = "nix flake show /etc/nixos";
         ngl = "nixos-rebuild list-generations";
         ngc = "sudo nix-collect-garbage --delete-older-than 30d";
+      }
+      # home-manager standalone (my.users.<u>.standaloneHome): o perfil é
+      # aplicado pelo próprio usuário, sem rebuild do sistema nem run0.
+      // lib.optionalAttrs config.my.standaloneHome {
+        hms = "${sysJust} home switch";
+        hmb = "${sysJust} home build";
+        hmn = "${sysJust} home news";
+        hmg = "home-manager generations";
+        hmr = "${sysJust} home-rollback";
       };
     in
     {

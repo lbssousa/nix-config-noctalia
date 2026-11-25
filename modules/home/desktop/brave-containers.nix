@@ -45,9 +45,7 @@
       } (builtins.readFile ../../packages/_brave-containers/brave-containers.py);
     in
     {
-      options.my.braveContainers.enable = lib.mkEnableOption (
-        "Containers e Traffic Control do Brave neste perfil"
-      );
+      options.my.braveContainers.enable = lib.mkEnableOption "Containers e Traffic Control do Brave neste perfil";
 
       config = lib.mkIf cfg.enable {
         home.packages = [ brave-containers ];

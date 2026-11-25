@@ -43,7 +43,7 @@
       # Dropbox, só se algum usuário o ligar (my.dropbox.enable,
       # home/desktop/dropbox.nix).
       ++ lib.optional (lib.any (u: u.my.dropbox.enable) (
-        lib.attrValues config.home-manager.users
+        lib.attrValues config.my.homes
       )) "com.dropbox.Client";
 
       environment.systemPackages = with pkgs; [

@@ -57,191 +57,194 @@ in
       policyDir = "brave/policies/managed";
     in
     {
-      options.my.brave.origin = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = ''
-          Brave como o Brave Origin para todos: sem Rewards e anúncios do
-          navegador, Wallet, VPN, Leo AI e IA local, News, Talk, Tor,
-          Speedreader, Playlist, Wayback Machine, Web Discovery, aliases de
-          e-mail, PSST, P3A e ping de uso (políticas travadas).
-        '';
-      };
+      options.my.brave = {
+        origin = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = ''
+            Brave como o Brave Origin para todos: sem Rewards e anúncios do
+            navegador, Wallet, VPN, Leo AI e IA local, News, Talk, Tor,
+            Speedreader, Playlist, Wayback Machine, Web Discovery, aliases de
+            e-mail, PSST, P3A e ping de uso (políticas travadas).
+          '';
+        };
 
-      options.my.brave.themeOwner = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = firstAdmin;
-        defaultText = lib.literalMD "o primeiro usuário com `sudo = true`, por uid";
-        description = ''
-          Usuário cuja paleta da Noctalia colore o Brave de todos
-          (BrowserThemeColor); null desliga.
-        '';
-      };
+        themeOwner = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = firstAdmin;
+          defaultText = lib.literalMD "o primeiro usuário com `sudo = true`, por uid";
+          description = ''
+            Usuário cuja paleta da Noctalia colore o Brave de todos
+            (BrowserThemeColor); null desliga.
+          '';
+        };
 
-      # Equivalente às extensões "<empresa> Container" do Firefox
-      # (nixos/desktop/firefox.nix): um container por fabricante e uma regra de
-      # Traffic Control que abre os domínios dele automaticamente no container.
-      # São preferências do perfil, não políticas: o home-manager as grava com
-      # o Brave fechado (home/desktop/brave-containers.nix), só para quem tem
-      # my.braveContainers.enable.
-      options.my.brave.containers = lib.mkOption {
-        type = lib.types.listOf (
-          lib.types.submodule {
-            options = {
-              name = lib.mkOption {
-                type = lib.types.str;
-                description = "Nome do container, igual ao do Firefox.";
+        # Equivalente às extensões "<empresa> Container" do Firefox
+        # (nixos/desktop/firefox.nix): um container por fabricante e uma regra de
+        # Traffic Control que abre os domínios dele automaticamente no container.
+        # São preferências do perfil, não políticas: o home-manager as grava com
+        # o Brave fechado (home/desktop/brave-containers.nix), só para quem tem
+        # my.braveContainers.enable.
+        containers = lib.mkOption {
+          type = lib.types.listOf (
+            lib.types.submodule {
+              options = {
+                name = lib.mkOption {
+                  type = lib.types.str;
+                  description = "Nome do container, igual ao do Firefox.";
+                };
+                icon = lib.mkOption {
+                  type = lib.types.enum [
+                    "personal"
+                    "work"
+                    "shopping"
+                    "social"
+                    "events"
+                    "banking"
+                    "star"
+                    "travel"
+                    "school"
+                    "private"
+                    "messaging"
+                  ];
+                  default = "social";
+                  description = "Ícone do container (containers.mojom.Icon).";
+                };
+                color = lib.mkOption {
+                  type = lib.types.strMatching "0x[0-9A-Fa-f]{8}";
+                  description = "Cor de fundo do ícone em 0xAARRGGBB.";
+                };
+                domains = lib.mkOption {
+                  type = lib.types.listOf (lib.types.strMatching "([a-z0-9-]+\\.)+[a-z]{2,}");
+                  default = [ ];
+                  description = ''
+                    Domínios do fabricante. Cada um vira uma linha
+                    `https://dominio` no url_filter: casa o site e os subdomínios.
+                  '';
+                };
               };
-              icon = lib.mkOption {
-                type = lib.types.enum [
-                  "personal"
-                  "work"
-                  "shopping"
-                  "social"
-                  "events"
-                  "banking"
-                  "star"
-                  "travel"
-                  "school"
-                  "private"
-                  "messaging"
-                ];
-                default = "social";
-                description = "Ícone do container (containers.mojom.Icon).";
-              };
-              color = lib.mkOption {
-                type = lib.types.strMatching "0x[0-9A-Fa-f]{8}";
-                description = "Cor de fundo do ícone em 0xAARRGGBB.";
-              };
-              domains = lib.mkOption {
-                type = lib.types.listOf (lib.types.strMatching "([a-z0-9-]+\\.)+[a-z]{2,}");
-                default = [ ];
-                description = ''
-                  Domínios do fabricante. Cada um vira uma linha
-                  `https://dominio` no url_filter: casa o site e os subdomínios.
-                '';
-              };
-            };
-          }
-        );
-        default = [
-          {
-            name = "Google";
-            icon = "work";
-            color = "0xFFD50000";
-            # O Google Container do Firefox inclui o YouTube.
-            domains = [
-              "google.com"
-              "googlemail.com"
-              "youtube.com"
-              "youtu.be"
-              "g.co"
-              "goo.gl"
-              "blogger.com"
-              "blogspot.com"
-              "blog.google"
-              "googleblog.com"
-            ];
-          }
-          {
-            name = "Microsoft";
-            icon = "work";
-            color = "0xFF0078D4";
-            # O Better Microsoft Container do Firefox inclui o GitHub.
-            domains = [
-              "microsoft.com"
-              "microsoftonline.com"
-              "outlook.com"
-              "live.com"
-              "hotmail.com"
-              "office.com"
-              "office365.com"
-              "sharepoint.com"
-              "onedrive.com"
-              "onenote.com"
-              "skype.com"
-              "xbox.com"
-              "visualstudio.com"
-              "azure.com"
-              "github.com"
-              "github.io"
-              "githubusercontent.com"
-            ];
-          }
-          {
-            name = "Facebook";
-            icon = "social";
-            color = "0xFF1877F2";
-            # O Facebook Container isola também Instagram, Messenger e Threads.
-            domains = [
-              "facebook.com"
-              "facebook.net"
-              "fb.com"
-              "fb.me"
-              "messenger.com"
-              "m.me"
-              "instagram.com"
-              "threads.net"
-              "meta.com"
-              "workplace.com"
-              "oculus.com"
-            ];
-          }
-          {
-            name = "Amazon";
-            icon = "shopping";
-            color = "0xFFFF9900";
-            domains = [
-              "amazon.com"
-              "amazon.com.br"
-              "amazon.co.uk"
-              "amazon.de"
-              "amazon.fr"
-              "amazon.ca"
-              "amazon.co.jp"
-              "amazon.in"
-              "amazon.es"
-              "amazon.it"
-              "amazon.nl"
-              "amazon.com.au"
-            ];
-          }
-          {
-            name = "Twitter";
-            icon = "social";
-            color = "0xFF1DA1F2";
-            # O Twitter Container do Firefox já inclui o x.com.
-            domains = [
-              "x.com"
-              "twitter.com"
-              "t.co"
-              "twimg.com"
-            ];
-          }
-          {
-            name = "Discord";
-            icon = "messaging";
-            color = "0xFF5865F2";
-            domains = [
-              "discord.com"
-              "discordapp.com"
-              "discord.gg"
-            ];
-          }
-          {
-            name = "TikTok";
-            icon = "social";
-            color = "0xFFFE2C55";
-            domains = [
-              "tiktok.com"
-              "tiktokv.com"
-            ];
-          }
-        ];
-        description = ''
-          Containers do Brave e as regras de Traffic Control dos domínios de
-          cada fabricante (o equivalente às extensões de container do Firefox).
-        '';
+            }
+          );
+          default = [
+            {
+              name = "Google";
+              icon = "work";
+              color = "0xFFD50000";
+              # O Google Container do Firefox inclui o YouTube.
+              domains = [
+                "google.com"
+                "googlemail.com"
+                "youtube.com"
+                "youtu.be"
+                "g.co"
+                "goo.gl"
+                "blogger.com"
+                "blogspot.com"
+                "blog.google"
+                "googleblog.com"
+              ];
+            }
+            {
+              name = "Microsoft";
+              icon = "work";
+              color = "0xFF0078D4";
+              # O Better Microsoft Container do Firefox inclui o GitHub.
+              domains = [
+                "microsoft.com"
+                "microsoftonline.com"
+                "outlook.com"
+                "live.com"
+                "hotmail.com"
+                "office.com"
+                "office365.com"
+                "sharepoint.com"
+                "onedrive.com"
+                "onenote.com"
+                "skype.com"
+                "xbox.com"
+                "visualstudio.com"
+                "azure.com"
+                "github.com"
+                "github.io"
+                "githubusercontent.com"
+              ];
+            }
+            {
+              name = "Facebook";
+              icon = "social";
+              color = "0xFF1877F2";
+              # O Facebook Container isola também Instagram, Messenger e Threads.
+              domains = [
+                "facebook.com"
+                "facebook.net"
+                "fb.com"
+                "fb.me"
+                "messenger.com"
+                "m.me"
+                "instagram.com"
+                "threads.net"
+                "meta.com"
+                "workplace.com"
+                "oculus.com"
+              ];
+            }
+            {
+              name = "Amazon";
+              icon = "shopping";
+              color = "0xFFFF9900";
+              domains = [
+                "amazon.com"
+                "amazon.com.br"
+                "amazon.co.uk"
+                "amazon.de"
+                "amazon.fr"
+                "amazon.ca"
+                "amazon.co.jp"
+                "amazon.in"
+                "amazon.es"
+                "amazon.it"
+                "amazon.nl"
+                "amazon.com.au"
+              ];
+            }
+            {
+              name = "Twitter";
+              icon = "social";
+              color = "0xFF1DA1F2";
+              # O Twitter Container do Firefox já inclui o x.com.
+              domains = [
+                "x.com"
+                "twitter.com"
+                "t.co"
+                "twimg.com"
+              ];
+            }
+            {
+              name = "Discord";
+              icon = "messaging";
+              color = "0xFF5865F2";
+              domains = [
+                "discord.com"
+                "discordapp.com"
+                "discord.gg"
+              ];
+            }
+            {
+              name = "TikTok";
+              icon = "social";
+              color = "0xFFFE2C55";
+              domains = [
+                "tiktok.com"
+                "tiktokv.com"
+              ];
+            }
+          ];
+          description = ''
+            Containers do Brave e as regras de Traffic Control dos domínios de
+            cada fabricante (o equivalente às extensões de container do Firefox).
+          '';
+        };
+
       };
 
       config = {
