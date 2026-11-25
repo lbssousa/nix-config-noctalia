@@ -53,13 +53,19 @@
               user.name = inputs.nix-secrets.abutre.gitName;
               user.email = inputs.nix-secrets.abutre.gitEmail;
             };
-            # Repos da AISCGre usam o e-mail institucional.
-            includes = lib.mkBefore [
-              {
-                condition = "gitdir:${config.xdg.userDirs.extraConfig.PROJECTS}/AISCGre-BR/";
-                contents.user.email = inputs.nix-secrets.abutre.gitEmailAiscgre;
-              }
-            ];
+            # Repos da AISCGre (em Projetos e Documentos, subpastas inclusive)
+            # usam o e-mail institucional.
+            includes = lib.mkBefore (
+              map
+                (dir: {
+                  condition = "gitdir:${dir}/AISCGre-BR/";
+                  contents.user.email = inputs.nix-secrets.abutre.gitEmailAiscgre;
+                })
+                [
+                  config.xdg.userDirs.extraConfig.PROJECTS
+                  config.xdg.userDirs.documents
+                ]
+            );
           };
         };
 
