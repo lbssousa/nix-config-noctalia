@@ -62,6 +62,14 @@
       '';
       nativeProfile = "${config.home.homeDirectory}/.mozilla/firefox/${profile}";
       flatpakProfile = "${config.home.homeDirectory}/${config.programs.firefox.configPath}/${profile}";
+
+      # Arquivos do perfil que o programs.firefox gera. Symlinks para o
+      # /nix/store não resolvem no sandbox do Flatpak (a store não é montada):
+      # o Firefox não via o profiles.ini nem o user.js. Vão como cópias.
+      profileFiles = map (f: "${config.programs.firefox.configPath}/${f}") [
+        "profiles.ini"
+        "${profile}/user.js"
+      ];
     in
     {
       options.my.firefox.migrateNativeProfile = lib.mkEnableOption ''
@@ -96,8 +104,21 @@
               ''
             );
 
+            # Cópias, e não symlinks, dos arquivos do perfil (profileFiles).
+            # Depois do linkGeneration, que apaga os symlinks de gerações
+            # antigas; reescritas a cada ativação, como o home.file faria.
+            firefoxProfileFiles = lib.hm.dag.entryAfter [ "linkGeneration" ] (
+              ''
+                run mkdir -p ${lib.escapeShellArg flatpakProfile}
+              ''
+              + lib.concatMapStrings (f: ''
+                run rm -f ${lib.escapeShellArg "${config.home.homeDirectory}/${f}"}
+                run install -m 0644 ${config.home.file.${f}.source} ${lib.escapeShellArg "${config.home.homeDirectory}/${f}"}
+              '') profileFiles
+            );
+
             # Na ativação (no boot, antes do login, o Firefox está fechado).
-            firefoxWebapps = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+            firefoxWebapps = lib.hm.dag.entryAfter [ "writeBoundary" "firefoxProfileFiles" ] ''
               run ${lib.getExe firefox-webapps} apply || warnEcho "firefox-webapps apply falhou."
             '';
           };
@@ -116,6 +137,20 @@
             # no Flatpak; o user.js a liga a cada início.
             settings."browser.taskbarTabs.enabled" = true;
           };
+        };
+
+        home.file = lib.genAttrs profileFiles (_: {
+          enable = false;
+        });
+
+        # O profiles.ini é reescrito a cada ativação (firefoxProfileFiles).
+        # Sem MOZ_LEGACY_PROFILES, o Firefox quer um perfil dedicado à
+        # instalação ([Install<hash>]) e cria um *.default-release em vez de
+        # usar o "default" daqui. Com a variável, usa o perfil Default=1 e não
+        # reescreve o arquivo. Override do Flatpak no nível do usuário (lido
+        # pelo flatpak no host, então o symlink serve), junto do perfil.
+        xdg.dataFile."flatpak/overrides/${appId}".text = lib.generators.toINI { } {
+          Environment.MOZ_LEGACY_PROFILES = "1";
         };
 
         # No login: o mesmo, mais os ícones (que precisam de rede).
