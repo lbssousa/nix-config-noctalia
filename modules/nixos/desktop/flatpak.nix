@@ -15,49 +15,72 @@
 # (uninstallUnmanaged = false).
 { inputs, ... }:
 {
-  flake.modules.nixos.flatpak = {
-    imports = [ inputs.nix-flatpak.nixosModules.nix-flatpak ];
+  flake.modules.nixos.flatpak =
+    { lib, pkgs, ... }:
+    let
+      # Remotos OCI (ArtCraft) precisam de um barramento de sessão D-Bus mesmo
+      # em instalações --system. O serviço roda como root, sem sessão gráfica,
+      # então o Flatpak tenta o autolaunch e falha ("Cannot autolaunch D-Bus
+      # without X11 $DISPLAY"). Um barramento de sessão privado, iniciado antes
+      # do script, resolve sem depender de usuário ou DISPLAY.
+      dbusAddress = "unix:path=/run/flatpak-dbus/bus";
+      startDbus = pkgs.writeShellScript "flatpak-managed-dbus" ''
+        if [ ! -S /run/flatpak-dbus/bus ]; then
+          ${lib.getExe' pkgs.dbus "dbus-daemon"} --session --fork --address=${dbusAddress}
+        fi
+      '';
+      withDbus = {
+        environment.DBUS_SESSION_BUS_ADDRESS = dbusAddress;
+        serviceConfig = {
+          RuntimeDirectory = "flatpak-dbus";
+          ExecStartPre = [ startDbus ];
+        };
+      };
+    in
+    {
+      imports = [ inputs.nix-flatpak.nixosModules.nix-flatpak ];
 
-    services.flatpak = {
-      enable = true;
-      packages = [
-        "com.github.tchx84.Flatseal" # permissões
-        "io.github.flattool.Warehouse" # gerência de apps e dados
-        "io.github.kolunmi.Bazaar" # loja do Flathub
-      ];
-      uninstallUnmanaged = false;
-      update.onActivation = true;
-      update.auto = {
+      services.flatpak = {
         enable = true;
-        onCalendar = "daily";
+        packages = [
+          "com.github.tchx84.Flatseal" # permissões
+          "io.github.flattool.Warehouse" # gerência de apps e dados
+          "io.github.kolunmi.Bazaar" # loja do Flathub
+        ];
+        uninstallUnmanaged = false;
+        update.onActivation = true;
+        update.auto = {
+          enable = true;
+          onCalendar = "daily";
+        };
+
+        # Aparência da Noctalia nos Flatpaks: o gtk.css que o template GTK grava
+        # (claro/escuro chega pelo portal) e os ícones do usuário.
+        overrides.settings.global.Context.filesystems = [
+          "xdg-config/gtk-3.0:ro"
+          "xdg-config/gtk-4.0:ro"
+          "~/.local/share/icons:ro"
+        ];
       };
 
-      # Aparência da Noctalia nos Flatpaks: o gtk.css que o template GTK grava
-      # (claro/escuro chega pelo portal) e os ícones do usuário.
-      overrides.settings.global.Context.filesystems = [
-        "xdg-config/gtk-3.0:ro"
-        "xdg-config/gtk-4.0:ro"
-        "~/.local/share/icons:ro"
-      ];
+      # A instalação no switch/boot precisa de rede e de D-Bus (remotos OCI).
+      systemd.services.flatpak-managed-install = withDbus // {
+        after = [ "network-online.target" ];
+        wants = [ "network-online.target" ];
+      };
+      systemd.services.flatpak-managed-install-timer = withDbus;
+
+      # Os Flatpaks só enxergam as fontes do sistema por /run/host/fonts.
+      fonts.fontDir.enable = true;
+
+      # Administradores gerenciam Flatpaks do sistema sem senha.
+      security.polkit.extraConfig = ''
+        polkit.addRule(function(action, subject) {
+          if (action.id.indexOf("org.freedesktop.Flatpak") === 0 &&
+              subject.isInGroup("wheel")) {
+            return polkit.Result.YES;
+          }
+        });
+      '';
     };
-
-    # A instalação no switch/boot precisa de rede.
-    systemd.services.flatpak-managed-install = {
-      after = [ "network-online.target" ];
-      wants = [ "network-online.target" ];
-    };
-
-    # Os Flatpaks só enxergam as fontes do sistema por /run/host/fonts.
-    fonts.fontDir.enable = true;
-
-    # Administradores gerenciam Flatpaks do sistema sem senha.
-    security.polkit.extraConfig = ''
-      polkit.addRule(function(action, subject) {
-        if (action.id.indexOf("org.freedesktop.Flatpak") === 0 &&
-            subject.isInGroup("wheel")) {
-          return polkit.Result.YES;
-        }
-      });
-    '';
-  };
 }
