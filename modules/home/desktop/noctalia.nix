@@ -41,13 +41,29 @@
         wallpapers_dir="${config.xdg.userDirs.pictures}/Wallpapers/bluefin"
         target_wp="$wallpapers_dir/$period/$month-bluefin.jpg"
 
-        if [ -f "$target_wp" ]; then
-          curr=$(${pkgs.noctalia}/bin/noctalia msg wallpaper-get 2>/dev/null || true)
+        [ -f "$target_wp" ] || exit 0
+
+        noctalia=${pkgs.noctalia}/bin/noctalia
+
+        # 4. Padrão e, por cima, cada monitor conectado: um wallpaper por
+        # monitor ([wallpaper.monitors.<conector>] no estado da Noctalia)
+        # vence o padrão, e wallpaper-set sem conector não o substitui.
+        sync_wp() {
+          local curr
+          curr=$("$noctalia" msg wallpaper-get "$@" 2>/dev/null || true)
           curr="''${curr//$'\n'/}"
           if [ "$curr" != "$target_wp" ]; then
-            ${pkgs.noctalia}/bin/noctalia msg wallpaper-set "$target_wp"
+            "$noctalia" msg wallpaper-set "$@" "$target_wp" || true
           fi
-        fi
+        }
+
+        sync_wp
+        for status in /sys/class/drm/card*-*/status; do
+          [ -r "$status" ] || continue
+          [ "$(cat "$status")" = connected ] || continue
+          connector=$(basename "$(dirname "$status")")
+          sync_wp "''${connector#card*-}"
+        done
       '';
     in
     {
