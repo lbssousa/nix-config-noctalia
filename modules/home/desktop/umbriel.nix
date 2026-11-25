@@ -150,9 +150,11 @@
           "Mod+Return" = once "spawn ${cfg.terminal}";
           "Mod+Alt+Return" = once "spawn ${cfg.terminal} -e tmux new-session -A -s main";
           "Mod+Ctrl+Return" = once "spawn ${cfg.terminal} -e herdr";
-          "Mod+Shift+Return" = once "spawn org.mozilla.firefox";
-          "Mod+Shift+B" = once "spawn org.mozilla.firefox";
-          "Mod+Shift+Alt+B" = once "spawn org.mozilla.firefox --private-window";
+          # Navegador padrão do usuário (my.browser, home/base/xdg.nix).
+          "Mod+Shift+Return" = once "spawn ${config.my.browserApp.command}";
+          "Mod+Shift+B" = once "spawn ${config.my.browserApp.command}";
+          "Mod+Shift+Alt+B" =
+            once "spawn ${config.my.browserApp.command} ${config.my.browserApp.privateFlag}";
           "Mod+Shift+F" = once "spawn ${config.my.fileManagerApp.command}";
           "Mod+Shift+N" = once "spawn ${cfg.terminal} -e nvim";
           "Mod+Shift+D" = once "spawn ${cfg.terminal} -e lazydocker";

@@ -1,6 +1,6 @@
 # Aplicativos padrão por usuário, publicados como *camada de defaults*.
 #
-# O mimeapps.list gerado fica num diretório do perfil HM incluído em
+# O mimeapps.list gerado fica em ~/.local/share/xdg-defaults, incluído em
 # XDG_CONFIG_DIRS, e não em ~/.config/mimeapps.list: pela especificação XDG, o
 # arquivo do usuário continua gravável (xdg-mime default, "Abrir com…") e tem
 # precedência sobre estes defaults.
@@ -31,11 +31,13 @@
           appId = "org.mozilla.firefox";
           desktop = "org.mozilla.firefox.desktop";
           command = "org.mozilla.firefox";
+          privateFlag = "--private-window";
         };
         brave = {
           appId = "com.brave.Browser";
           desktop = "com.brave.Browser.desktop";
           command = "com.brave.Browser";
+          privateFlag = "--incognito";
         };
       };
       browserTypes = [
@@ -87,7 +89,7 @@
           readOnly = true;
           internal = true;
           default = browsers.${config.my.browser};
-          description = "appId, arquivo .desktop e comando do navegador escolhido em my.browser.";
+          description = "appId, arquivo .desktop, comando e flag de janela privada do navegador escolhido em my.browser.";
         };
       };
 
@@ -111,7 +113,11 @@
             videos = "${config.home.homeDirectory}/Vídeos";
             extraConfig.PROJECTS = "${config.home.homeDirectory}/Projetos";
           };
-          systemDirs.config = [ "${mimeappsDir}/etc/xdg" ];
+          # Caminho estável (link atualizado a cada switch): o XDG_CONFIG_DIRS
+          # da sessão só é lido no login, e um caminho do store nele deixaria
+          # a sessão aberta presa aos defaults antigos até o próximo login.
+          systemDirs.config = [ "${config.xdg.dataHome}/xdg-defaults" ];
+          dataFile."xdg-defaults/mimeapps.list".source = "${mimeappsDir}/etc/xdg/mimeapps.list";
         };
       };
     };
