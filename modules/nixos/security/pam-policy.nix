@@ -10,13 +10,22 @@
 # falha na hora e segue para a senha. Os dois são "sufficient": nenhum deles
 # tranca a conta, a senha sempre fica no fim.
 #
+# PIN da chave: com "Pedir o PIN junto com o toque" (página Segurança da
+# Noctalia, que põe +pin nas chaves do u2f_keys do usuário; ver
+# security/yubikey.nix), o pam_u2f pede o PIN antes do toque. No terminal é o
+# prompt "Please enter the PIN:"; no painel do polkit, um campo de PIN com o
+# "Usar senha" ao lado.
+#
 # Na tela de bloqueio da Noctalia (patches em modules/flake/packages.nix) é um
 # método por vez, sem Enter para a digital nem para a chave, e com um botão
 # "Usar senha" para pular direto ao fim:
 #   - digital: a própria Noctalia fala com o fprintd pelo D-Bus (3 leituras ou
 #     30 s sem leitura), por isso não há pam_fprintd nas duas pilhas abaixo;
 #   - FIDO2: "noctalia-lock-u2f", só o pam_u2f; sem chave cadastrada conectada
-#     ou com o toque expirado, segue para a senha;
+#     ou com o toque expirado, segue para a senha. Se a chave pede o PIN, o
+#     noctalia-pam-helper recusa o prompt sem chegar à chave (um PIN vazio
+#     gastaria uma tentativa) e a Noctalia troca o campo de senha por um de
+#     PIN; com ele, nova tentativa: o PIN e depois o toque;
 #   - senha: "noctalia-lock" (o padrão seria o "login"). Com o campo vazio,
 #     plugar uma chave cadastrada (novo /dev/hidraw*) volta à FIDO2.
 # Os dois nomes vêm da compilação da Noctalia (-Dpam_service e

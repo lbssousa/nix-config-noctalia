@@ -318,8 +318,15 @@ yubikey-register user='':
 
   "${as_target[@]}" mkdir -p -m 700 "$(dirname "${authfile}")"
   if "${as_target[@]}" grep -q "^${target}:" "${authfile}" 2>/dev/null; then
+    # Keys registered with the PIN required (+pin, "Pedir o PIN junto com o
+    # toque" on the Noctalia Security page): the new one asks for it too.
+    pin_flag=()
+    if "${as_target[@]}" grep -q "^${target}:.*[+]pin" "${authfile}"; then
+      pin_flag=(-N)
+      echo "Your keys ask for their PIN: this one will too (the key needs a PIN set)."
+    fi
     # -n prints ":<credential>" (no user name); normalize to a single leading ':'.
-    new_cred=$(pamu2fcfg -n -u "${target}")
+    new_cred=$(pamu2fcfg -n "${pin_flag[@]}" -u "${target}")
     new_cred="${new_cred#:}"
     "${as_target[@]}" sed -i "/^${target}:/ s|$|:${new_cred}|" "${authfile}"
     echo "Additional key registered for '${target}'."

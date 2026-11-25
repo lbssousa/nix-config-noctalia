@@ -40,7 +40,9 @@ let
       # -Dpam_service=noctalia-lock e -Dpam_service_security_key=noctalia-lock-u2f
       # (security/pam-policy.nix) e traz a digital com 3 tentativas, os
       # destaques e o "Usar senha" do polkit, a chave de segurança e a sequência
-      # digital → FIDO2 → senha na tela de bloqueio, e a página Segurança.
+      # digital → FIDO2 → senha na tela de bloqueio, e a página Segurança (com
+      # o "Pedir o PIN junto com o toque", que a tela de bloqueio e o painel do
+      # polkit atendem com um campo de PIN).
       #
       # O pinentry/askpass não é patch: os mantenedores não aceitam segredos no
       # core (PR #4951). É o plugin lbssousa/secret-prompts, com o auxiliar

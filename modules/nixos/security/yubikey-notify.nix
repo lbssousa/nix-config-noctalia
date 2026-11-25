@@ -12,7 +12,9 @@
     # there's a graphical session at /run/user/<uid>/bus, and sends an urgent
     # notification via org.freedesktop.Notifications (the Noctalia shell). The
     # call runs in the background so it doesn't block sudo while waiting for
-    # U2F authentication.
+    # U2F authentication. When the user's keys ask for their PIN (+pin in
+    # their u2f_keys, set on the Noctalia Security page), the notification
+    # says the PIN comes first, in the terminal.
     {
       config,
       lib,
@@ -46,6 +48,14 @@
         # Only notify if the user has an active graphical session
         [ -S "$bus" ] || exit 0
 
+        title="Touch the YubiKey"
+        body="Authentication requires a touch on the security key."
+        home=$(${pkgs.getent}/bin/getent passwd "$user" | cut -d: -f6)
+        if ${pkgs.gnugrep}/bin/grep -qs "^$user:.*[+]pin" "$home/.config/Yubico/u2f_keys"; then
+          title="Enter the YubiKey PIN, then touch it"
+          body="Type the security key's PIN in the terminal, then touch the key."
+        fi
+
         # Fire the notification in the background so it doesn't block sudo
         ${pkgs.util-linux}/bin/runuser -u "$user" -- \
           ${pkgs.coreutils}/bin/env \
@@ -56,8 +66,8 @@
             --urgency=critical \
             --icon=security-high-symbolic \
             --expire-time=30000 \
-            "Touch the YubiKey" \
-            "Authentication requires a touch on the security key." \
+            "$title" \
+            "$body" \
           >/dev/null 2>&1 &
       '';
     in

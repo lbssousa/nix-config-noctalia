@@ -90,6 +90,19 @@
               # ~/.config/Yubico/u2f_keys (opened as that user), the file the
               # Noctalia Security page and `just yubikey-register` write to.
               # /home is a persistent subvolume, so it survives the root wipe.
+              #
+              # pinverification deliberately omitted: the PIN is each user's
+              # choice, per credential. "Pedir o PIN junto com o toque"
+              # (Noctalia › Segurança › Entrar com Chave de Segurança) adds
+              # "+pin" to the options of every key in that user's u2f_keys
+              # (pamu2fcfg -N for new ones), and pam_u2f then asks for the PIN
+              # before the touch. pinverification=1 would force it on everyone,
+              # and pinverification=0 would turn it off for everyone. A key
+              # without a PIN set is skipped (pam_u2f falls through to the
+              # password). Each wrong PIN, an empty one included, uses up one
+              # of the key's retries: the Noctalia lock screen and polkit panel
+              # never send an empty PIN, but in a terminal (sudo, run0) an
+              # empty Enter at "Please enter the PIN:" counts as a wrong one.
             };
           };
 
