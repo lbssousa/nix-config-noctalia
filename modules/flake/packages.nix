@@ -87,6 +87,32 @@ let
                 --replace-fail ".default." ".dark."
             done
 
+            # Salvaguardas contra mudanças do upstream que desfariam o modo
+            # escuro dos terminais em silêncio:
+            #  - todo template da categoria "terminal" do catálogo precisa
+            #    estar remapeado acima (um terminal novo entra na lista);
+            #  - o binário precisa ler <prefixo>_APP_ASSETS_DIR (o nome é
+            #    montado em tempo de execução; só o sufixo aparece no binário).
+            templates="$out/share/noctalia/assets/templates"
+            for id in $(awk '
+                /^\[catalog\./ { id = $0; sub(/^\[catalog\./, "", id); sub(/\]$/, "", id) }
+                /^category *= *"terminal"/ { print id }
+              ' "$templates/builtin.toml"); do
+              input=$(awk -v sec="[templates.$id]" '
+                  $0 == sec { found = 1; next }
+                  /^\[/ { found = 0 }
+                  found && /^input_path *=/ { gsub(/^input_path *= *"\.\/|"$/, ""); print; exit }
+                ' "$templates/builtin.toml")
+              if [ -z "$input" ] || grep -q '\.default\.' "$templates/$input"; then
+                echo "template de terminal '$id' ($input) sem a variante escura: inclua-o no remapeamento" >&2
+                exit 1
+              fi
+            done
+            if ! grep -rqa APP_ASSETS_DIR ${base}/bin; then
+              echo "a Noctalia não lê mais <prefixo>_APP_ASSETS_DIR: ajuste o makeWrapper abaixo" >&2
+              exit 1
+            fi
+
             # Ferramentas da página Segurança no fim do PATH: as do usuário vêm antes.
             # O XDG_DATA_DIRS da sessão nem sempre chega à unit da Noctalia com
             # os exports do Flatpak (é onde vivem .desktop e ícones do Firefox).
