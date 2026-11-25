@@ -180,10 +180,10 @@
           # wallpaper e central de controle na barra.
           bar.default = {
             background_opacity = lib.mkDefault 1.0;
-            # Flutuante: desacoplada das bordas da tela (mesma margem de 8 px da
-            # dock e dos gaps do Umbriel) e estreitada proporcionalmente ao monitor
-            # para acomodar confortavelmente os widgets atuais sem cortar o fim.
-            margin_edge = lib.mkDefault 8;
+            # Flutuante: 4 px da borda superior e estreitada proporcionalmente ao
+            # monitor para acomodar confortavelmente os widgets atuais sem cortar
+            # o fim.
+            margin_edge = lib.mkDefault 4;
             margin_ends = lib.mkDefault "15%";
             start = lib.mkDefault [
               "noctalia/umbriel-companion:bar"
