@@ -3,9 +3,13 @@
 # (my.firefox.webapps), cada um no container que a extensão da empresa cria, e
 # as cores da Noctalia via Pywalfox.
 #
-# O perfil fica onde o Flatpak o procura (~/.var/app/org.mozilla.firefox/
-# .mozilla/firefox); o caminho é o mesmo dentro e fora do sandbox, então o
-# `-profile` dos lançadores vale nos dois lados.
+# O perfil fica no host em ~/.var/app/org.mozilla.firefox/.mozilla/firefox, mas
+# dentro do sandbox o Flatpak (`persistent=.mozilla`) monta esse diretório em
+# ~/.mozilla/firefox. O Firefox normal abre o perfil por ~/.mozilla/firefox e
+# registra o serviço D-Bus remoto pelo base64 desse caminho; por isso o
+# `-profile` dos lançadores precisa usar ~/.mozilla/firefox (senão o Firefox
+# tenta iniciar outra instância no mesmo diretório e falha com erro de perfil
+# em uso), enquanto os arquivos do perfil e `Icon=` usam o caminho do host.
 #
 # Cores da Noctalia (Pywalfox): o template "pywalfox" da comunidade grava
 # ~/.cache/wal/colors.json e roda a post_action "firefox-theme" da Noctalia.
@@ -51,6 +55,7 @@
           firefox = "/var/lib/flatpak/exports/bin/${appId}";
           flatpak = "/run/current-system/sw/bin/flatpak";
           profileDir = "${config.home.homeDirectory}/${config.programs.firefox.configPath}/${profile}";
+          sandboxProfileDir = "${config.home.homeDirectory}/.mozilla/firefox/${profile}";
           inherit (cfg) webapps;
         }
       );

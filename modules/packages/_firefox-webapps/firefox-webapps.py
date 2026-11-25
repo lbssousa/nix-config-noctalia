@@ -34,6 +34,7 @@ def xdg(var, default):
 
 
 PROFILE = CONFIG["profileDir"]
+SANDBOX_PROFILE = CONFIG.get("sandboxProfileDir", PROFILE)
 CONTAINERS = os.path.join(PROFILE, "containers.json")
 TASKBAR_TABS = os.path.join(PROFILE, "taskbartabs")
 REGISTRY = os.path.join(TASKBAR_TABS, "taskbartabs.json")
@@ -135,7 +136,7 @@ def registry(ids):
 def exec_args(app_id, container_id):
     app = CONFIG["webapps"][app_id]
     return [CONFIG["firefox"], "-taskbar-tab", app_uuid(app_id), "-new-window", app["url"],
-            "-profile", PROFILE, "-container", str(container_id)]
+            "-profile", SANDBOX_PROFILE, "-container", str(container_id)]
 
 
 def launchers(ids):
