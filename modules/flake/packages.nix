@@ -48,10 +48,10 @@ let
       # core (PR #4951). É o plugin lbssousa/secret-prompts, com o auxiliar
       # noctalia-secret-prompts.
       #
-      # Aqui, só o que é deste nix-config: os templates dos emuladores de
-      # terminal remapeados de `.default` para `.dark` (sempre a variante
-      # escura da paleta ativa, mesmo com [theme].mode = "auto"; os demais
-      # templates seguem o modo global) e as ferramentas da página Segurança no
+      # Aqui, só o que é deste nix-config: os templates dos aplicativos de
+      # terminal (emuladores e btop) remapeados de `.default` para `.dark`
+      # (sempre a variante escura da paleta ativa, mesmo com
+      # [theme].mode = "auto"; os demais templates seguem o modo global) e as ferramentas da página Segurança no
       # PATH. Reempacotar os assets (em vez de overrideAttrs/postInstall) evita
       # recompilar a Noctalia: basta copiar a saída já construída, ajustar os
       # templates e apontar NOCTALIA_APP_ASSETS_DIR para a cópia (o nome desde
@@ -77,6 +77,7 @@ let
 
             for template in \
               alacritty/alacritty.toml \
+              btop/btop.theme \
               foot/foot \
               ghostty/ghostty \
               kitty/kitty.conf \

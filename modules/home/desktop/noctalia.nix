@@ -140,9 +140,10 @@
             # Superfícies da própria shell acompanham o modo acima (auto).
             shell_mode = lib.mkDefault "follow";
             # Cores das outras aplicações acompanham a paleta da shell. Os
-            # aplicativos de terminal (emuladores e starship) são a exceção:
-            # usam sempre a variante escura, conforme o remapeamento dos
-            # templates em flake/packages.nix.
+            # aplicativos de terminal (emuladores e btop; o starship usa as
+            # cores ANSI do terminal) são a exceção: usam sempre a variante
+            # escura, conforme o remapeamento dos templates em
+            # flake/packages.nix.
             templates = {
               enable_builtin_templates = lib.mkDefault true;
               builtin_ids = lib.mkDefault [

@@ -1,4 +1,5 @@
-# btop com o tema da Noctalia (template "btop" em noctalia.nix).
+# btop com o tema da Noctalia (template "btop" em noctalia.nix), sempre na
+# variante escura, como os terminais (remapeamento em flake/packages.nix).
 #
 # O template grava ~/.config/btop/themes/noctalia.theme, mas o script de apply
 # só escolhe o tema num btop.conf que já exista, e o btop só cria o seu ao
