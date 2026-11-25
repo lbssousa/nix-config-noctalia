@@ -320,6 +320,17 @@
               anchor = "top";
             };
           }
+          # Janelas destacadas da extensão do Bitwarden no Firefox (o pop-up
+          # de passkey, o "pop out" do cofre): flutuantes e centralizadas, com
+          # o tamanho que a extensão pede, em vez de dividir o tile com a
+          # página. O título é "<Extensão|Extension>: (Bitwarden Password
+          # Manager) - Bitwarden — Mozilla Firefox", com o prefixo no idioma
+          # do Firefox.
+          {
+            match.app_id = "^org\\.mozilla\\.firefox$";
+            match.title = "^[^:]+: \\(Bitwarden Password Manager\\) - ";
+            default_floating = true;
+          }
           {
             match.title = "^(Picture-in-Picture|Picture in picture)$";
             default_floating = true;
