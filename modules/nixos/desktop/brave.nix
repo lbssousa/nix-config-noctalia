@@ -28,7 +28,8 @@
 # paleta dele (home/desktop/brave.nix).
 #
 # Web apps (my.brave.webapps): instalados como PWAs pelo próprio Brave
-# (WebAppInstallForceList), em janela própria; `webapp <id>` os abre
+# (WebAppInstallForceList; os com forceInstall = false, como o WhatsApp, o
+# usuário instala pela interface), em janela própria; `webapp <id>` os abre
 # (home/desktop/brave.nix). O override `~/.local/share/icons:create` restaura a
 # permissão de escrita do manifesto do Brave (rebaixada para `:ro` pelo
 # override global em flatpak.nix) para o flextop instalar os ícones e
@@ -99,6 +100,21 @@ in
                   type = lib.types.str;
                   description = "URL de início.";
                 };
+                forceInstall = lib.mkOption {
+                  type = lib.types.bool;
+                  default = true;
+                  description = ''
+                    Instalar a PWA pela política WebAppInstallForceList. O
+                    Brave a instala carregando a URL no armazenamento padrão,
+                    fora de qualquer container: sites que sem login
+                    redirecionam para uma página sem manifest (WhatsApp Web)
+                    viram um atalho com escopo e id errados. Com false, o
+                    usuário instala a PWA pela interface (de uma aba já no
+                    container); `name` deve ser o do manifest, que o
+                    brave-pwa-fix e o `webapp <id>` usam para achar o
+                    lançador.
+                  '';
+                };
                 container = lib.mkOption {
                   type = lib.types.nullOr lib.types.str;
                   default = null;
@@ -130,10 +146,16 @@ in
             }
           );
           default = {
+            # Sem login, https://web.whatsapp.com/ redireciona para /login/, que
+            # não declara o manifest (/data/manifest.json, id e escopo
+            # https://web.whatsapp.com/, nome "WhatsApp Web"): pela política,
+            # sairia um atalho com escopo /login/ que o Brave não reconhece
+            # como a PWA. Instalada pela interface, de uma aba no container.
             whatsapp = {
-              name = "WhatsApp";
+              name = "WhatsApp Web";
               url = "https://web.whatsapp.com/";
               container = "Facebook";
+              forceInstall = false;
             };
             youtube = {
               name = "YouTube";
@@ -295,6 +317,10 @@ in
                 "meta.com"
                 "workplace.com"
                 "oculus.com"
+                # WhatsApp Web, no container da PWA (my.brave.webapps.whatsapp).
+                "whatsapp.com"
+                "whatsapp.net"
+                "wa.me"
               ];
             }
             {
@@ -392,7 +418,7 @@ in
                   inherit (app.icon) url hash;
                 };
               }
-            ) cfg.webapps;
+            ) (lib.filterAttrs (_: app: app.forceInstall) cfg.webapps);
           };
         };
 

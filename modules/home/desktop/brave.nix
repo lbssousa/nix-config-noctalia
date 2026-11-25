@@ -6,7 +6,8 @@
 # (WebAppInstallForceList), que cria o lançador
 # ~/.local/share/applications/brave-<app-id>-Default.desktop com o nome
 # declarado. `webapp <id>` abre esse lançador; antes de a PWA existir (o Brave
-# ainda não abriu, ou estava sem rede), abre a URL numa janela de app.
+# ainda não abriu, ou estava sem rede, ou é um app com forceInstall = false
+# ainda não instalado pela interface), abre a URL numa janela de app.
 #
 # Native messaging: o Bitwarden em Flatpak só prepara os navegadores em
 # Flatpak que conhece (Firefox, Chrome, Chromium, Edge), e o Brave não é um
