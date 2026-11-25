@@ -192,54 +192,35 @@
             start = lib.mkDefault [
               "noctalia/umbriel-companion:bar"
               "workspaces"
-              "spacer-start"
-              "media"
             ];
-            # À direita do relógio, depois de um respiro: área de transferência
-            # e notificações ("group:inbox"), impressoras e status do NixOS. O
-            # relógio é ancorado no centro da barra (anchor = true).
+            # À direita do relógio, depois de um respiro: área de transferência,
+            # notificações e status do NixOS. O relógio é ancorado no centro da
+            # barra (anchor = true).
             center = lib.mkDefault [
               "clock"
               "spacer-clock-right"
-              "group:inbox"
-              "andrewdems/printers:printer"
+              "clipboard"
+              "notifications"
               "mindnbytes/nix-status:status"
             ];
-            # "usage": limites dos planos de IA (headroom; widget.usage abaixo).
+            # "usage": limites dos planos de IA (headroom; widget.usage abaixo),
+            # com um respiro antes das impressoras e dos ícones do sistema,
+            # todos soltos, sem cápsulas agrupadas.
             end = lib.mkDefault [
               "tray"
               "spacer-tray"
               "usage"
-              "group:toggles"
-              "group:system"
+              "spacer-headroom-right"
+              "andrewdems/printers:printer"
+              "nightlight"
+              "caffeine"
+              "bluetooth"
+              "network"
+              "volume"
+              "battery"
               "session"
             ];
-            # Cápsulas citadas nas listas acima ("group:<id>").
-            capsule_group = lib.mkDefault [
-              {
-                id = "system";
-                members = [
-                  "bluetooth"
-                  "network"
-                  "volume"
-                  "battery"
-                ];
-              }
-              {
-                id = "inbox";
-                members = [
-                  "clipboard"
-                  "notifications"
-                ];
-              }
-              {
-                id = "toggles";
-                members = [
-                  "nightlight"
-                  "caffeine"
-                ];
-              }
-            ];
+            capsule_group = lib.mkDefault [ ];
           };
 
           # Rede e volume na barra só com o ícone, sem o nome da rede nem a
@@ -258,9 +239,9 @@
             battery.hide_when_full = lib.mkDefault true;
             # Espaçadores da barra, um por posição (os ids repetidos nas listas
             # seriam o mesmo widget).
-            spacer-start.type = "spacer";
             spacer-clock-right.type = "spacer";
             spacer-tray.type = "spacer";
+            spacer-headroom-right.type = "spacer";
             usage.type = "ayagmar/headroom:usage";
           };
 
