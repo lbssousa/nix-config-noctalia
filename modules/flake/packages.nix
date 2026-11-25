@@ -82,8 +82,12 @@ let
             done
 
             # Ferramentas da página Segurança no fim do PATH: as do usuário vêm antes.
+            # O XDG_DATA_DIRS da sessão nem sempre chega à unit da Noctalia com
+            # os exports do Flatpak (é onde vivem .desktop e ícones do Firefox).
+            # --suffix preserva o valor existente e garante os ícones da dock.
             makeWrapper ${base}/bin/noctalia $out/bin/noctalia \
               --set-default NOCTALIA_ASSETS_DIR "$out/share/noctalia/assets" \
+              --suffix XDG_DATA_DIRS : "/var/lib/flatpak/exports/share" \
               --suffix PATH : ${
                 final.lib.makeBinPath [
                   final.libfido2
