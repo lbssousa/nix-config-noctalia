@@ -246,22 +246,6 @@
           # porcentagem; relógio com dia da semana e data (strftime, no idioma
           # do LC_TIME: "dom 18 out 20:15").
           widget = {
-            # Alternador de espaços de trabalho no estilo GNOME:
-            # pílulas animadas sem rótulos de texto, altura ajustada (~10 px).
-            # Todas as pílulas na cor do texto da barra (on_surface, a mesma do
-            # relógio e dos rótulos, que acompanha a paleta e o modo claro/escuro).
-            # O ativo se destaca pelo tamanho; os vazios ficam com 55% de
-            # opacidade (atenuação embutida no widget para empty_color).
-            workspaces = {
-              style = lib.mkDefault "regular";
-              show_labels = lib.mkDefault false;
-              pill_scale = lib.mkDefault 0.55;
-              active_pill_size = lib.mkDefault 3.2;
-              inactive_pill_size = lib.mkDefault 1.0;
-              focused_color = lib.mkDefault "on_surface";
-              occupied_color = lib.mkDefault "on_surface";
-              empty_color = lib.mkDefault "on_surface";
-            };
             clock = {
               format = lib.mkDefault "{:%a %d %b  %H:%M}";
               # Ancorado no centro da barra para que o relógio fique na linha média
