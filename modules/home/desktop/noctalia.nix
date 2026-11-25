@@ -179,13 +179,12 @@
           # (Mod+Ctrl+E, launcher, Mod+Shift+Ctrl+Space). Sem launcher,
           # wallpaper e central de controle na barra.
           bar.default = {
-            # Ícones, texto e espessura da barra ("Escala do Conteúdo").
-            scale = lib.mkDefault 1.15;
             background_opacity = lib.mkDefault 1.0;
-            # Estilo Unity: preenche toda a largura da tela, flush com o topo.
-            margin_edge = lib.mkDefault 0;
-            margin_ends = lib.mkDefault 0;
-            radius = lib.mkDefault 0;
+            # Flutuante: desacoplada das bordas da tela (mesma margem de 8 px da
+            # dock e dos gaps do Umbriel) e estreitada proporcionalmente ao monitor
+            # para acomodar confortavelmente os widgets atuais sem cortar o fim.
+            margin_edge = lib.mkDefault 8;
+            margin_ends = lib.mkDefault "15%";
             start = lib.mkDefault [
               "noctalia/umbriel-companion:bar"
               "workspaces"
