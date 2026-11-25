@@ -10,7 +10,10 @@
 #  - o diretório do Chrome em Flatpak é criado (sem o Chrome), e o Bitwarden
 #    passa a usá-lo;
 #  - o Brave recebe acesso a esse diretório (override do Flatpak);
-#  - o manifesto com.8bit.bitwarden do Brave aponta para o proxy dali.
+#  - o manifesto com.8bit.bitwarden do Brave aponta para o proxy dali. É
+#    uma cópia, e não um symlink do home.file: o alvo no /nix/store não
+#    existe no sandbox, o Brave não lê o manifesto e a extensão não acha o
+#    app.
 # O Bitwarden precisa estar rodando (e ter iniciado depois de o diretório
 # existir) para a extensão falar com o app.
 #
@@ -25,6 +28,7 @@
       config,
       lib,
       osConfig,
+      pkgs,
       ...
     }:
     let
@@ -32,19 +36,23 @@
       sharedHosts = ".var/app/com.google.Chrome/config/google-chrome/NativeMessagingHosts";
       braveHosts = ".var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser/NativeMessagingHosts";
       brave = "/var/lib/flatpak/exports/bin/com.brave.Browser";
+      manifest = pkgs.writeText "com.8bit.bitwarden.json" (
+        builtins.toJSON {
+          name = "com.8bit.bitwarden";
+          description = "Bitwarden desktop <-> browser bridge";
+          path = "${home}/${sharedHosts}/.bitwarden_desktop_proxy";
+          type = "stdio";
+          allowed_origins = [ "chrome-extension://nngceckbapebfimnlniiiahkandclblb/" ];
+        }
+      );
     in
     {
-      home.activation.bitwardenSharedNativeMessaging = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        run mkdir -p ${lib.escapeShellArg "${home}/${sharedHosts}"}
+      # Depois do linkGeneration, que apaga o symlink de gerações antigas.
+      home.activation.bitwardenSharedNativeMessaging = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+        run mkdir -p ${lib.escapeShellArg "${home}/${sharedHosts}"} ${lib.escapeShellArg "${home}/${braveHosts}"}
+        run rm -f ${lib.escapeShellArg "${home}/${braveHosts}/com.8bit.bitwarden.json"}
+        run install -m 0644 ${manifest} ${lib.escapeShellArg "${home}/${braveHosts}/com.8bit.bitwarden.json"}
       '';
-
-      home.file."${braveHosts}/com.8bit.bitwarden.json".text = builtins.toJSON {
-        name = "com.8bit.bitwarden";
-        description = "Bitwarden desktop <-> browser bridge";
-        path = "${home}/${sharedHosts}/.bitwarden_desktop_proxy";
-        type = "stdio";
-        allowed_origins = [ "chrome-extension://nngceckbapebfimnlniiiahkandclblb/" ];
-      };
 
       programs.noctalia.settings.theme.templates.user.brave =
         lib.mkIf (osConfig.my.brave.themeOwner == config.home.username)
