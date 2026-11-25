@@ -281,8 +281,7 @@
         }
         // workspaceBinds;
 
-        window_rule = transparencyRules
-        ++ [
+        window_rule = transparencyRules ++ [
           {
             match.app_id = "^dev.noctalia.Noctalia$";
             default_floating = true;
