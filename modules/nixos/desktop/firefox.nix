@@ -7,12 +7,13 @@
 # copiado, não ligado à store: o sandbox não enxerga /nix/store.
 #  - abas de container ligadas (privacy.userContext.enabled), como padrão
 #    (Status = "default": o usuário ainda muda em about:config);
-#  - extensões do Bitwarden, Multi-Account Containers e os "<empresa>
-#    Container" (Facebook, Google, Microsoft, Twitter, Discord, Amazon e
-#    TikTok) instaladas por padrão (o usuário pode desativá-las, não
-#    removê-las); as demais vêm da sincronização com a conta Mozilla de cada
-#    usuário. O native messaging com o Bitwarden é do próprio Bitwarden em
-#    Flatpak (nixos/security/bitwarden.nix). Os containers não são
+#  - extensões do Bitwarden, Pywalfox (cores vivas da Noctalia, ponte de native
+#    messaging via socket systemd em home/desktop/firefox.nix), Multi-Account
+#    Containers e os "<empresa> Container" (Facebook, Google, Microsoft,
+#    Twitter, Discord, Amazon e TikTok) instaladas por padrão (o usuário pode
+#    desativá-las, não removê-las); as demais vêm da sincronização com a conta
+#    Mozilla de cada usuário. O native messaging com o Bitwarden é do próprio
+#    Bitwarden em Flatpak (nixos/security/bitwarden.nix). Os containers não são
 #    declarados: cada "<empresa> Container" cria o seu, com o nome da
 #    empresa, e abre nele os domínios dela. O da Microsoft inclui o GitHub, a
 #    menos que se marque "Ignore GitHub" nas opções dele; o do Twitter inclui
@@ -31,6 +32,7 @@
       # id da extensão → slug em addons.mozilla.org.
       extensions = {
         "{446900e4-71c2-419f-a6a7-df9c091e268b}" = "bitwarden-password-manager";
+        "pywalfox@frewacom.org" = "pywalfox";
         "@testpilot-containers" = "multi-account-containers";
         "@contain-facebook" = "facebook-container";
         "@contain-google" = "google-container";
@@ -185,7 +187,14 @@
       };
 
       config = {
-        services.flatpak.packages = [ "org.mozilla.firefox" ];
+        services.flatpak = {
+          packages = [ "org.mozilla.firefox" ];
+          # Socket Unix do host de native messaging da Noctalia (Pywalfox),
+          # ativado pelo systemd de cada usuário (home/desktop/firefox.nix).
+          overrides.settings."org.mozilla.firefox".Context.filesystems = [
+            "xdg-run/noctalia-firefox-theme"
+          ];
+        };
 
         # Serviço, não activationScript: no boot, a ativação roda antes de
         # /var/lib/flatpak (preservation) ser montado.

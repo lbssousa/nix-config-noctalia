@@ -105,7 +105,7 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
   o greeter pede direto a nova senha e a confirmação (`nullresetok` no PAM:
   senha vazia só entra enquanto expirada).
 - **Firefox** (Flatpak) é o navegador padrão de todos.
-  - **Políticas:** vão na extensão `org.mozilla.firefox.systemconfig`. Instalam o Bitwarden, o Multi-Account Containers e os "<empresa> Container" (Facebook, Google, Microsoft, Twitter, Discord, Amazon e TikTok). As demais extensões vêm da sincronização com a conta Mozilla.
+  - **Políticas:** vão na extensão `org.mozilla.firefox.systemconfig`. Instalam o Bitwarden, o Pywalfox (cores vivas da Noctalia via socket systemd, sem abrir o sandbox), o Multi-Account Containers e os "<empresa> Container" (Facebook, Google, Microsoft, Twitter, Discord, Amazon e TikTok). As demais extensões vêm da sincronização com a conta Mozilla.
   - **Web apps:** são Taskbar Tabs, cada um no container da sua empresa, abertos por `webapp <id>`: WhatsApp (Facebook), Teams (Microsoft), YouTube e Google Maps/Photos/Messages/Contacts (Google), Discord e X (Twitter).
 - **Brave** (Flatpak) é o segundo navegador.
   - **Políticas** (`/etc/brave/policies`): extensão do Bitwarden e as cores da Noctalia (`BrowserThemeColor`, do template `chromium-based` da comunidade).
