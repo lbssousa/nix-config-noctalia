@@ -26,11 +26,12 @@
             # Patch do PR noctalia-greeter#131 (ver modules/flake/packages.nix):
             # mostra o nome completo (AccountsService RealName/GECOS).
             show_real_names = true;
-            # Mesmo tema da shell. Esquemas embutidos usam sempre a variante
-            # escura no greeter; fixado aqui, vence a última escolha feita na
-            # tela de login (F7), que fica em /var/lib/noctalia-greeter/sync.toml
-            # (persistente; guarda também o último usuário e a última sessão).
-            scheme = "Nord";
+            # Mesmo tema da shell (paleta padrão Noctalia). Esquemas embutidos
+            # usam sempre a variante escura no greeter; fixado aqui, vence a
+            # última escolha feita na tela de login (F7), que fica em
+            # /var/lib/noctalia-greeter/sync.toml (persistente; guarda também
+            # o último usuário e a última sessão).
+            scheme = "Noctalia";
           };
           # Enter com o campo vazio envia: é o primeiro login de uma conta sem
           # senha (security/first-login.nix). Quem decide é o PAM, que só

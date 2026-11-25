@@ -1,4 +1,4 @@
-# Noctalia: shell no estilo Omarchy (paleta Osaka jade, barra no topo, dock
+# Noctalia: shell no estilo Omarchy (paleta padrão Noctalia, barra no topo, dock
 # habilitado por padrão) com um conjunto de plugins pré-instalados.
 #
 # Camadas de configuração (todas mescladas pela própria Noctalia):
@@ -146,12 +146,9 @@
           };
 
           theme = {
-            # Paleta da comunidade (baixada e guardada em cache pela própria
-            # Noctalia em ~/.local/state/noctalia/community-palettes no
-            # primeiro uso; exige rede nesse primeiro carregamento).
-            source = lib.mkDefault "community";
-            community_palette = lib.mkDefault "Osaka jade";
-            builtin = lib.mkDefault "Nord";
+            # Paleta padrão da Noctalia (embutida).
+            source = lib.mkDefault "builtin";
+            builtin = lib.mkDefault "Noctalia";
             mode = lib.mkDefault "auto";
             # Superfícies da própria shell acompanham o modo acima (auto).
             shell_mode = lib.mkDefault "follow";
