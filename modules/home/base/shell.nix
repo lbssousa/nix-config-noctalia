@@ -5,7 +5,12 @@
 # automaticamente) e ~/.config/fish/local.fish (carregado por último).
 {
   flake.modules.homeManager.shell =
-    { lib, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
       # Sempre o justfile do sistema (/etc/nixos → my.flakeDir): dentro de
       # outro projeto com justfile próprio o wrapper do just usaria o local.
@@ -51,7 +56,7 @@
         sessionVariables = {
           EDITOR = lib.mkDefault "nvim";
           VISUAL = lib.mkDefault "nvim";
-          BROWSER = lib.mkDefault "org.mozilla.firefox";
+          BROWSER = lib.mkDefault config.my.browserApp.command;
         };
       };
 

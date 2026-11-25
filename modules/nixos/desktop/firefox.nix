@@ -1,5 +1,5 @@
-# Firefox (Flatpak org.mozilla.firefox) como navegador padrão de todos os
-# usuários.
+# Firefox (Flatpak org.mozilla.firefox), navegador padrão do sistema; cada
+# usuário escolhe o seu com my.browser (home/base/xdg.nix).
 #
 # Políticas do sistema, na extensão org.mozilla.firefox.systemconfig, que o
 # Flatpak monta em /app/etc/firefox (um diretório comum em
@@ -202,7 +202,8 @@
           '';
         };
 
-        # Padrão do sistema; cada usuário pode trocar em ~/.config/mimeapps.list.
+        # Padrão do sistema; cada usuário troca com my.browser, na camada de
+        # defaults do HM (que fica em XDG_CONFIG_DIRS, antes deste arquivo).
         xdg.mime.defaultApplications = lib.genAttrs [
           "text/html"
           "application/xhtml+xml"

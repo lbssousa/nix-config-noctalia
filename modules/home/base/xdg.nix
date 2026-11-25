@@ -26,10 +26,31 @@
           command = "luciole";
         };
       };
+      browsers = {
+        firefox = {
+          appId = "org.mozilla.firefox";
+          desktop = "org.mozilla.firefox.desktop";
+          command = "org.mozilla.firefox";
+        };
+        brave = {
+          appId = "com.brave.Browser";
+          desktop = "com.brave.Browser.desktop";
+          command = "com.brave.Browser";
+        };
+      };
+      browserTypes = [
+        "application/xhtml+xml"
+        "text/html"
+        "x-scheme-handler/about"
+        "x-scheme-handler/http"
+        "x-scheme-handler/https"
+        "x-scheme-handler/unknown"
+      ];
       defaults = {
         "inode/directory" = "${config.my.fileManagerApp.appId}.desktop";
       }
-      // lib.genAttrs pdfTypes (_: config.my.pdfViewer);
+      // lib.genAttrs pdfTypes (_: config.my.pdfViewer)
+      // lib.genAttrs browserTypes (_: config.my.browserApp.desktop);
 
       mimeappsDir = pkgs.writeTextDir "etc/xdg/mimeapps.list" (
         lib.generators.toINI { } {
@@ -55,6 +76,18 @@
           internal = true;
           default = fileManagers.${config.my.fileManager};
           description = "appId e comando do gerenciador escolhido em my.fileManager.";
+        };
+        browser = lib.mkOption {
+          type = lib.types.enum (lib.attrNames browsers);
+          default = "firefox";
+          description = "Navegador web padrão (associações MIME, BROWSER e dock).";
+        };
+        browserApp = lib.mkOption {
+          type = lib.types.attrsOf lib.types.str;
+          readOnly = true;
+          internal = true;
+          default = browsers.${config.my.browser};
+          description = "appId, arquivo .desktop e comando do navegador escolhido em my.browser.";
         };
       };
 

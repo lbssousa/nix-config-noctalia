@@ -23,6 +23,11 @@
           nixvim.enable = true;
           # Zathura como leitor de PDF padrão (Papers para os demais).
           pdfViewer = "org.pwmt.zathura.desktop";
+          # Brave como navegador web padrão (Firefox para os demais).
+          browser = "brave";
+          # Containers e Traffic Control do Brave só neste perfil (a lista de
+          # domínios é global, em my.brave.containers).
+          braveContainers.enable = true;
           # Leva para o Firefox em Flatpak o perfil do Firefox nativo, com as
           # extensões que ele tinha (as da conta Mozilla inclusive).
           firefox.migrateNativeProfile = true;
