@@ -46,6 +46,10 @@
           "com.github.tchx84.Flatseal" # permissões
           "io.github.flattool.Warehouse" # gerência de apps e dados
           "io.github.kolunmi.Bazaar" # loja do Flathub
+          # Tema GTK3 nos Flatpaks (par do pkgs.adw-gtk3 em session.nix): lê
+          # as variáveis @define-color de ~/.config/gtk-3.0/noctalia.css.
+          "org.gtk.Gtk3theme.adw-gtk3"
+          "org.gtk.Gtk3theme.adw-gtk3-dark"
         ];
         uninstallUnmanaged = false;
         update.onActivation = true;

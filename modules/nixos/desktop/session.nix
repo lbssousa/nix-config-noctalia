@@ -55,6 +55,11 @@
       };
 
       environment.systemPackages = with pkgs; [
+        # Tema GTK3 que lê os @define-color do noctalia.css (o apply.sh do
+        # template gtk3 só define gtk-theme no dconf quando encontra
+        # adw-gtk3 / adw-gtk3-dark no XDG_DATA_DIRS). Os equivalentes em
+        # Flatpak ficam em desktop/flatpak.nix.
+        adw-gtk3
         wl-clipboard
         libnotify
         xdg-utils

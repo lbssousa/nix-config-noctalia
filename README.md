@@ -120,7 +120,7 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 - **Apps de usuário do Flathub** (nix-flatpak, `modules/nixos/desktop/flatpak.nix` e `apps.nix`):
   - **Apps:** Papers, mpv (decodificação por hardware), OnlyOffice, Xournal++, LocalSend, Zoom, OBS, Kdenlive, Pinta, Inkscape, FontForge e o Dropbox (de quem tem `my.dropbox.enable`), além de Flatseal, Warehouse e Bazaar para gerenciar os Flatpaks.
   - **Atualização:** os apps instalam no switch e atualizam todo dia, com os dados em `~/.var/app/<id>`.
-  - **Aparência:** seguem a da Noctalia (`gtk.css` e ícones do usuário).
+  - **Aparência:** seguem a da Noctalia (`adw-gtk3`, `gtk.css` e ícones do usuário).
   - **Ficam em Nix:** o que não está no Flathub, os terminais, os editores (FHS, com as toolchains do host), o zathura (vimtex com SyncTeX) e o que plugins e scripts chamam pela linha de comando.
 - **ArtCraft Launcher e ArtCraft** (storytold) vêm do remoto Flatpak OCI oficial do projeto (`getartcraft.com/artcraft-oci.flatpakrepo`, assinado), em `modules/nixos/desktop/artcraft.nix`. Atualizam com os demais Flatpaks.
 - Do Omarchy 4.5: TCP BBR com fq e o escalonador kyber nos discos
