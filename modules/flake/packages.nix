@@ -54,7 +54,10 @@ let
       # templates seguem o modo global) e as ferramentas da página Segurança no
       # PATH. Reempacotar os assets (em vez de overrideAttrs/postInstall) evita
       # recompilar a Noctalia: basta copiar a saída já construída, ajustar os
-      # templates e apontar NOCTALIA_ASSETS_DIR para a cópia.
+      # templates e apontar NOCTALIA_APP_ASSETS_DIR para a cópia (o nome desde
+      # b487b30fb do upstream; o antigo NOCTALIA_ASSETS_DIR é ignorado). --set,
+      # não --set-default: um valor herdado de uma geração anterior não pode
+      # vencer o desta.
       noctalia =
         let
           base = prev.noctalia;
@@ -88,7 +91,7 @@ let
             # os exports do Flatpak (é onde vivem .desktop e ícones do Firefox).
             # --suffix preserva o valor existente e garante os ícones da dock.
             makeWrapper ${base}/bin/noctalia $out/bin/noctalia \
-              --set-default NOCTALIA_ASSETS_DIR "$out/share/noctalia/assets" \
+              --set NOCTALIA_APP_ASSETS_DIR "$out/share/noctalia/assets" \
               --suffix XDG_DATA_DIRS : "/var/lib/flatpak/exports/share" \
               --suffix PATH : ${
                 final.lib.makeBinPath [
