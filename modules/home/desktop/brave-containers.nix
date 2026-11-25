@@ -9,7 +9,7 @@
 # a decisão de aplicá-las é por usuário, não global.
 #
 # Escrita só com o Brave fechado (flatpak ps), na ativação (antes do login) e no
-# login, como o firefox-webapps. Containers e regras declarados têm prioridade;
+# login. Containers e regras declarados têm prioridade;
 # os criados pelo usuário no navegador ficam, desde que não choquem (mesmo id).
 # Mudanças feitas na interface do Brave voltam ao declarado no próximo login.
 {

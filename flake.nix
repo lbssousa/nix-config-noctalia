@@ -65,9 +65,8 @@
     # Plugin próprio: a mesma revisão cujo auxiliar o noctalia-nix compila.
     noctalia-secret-prompts.follows = "noctalia-nix/noctalia-secret-prompts";
 
-    # Templates de tema da comunidade Noctalia (Brave e Firefox/Pywalfox),
-    # fixados no flake.lock e usados como templates de usuário (sem rede em
-    # tempo de execução).
+    # Templates de tema da comunidade Noctalia (Brave), fixados no flake.lock
+    # e usados como templates de usuário (sem rede em tempo de execução).
     noctalia-templates-community = {
       url = "github:noctalia-dev/community-templates";
       flake = false;

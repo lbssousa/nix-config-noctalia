@@ -159,14 +159,13 @@
           "Mod+Shift+Q" = calculator;
           "XF86Calculator" = calculator;
 
-          # Web apps: Taskbar Tabs do Firefox nos seus containers (home/desktop/firefox.nix)
+          # Web apps: PWAs do Brave (home/desktop/brave.nix)
           "Mod+Shift+Y" = once "spawn webapp youtube";
           "Mod+Shift+Alt+G" = once "spawn webapp whatsapp";
           "Mod+Shift+Ctrl+G" = once "spawn webapp google-messages";
           "Mod+Shift+Alt+T" = once "spawn webapp teams";
           "Mod+Shift+S" = once "spawn webapp google-maps";
           "Mod+Shift+P" = once "spawn webapp google-photos";
-          "Mod+Shift+X" = once "spawn webapp x";
 
           # Menus da Noctalia
           "Mod" = noctalia "panel-toggle launcher";
@@ -296,13 +295,13 @@
             match.app_id = "^dev.noctalia.UmbrielSharePicker$";
             default_floating = true;
           }
-          # Web apps do Firefox (Taskbar Tabs, classe firefox.webapp-<id>)
+          # Web apps do Brave (PWAs e janelas --app, classe
+          # brave-<app>-Default; a janela do navegador é brave-browser)
           # maximizados como o "fullscreen, 1" do Hyprland: ocupam a área do
           # layout, com a barra e os gaps, e continuam no tiling. Abrem em
-          # fullscreen dentro do tile (como o Mod+Ctrl+F), sem a interface do
-          # Firefox.
+          # fullscreen dentro do tile (como o Mod+Ctrl+F).
           {
-            match.app_id = "^firefox\\.webapp-";
+            match.app_id = "^brave-.*-Default$";
             default_maximize = true;
             default_windowed_fullscreen = true;
           }

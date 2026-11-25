@@ -1,5 +1,5 @@
-# Brave (Flatpak com.brave.Browser) disponível para todos os usuários; o
-# padrão é o Firefox, salvo my.browser de cada usuário (home/base/xdg.nix).
+# Brave (Flatpak com.brave.Browser), navegador padrão do sistema; cada usuário
+# escolhe o seu com my.browser (home/base/xdg.nix).
 #
 # Políticas em /etc/brave/policies/managed: o brave.sh do Flatpak liga os
 # .json de /run/host/etc/brave/policies (permissão host-etc) no /etc do
@@ -27,9 +27,13 @@
 # um só usuário (my.brave.themeOwner) é o dono do arquivo e a cor é a da
 # paleta dele (home/desktop/brave.nix).
 #
-# Sem PWAs forçadas: os web apps são Taskbar Tabs do Firefox. As PWAs que o
-# usuário instalar no Brave têm os .desktop corrigidos por
-# home/desktop/brave-pwa-fix.nix.
+# Web apps (my.brave.webapps): instalados como PWAs pelo próprio Brave
+# (WebAppInstallForceList), em janela própria; `webapp <id>` os abre
+# (home/desktop/brave.nix). O override `~/.local/share/icons:create` restaura a
+# permissão de escrita do manifesto do Brave (rebaixada para `:ro` pelo
+# override global em flatpak.nix) para o flextop instalar os ícones e
+# lançadores das PWAs, e home/desktop/brave-pwa-fix.nix corrige o
+# StartupWMClass e garante o ícone absoluto de maior resolução no Wayland.
 #
 # Containers (my.brave.containers): o equivalente às extensões "<empresa>
 # Container" do Firefox. O Brave tem Containers e Traffic Control nativos, mas
@@ -77,6 +81,111 @@ in
             Usuário cuja paleta da Noctalia colore o Brave de todos
             (BrowserThemeColor); null desliga.
           '';
+        };
+
+        webapps = lib.mkOption {
+          description = ''
+            Web apps instalados como PWAs do Brave para todos os usuários
+            (`webapp <id>` abre cada um).
+          '';
+          type = lib.types.attrsOf (
+            lib.types.submodule {
+              options = {
+                name = lib.mkOption {
+                  type = lib.types.str;
+                  description = "Nome do app (também o do lançador que o Brave cria).";
+                };
+                url = lib.mkOption {
+                  type = lib.types.str;
+                  description = "URL de início.";
+                };
+                container = lib.mkOption {
+                  type = lib.types.nullOr lib.types.str;
+                  default = null;
+                  description = ''
+                    Nome do container do Brave em que a PWA abre
+                    (--container=<nome>; null: sem container), quando o usuário
+                    tem my.braveContainers.enable.
+                  '';
+                };
+                icon = lib.mkOption {
+                  type = lib.types.nullOr (
+                    lib.types.submodule {
+                      options = {
+                        url = lib.mkOption { type = lib.types.str; };
+                        hash = lib.mkOption {
+                          type = lib.types.str;
+                          description = "SHA-256 (hex) do arquivo do ícone.";
+                        };
+                      };
+                    }
+                  );
+                  default = null;
+                  description = ''
+                    Ícone próprio, para os sites que só o mostram com login
+                    (null: o do manifest do site).
+                  '';
+                };
+              };
+            }
+          );
+          default = {
+            whatsapp = {
+              name = "WhatsApp";
+              url = "https://web.whatsapp.com/";
+              container = "Facebook";
+            };
+            youtube = {
+              name = "YouTube";
+              url = "https://www.youtube.com/";
+              container = "Google";
+              icon = {
+                url = "https://www.gstatic.com/images/branding/productlogos/youtube/v9/web-512dp/logo_youtube_color_1x_web_512dp.png";
+                hash = "69d5eb245c6654e3aff32600ffa630ae0b9bce42d19cd754bf5942694c67f6ab";
+              };
+            };
+            google-maps = {
+              name = "Google Maps";
+              url = "https://www.google.com/maps";
+              container = "Google";
+              icon = {
+                url = "https://www.gstatic.com/images/branding/productlogos/maps_2025_round/v1/web-512dp/logo_maps_2025_round_color_1x_web_512dp.png";
+                hash = "6d67afe14b7cd30f7f231b727454a54149516d54c53a2a6791b3056f64684c57";
+              };
+            };
+            google-photos = {
+              name = "Google Photos";
+              url = "https://photos.google.com/";
+              container = "Google";
+              icon = {
+                url = "https://www.gstatic.com/images/branding/product/1x/photos_512dp.png";
+                hash = "52f51778cc5c2c5e650f42f2e2c4e9c0690267da8ddfdf99d11fd83f82f4b752";
+              };
+            };
+            google-messages = {
+              name = "Google Messages";
+              url = "https://messages.google.com/web";
+              container = "Google";
+              icon = {
+                url = "https://ssl.gstatic.com/android-messages-web/images/2026/pwa_round_v2_512.png";
+                hash = "dd477181f054881cf7bca6b307cd490f709ccc27b0ee5967a9200ec872f4a910";
+              };
+            };
+            google-contacts = {
+              name = "Google Contacts";
+              url = "https://contacts.google.com/";
+              container = "Google";
+              icon = {
+                url = "https://www.gstatic.com/images/branding/product/1x/contacts_2022_512dp.png";
+                hash = "26b538e7e72ebca50af5cb59e147320da83669309c6e2978855b7c41a77384e8";
+              };
+            };
+            teams = {
+              name = "Microsoft Teams";
+              url = "https://teams.cloud.microsoft/";
+              container = "Microsoft";
+            };
+          };
         };
 
         # Equivalente às extensões "<empresa> Container" do Firefox
@@ -249,10 +358,16 @@ in
 
       config = {
         services.flatpak.packages = [ "com.brave.Browser" ];
-        # Socket IPC e desktop_proxy do Bitwarden em Flatpak, abertos no
-        # diretório do Chrome em Flatpak (home/desktop/brave.nix).
+        # - Socket IPC e desktop_proxy do Bitwarden em Flatpak, abertos no
+        #   diretório do Chrome em Flatpak (home/desktop/brave.nix).
+        # - ~/.local/share/icons:create restaura a permissão de escrita do
+        #   manifesto do Brave que o override global (`~/.local/share/icons:ro`
+        #   em flatpak.nix) rebaixava para somente leitura, impedindo o flextop
+        #   (xdg-desktop-menu / xdg-icon-resource) de instalar ícones e
+        #   lançadores das PWAs.
         services.flatpak.overrides.settings."com.brave.Browser".Context.filesystems = [
           "~/.var/app/com.google.Chrome/config/google-chrome/NativeMessagingHosts"
+          "~/.local/share/icons:create"
         ];
 
         environment.etc."${policyDir}/nix.json" = {
@@ -264,6 +379,20 @@ in
               installation_mode = "normal_installed";
               update_url = "https://clients2.google.com/service/update2/crx";
             };
+            WebAppInstallForceList = lib.mapAttrsToList (
+              _: app:
+              {
+                inherit (app) url;
+                default_launch_container = "window";
+                custom_name = app.name;
+                fallback_app_name = app.name;
+              }
+              // lib.optionalAttrs (app.icon != null) {
+                custom_icon = {
+                  inherit (app.icon) url hash;
+                };
+              }
+            ) cfg.webapps;
           };
         };
 
@@ -303,6 +432,17 @@ in
             argument = "{}";
           };
         };
+
+        # Padrão do sistema; cada usuário troca com my.browser, na camada de
+        # defaults do HM (que fica em XDG_CONFIG_DIRS, antes deste arquivo).
+        xdg.mime.defaultApplications = lib.genAttrs [
+          "text/html"
+          "application/xhtml+xml"
+          "x-scheme-handler/http"
+          "x-scheme-handler/https"
+          "x-scheme-handler/about"
+          "x-scheme-handler/unknown"
+        ] (_: "com.brave.Browser.desktop");
       };
     };
 }
