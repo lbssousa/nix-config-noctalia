@@ -6,7 +6,7 @@
 #  - os que não estão no Flathub (ghostty, kitty, discos, imv, Superwhisper);
 #  - o foot, que existe no Flathub, mas num terminal em sandbox o shell perde
 #    as ferramentas do host;
-#  - os editores, FHS e com as toolchains do host, e o zathura, que o vimtex do
+#  - os editores, com as toolchains do host, e o zathura, que o vimtex do
 #    nixvim usa com SyncTeX (o zathura chama o nvim de volta, o que o sandbox
 #    impede);
 #  - o que plugins e scripts chamam pela linha de comando (gpu-screen-recorder
@@ -60,8 +60,12 @@
         # Gravação de tela (usada pelo plugin screen_recorder da Noctalia)
         gpu-screen-recorder
 
-        # Editores
-        zed-editor-fhs
+        # Editores. O Zed fica fora do FHS: no bwrap dele, a /nix/store aparece
+        # como de nobody, e o ssh do terminal integrado recusa o ~/.ssh/config
+        # do home-manager (um link para ela). Os binários que as extensões
+        # baixam (Node, servidores de linguagem) rodam pelo nix-ld
+        # (dev/nix-ld.nix).
+        zed-editor
         vscode-fhs
         emacs-pgtk
 
