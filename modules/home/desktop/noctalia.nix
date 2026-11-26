@@ -222,10 +222,13 @@
 
           # Rede e volume na barra só com o ícone, sem o nome da rede nem a
           # porcentagem; relógio com dia da semana e data (strftime, no idioma
-          # do LC_TIME: "dom 18 out 20:15").
+          # do LC_TIME: "dom 18 out 20:15"), em negrito.
           widget = {
             clock = {
               format = lib.mkDefault "{:%a %d %b  %H:%M}";
+              # Peso CSS (400 normal, 700 negrito); sem ele, o relógio herda o
+              # da barra (500).
+              font_weight = lib.mkDefault 700;
               # Ancorado no centro da barra para que o relógio fique na linha média
               # exata do monitor, sem ser deslocado pelos widgets ao seu redor.
               anchor = lib.mkDefault true;
