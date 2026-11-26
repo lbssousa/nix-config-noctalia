@@ -1,6 +1,8 @@
 # Umbriel com layout dwindle e os atalhos do Omarchy (Super = Mod).
 #
 # Camadas: o config.toml gerado aqui inclui, por último e opcionalmente,
+#   cursor.toml   — tema de cursor do modo claro/escuro atual, escrito pelo
+#                   hook da Noctalia (home/desktop/noctalia.nix);
 #   local.toml    — overrides do próprio usuário (não gerenciado pelo Nix);
 #   noctalia.toml — cores escritas pelo template de tema da Noctalia (vencem
 #                   o local.toml nas chaves de cor; para cores próprias, tire
@@ -12,6 +14,7 @@
     {
       config,
       lib,
+      osConfig,
       pkgs,
       ...
     }:
@@ -88,10 +91,11 @@
       );
 
       settings = {
-        # Esta é a ordem que o script de apply do template de tema da Noctalia
-        # impõe; com ela o arquivo (somente leitura) não precisa ser reescrito.
-        # Por isso as cores vêm sempre da paleta ativa.
+        # O script de apply do template de tema da Noctalia impõe o
+        # noctalia.toml por último; assim o arquivo (somente leitura) não
+        # precisa ser reescrito, e as cores vêm sempre da paleta ativa.
         include.optional.files = [
+          "cursor.toml"
           "local.toml"
           "noctalia.toml"
         ];
@@ -109,12 +113,10 @@
             numlock_toggle = true;
           };
           focus.follows_mouse = "sloppy";
-          # Mesmo cursor do sistema (nixos/desktop/cursor.nix); o Umbriel o
-          # exporta como XCURSOR_THEME/XCURSOR_SIZE para o que ele abre.
-          cursor = {
-            theme = "Adwaita";
-            size = 24;
-          };
+          # O tema vem do cursor.toml (modo claro/escuro); sem ele, do
+          # XCURSOR_THEME do sistema (nixos/desktop/cursor.nix). Num include, o
+          # theme só vale se o arquivo principal não o definir.
+          cursor.size = osConfig.my.cursor.size;
         };
 
         layout = {

@@ -11,10 +11,47 @@
     {
       config,
       lib,
+      osConfig,
       pkgs,
       ...
     }:
     let
+      cursor = osConfig.my.cursor;
+
+      # Tema de cursor do modo atual (nixos/desktop/cursor.nix): o diurno no
+      # modo claro e o noturno no escuro, nas três fontes que os programas
+      # leem. O Umbriel recarrega o cursor.toml sozinho; o GTK e os portais
+      # seguem o dconf na hora; o ambiente do systemd vale para o que for
+      # aberto depois. Só escreve o que mudou.
+      cursorModeSync = pkgs.writeShellScript "noctalia-cursor-mode-sync" ''
+        set -euo pipefail
+
+        mode="''${NOCTALIA_THEME_MODE:-}"
+        if [ -z "$mode" ]; then
+          mode=$(${pkgs.noctalia}/bin/noctalia msg theme-mode-get 2>/dev/null || true)
+          mode="''${mode//$'\n'/}"
+        fi
+        case "$mode" in
+          light) theme=${lib.escapeShellArg cursor.day} ;;
+          *) theme=${lib.escapeShellArg cursor.night} ;;
+        esac
+
+        file="${config.xdg.configHome}/umbriel/cursor.toml"
+        content=$(printf '# Escrito pelo hook da Noctalia (modo %s); não editar.\n[input.cursor]\ntheme = "%s"' "$mode" "$theme")
+        if [ "$(cat "$file" 2>/dev/null || true)" != "$content" ]; then
+          mkdir -p "''${file%/*}"
+          printf '%s\n' "$content" >"$file.tmp"
+          mv -f "$file.tmp" "$file"
+        fi
+
+        key=/org/gnome/desktop/interface/cursor-theme
+        if [ "$(${pkgs.dconf}/bin/dconf read "$key" 2>/dev/null || true)" != "'$theme'" ]; then
+          ${pkgs.dconf}/bin/dconf write "$key" "'$theme'" || true
+        fi
+
+        systemctl --user set-environment XCURSOR_THEME="$theme" || true
+      '';
+
       # Script hook para definir o wallpaper do Bluefin de acordo com o mês do ano
       # (01-bluefin em janeiro até 12-bluefin em dezembro) e sincronizar pares
       # diurno/noturno (day/night) quando o tema ou o período solar alternar.
@@ -64,6 +101,13 @@
           connector=$(basename "$(dirname "$status")")
           sync_wp "''${connector#card*-}"
         done
+      '';
+
+      # Hook de troca de modo claro/escuro (e de início da shell): wallpaper e
+      # cursor do período.
+      themeModeSync = pkgs.writeShellScript "noctalia-theme-mode-sync" ''
+        ${cursorModeSync} || true
+        exec ${wallpaperPairSync}
       '';
     in
     {
@@ -131,8 +175,8 @@
 
           # Hooks para sincronização do wallpaper em pares diurno/noturno.
           hooks = {
-            theme_mode_changed = "${wallpaperPairSync}";
-            started = "${wallpaperPairSync}";
+            theme_mode_changed = "${themeModeSync}";
+            started = "${themeModeSync}";
           };
 
           shell = {
