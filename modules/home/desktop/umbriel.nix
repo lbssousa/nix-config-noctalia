@@ -298,12 +298,10 @@
           # Web apps do Brave (PWAs e janelas --app, classe
           # brave-<app>-Default; a janela do navegador é brave-browser)
           # maximizados como o "fullscreen, 1" do Hyprland: ocupam a área do
-          # layout, com a barra e os gaps, e continuam no tiling. Abrem em
-          # fullscreen dentro do tile (como o Mod+Ctrl+F).
+          # layout, com a barra e os gaps, e continuam no tiling.
           {
             match.app_id = "^brave-.*-Default$";
             default_maximize = true;
-            default_windowed_fullscreen = true;
           }
           # Console Quake: centralizado, colado no topo, metade da tela.
           {
