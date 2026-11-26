@@ -168,6 +168,7 @@
                 "qt"
                 "btop"
                 "umbriel"
+                "luciole"
               ];
             };
           };
