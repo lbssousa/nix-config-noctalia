@@ -64,7 +64,7 @@
         # como de nobody, e o ssh do terminal integrado recusa o ~/.ssh/config
         # do home-manager (um link para ela). Os binários que as extensões
         # baixam (Node, servidores de linguagem) rodam pelo nix-ld
-        # (dev/nix-ld.nix).
+        # (dev/nix-ld.nix). Extensões padrão: home/desktop/zed.nix.
         zed-editor
         vscode-fhs
         emacs-pgtk
