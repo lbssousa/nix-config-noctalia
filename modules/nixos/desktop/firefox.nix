@@ -1,5 +1,5 @@
-# Firefox (Flatpak org.mozilla.firefox) disponível para todos os usuários; o
-# padrão é o Brave, salvo my.browser de cada usuário (home/base/xdg.nix).
+# Firefox (Flatpak org.mozilla.firefox), navegador padrão do sistema; cada
+# usuário escolhe o seu com my.browser (home/base/xdg.nix).
 #
 # Políticas do sistema, na extensão org.mozilla.firefox.systemconfig, que o
 # Flatpak monta em /app/etc/firefox (um diretório comum em
@@ -18,6 +18,9 @@
 #    menos que se marque "Ignore GitHub" nas opções dele; o do Twitter inclui
 #    o x.com. O YouTube Container fica de fora: o do Google já leva o YouTube;
 #  - diálogo de arquivos pelo portal (o Luciole; nixos/desktop/file-manager.nix).
+# As Taskbar Tabs (web apps) são ligadas no user.js de cada perfil, e os web
+# apps (my.firefox.webapps) são do perfil de cada usuário:
+# home/desktop/firefox.nix.
 #
 # O comando do navegador (atalhos, BROWSER) é o exportado pelo Flatpak,
 # /var/lib/flatpak/exports/bin/org.mozilla.firefox, no PATH.
@@ -63,21 +66,140 @@
       systemconfig = "/var/lib/flatpak/extension/org.mozilla.firefox.systemconfig/${pkgs.stdenv.hostPlatform.parsed.cpu.name}/stable";
     in
     {
-      services.flatpak.packages = [ "org.mozilla.firefox" ];
-
-      # Serviço, não activationScript: no boot, a ativação roda antes de
-      # /var/lib/flatpak (preservation) ser montado.
-      systemd.services.firefox-flatpak-policies = {
-        description = "Políticas do Firefox em Flatpak (org.mozilla.firefox.systemconfig)";
-        wantedBy = [ "multi-user.target" ];
-        unitConfig.RequiresMountsFor = "/var/lib/flatpak";
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
+      options.my.firefox = {
+        webapps = lib.mkOption {
+          description = ''
+            Web apps criados como Taskbar Tabs do Firefox para todos os usuários
+            (`webapp <id>` abre cada um no seu container).
+          '';
+          type = lib.types.attrsOf (
+            lib.types.submodule {
+              options = {
+                name = lib.mkOption { type = lib.types.str; };
+                url = lib.mkOption {
+                  type = lib.types.str;
+                  description = "URL de início.";
+                };
+                container = lib.mkOption {
+                  type = lib.types.nullOr lib.types.str;
+                  default = null;
+                  description = ''
+                    Nome do container em que o web app abre (null: sem
+                    container), um dos criados pelas extensões. Até a extensão
+                    criá-lo (na primeira vez que o Firefox abre), o web app abre
+                    sem container; a partir do login seguinte, no container.
+                  '';
+                };
+                icon = lib.mkOption {
+                  type = lib.types.nullOr lib.types.str;
+                  default = null;
+                  description = ''
+                    URL do ícone, para os sites que só o mostram com login
+                    (null: o maior que o site declara no manifest ou nos
+                    <link rel="icon">).
+                  '';
+                };
+                scopes = lib.mkOption {
+                  type = lib.types.listOf lib.types.str;
+                  description = ''
+                    "host[/caminho]" que continuam na janela do web app; o resto
+                    abre no navegador.
+                  '';
+                };
+              };
+            }
+          );
+          default = {
+            whatsapp = {
+              name = "WhatsApp";
+              url = "https://web.whatsapp.com/";
+              container = "Facebook";
+              scopes = [ "web.whatsapp.com" ];
+            };
+            youtube = {
+              name = "YouTube";
+              url = "https://www.youtube.com/";
+              container = "Google";
+              icon = "https://www.gstatic.com/images/branding/productlogos/youtube/v9/web-512dp/logo_youtube_color_1x_web_512dp.png";
+              scopes = [
+                "www.youtube.com"
+                "youtube.com"
+                "m.youtube.com"
+              ];
+            };
+            google-maps = {
+              name = "Google Maps";
+              url = "https://www.google.com/maps";
+              container = "Google";
+              icon = "https://www.gstatic.com/images/branding/productlogos/maps_2025_round/v1/web-512dp/logo_maps_2025_round_color_1x_web_512dp.png";
+              scopes = [
+                "www.google.com/maps"
+                "maps.google.com"
+              ];
+            };
+            google-photos = {
+              name = "Google Photos";
+              url = "https://photos.google.com/";
+              container = "Google";
+              icon = "https://www.gstatic.com/images/branding/product/1x/photos_512dp.png";
+              scopes = [ "photos.google.com" ];
+            };
+            google-messages = {
+              name = "Google Messages";
+              url = "https://messages.google.com/web";
+              container = "Google";
+              icon = "https://ssl.gstatic.com/android-messages-web/images/2026/pwa_round_v2_512.png";
+              scopes = [ "messages.google.com" ];
+            };
+            google-contacts = {
+              name = "Google Contacts";
+              url = "https://contacts.google.com/";
+              container = "Google";
+              icon = "https://www.gstatic.com/images/branding/product/1x/contacts_2022_512dp.png";
+              scopes = [ "contacts.google.com" ];
+            };
+            teams = {
+              name = "Microsoft Teams";
+              url = "https://teams.cloud.microsoft/";
+              container = "Microsoft";
+              scopes = [
+                "teams.cloud.microsoft"
+                "teams.microsoft.com"
+                "teams.live.com"
+              ];
+            };
+          };
         };
-        script = ''
-          ${pkgs.coreutils}/bin/install -Dm644 ${policies} ${systemconfig}/policies/policies.json
-        '';
+      };
+
+      config = {
+        services.flatpak.packages = [ "org.mozilla.firefox" ];
+
+        # Serviço, não activationScript: no boot, a ativação roda antes de
+        # /var/lib/flatpak (preservation) ser montado.
+        systemd.services.firefox-flatpak-policies = {
+          description = "Políticas do Firefox em Flatpak (org.mozilla.firefox.systemconfig)";
+          wantedBy = [ "multi-user.target" ];
+          unitConfig.RequiresMountsFor = "/var/lib/flatpak";
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+          };
+          script = ''
+            ${pkgs.coreutils}/bin/install -Dm644 ${policies} ${systemconfig}/policies/policies.json
+          '';
+        };
+
+        # Padrão do sistema; cada usuário troca com my.browser, na camada de
+        # defaults do HM (que fica em XDG_CONFIG_DIRS, antes deste arquivo).
+        xdg.mime.defaultApplications = lib.genAttrs [
+          "text/html"
+          "application/xhtml+xml"
+          "x-scheme-handler/http"
+          "x-scheme-handler/https"
+          "x-scheme-handler/about"
+          "x-scheme-handler/unknown"
+        ] (_: "org.mozilla.firefox.desktop");
       };
     };
 }

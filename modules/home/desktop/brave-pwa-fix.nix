@@ -9,15 +9,11 @@
 #  - aponta Icon= para um PNG em ~/.var/app/com.brave.Browser/data/icons que
 #    não existe (os PNGs reais vão para ~/.local/share/icons/hicolor ou ficam
 #    em Web Applications/Manifest Resources/<appid>/);
-#  - usa aspas simples em Exec= (fora da especificação XDG Desktop Entry);
-#  - não passa --container=<nome> (brave/brave-browser#58019): sem ele, o
-#    Traffic Control redireciona a abertura da PWA para uma aba na janela
-#    principal do navegador.
+#  - usa aspas simples em Exec= (fora da especificação XDG Desktop Entry).
 #
 # O brave-pwa-fix corrige StartupWMClass, garante os ícones em hicolor e aponta
-# Icon= para o caminho absoluto do PNG de maior resolução, normaliza o Exec= e
-# adiciona --container=<nome> para as PWAs declaradas em my.brave.webapps
-# (quando my.braveContainers.enable está ligado). Só regrava o que mudou.
+# Icon= para o caminho absoluto do PNG de maior resolução e normaliza o Exec=.
+# Só regrava o que mudou.
 #
 # Roda na ativação do home-manager, no login e quando o Brave grava um lançador
 # ou ícone (brave-pwa-fix.path). `brave-pwa-fix --dry-run` mostra o que mudaria.
@@ -26,43 +22,20 @@
     {
       config,
       lib,
-      osConfig,
       pkgs,
       ...
     }:
     let
       braveProfiles = "${config.home.homeDirectory}/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser";
 
-      containersByName =
-        if config.my.braveContainers.enable then
-          lib.listToAttrs (
-            lib.concatMap (
-              app:
-              lib.optional (app.container != null) {
-                inherit (app) name;
-                value = app.container;
-              }
-            ) (lib.attrValues osConfig.my.brave.webapps)
-          )
-        else
-          { };
-
-      containersConfig = pkgs.writeText "brave-pwa-containers.json" (builtins.toJSON containersByName);
-
       fix =
         pkgs.writers.writePython3Bin "brave-pwa-fix"
           {
             flakeIgnore = [ "E501" ];
-            makeWrapperArgs = [
-              "--set"
-              "BRAVE_PWA_CONTAINERS"
-              "${containersConfig}"
-            ];
           }
           ''
             import difflib
             import glob
-            import json
             import os
             import re
             import shlex
@@ -73,7 +46,6 @@
             DESKTOP_RE = re.compile(
                 r"^(?:com\.brave\.Browser\.flextop\.)?(brave-([a-p]{32})-(.+))\.desktop$"
             )
-            FIELD_CODES = {"%f", "%F", "%u", "%U", "%d", "%D", "%n", "%N", "%i", "%c", "%k", "%v", "%m"}
             XDG_RESERVED = set(' \t\n"\'\\><~|&;$*?#()`')
 
 
@@ -138,23 +110,14 @@
                 return best_path
 
 
-            def update_exec(value, container):
+            def update_exec(value):
                 tokens = shlex.split(value)
-                tokens = [t for t in tokens if not t.startswith("--container=")]
-                if container:
-                    insert_at = len(tokens)
-                    for idx, tok in enumerate(tokens):
-                        if tok in FIELD_CODES:
-                            insert_at = idx
-                            break
-                    tokens.insert(insert_at, f"--container={container}")
                 return " ".join(quote_xdg_exec(t) for t in tokens)
 
 
-            def rewrite_desktop(text, name, icon_path, containers_by_name):
+            def rewrite_desktop(text, name, icon_path):
                 lines = text.splitlines(keepends=True)
                 in_entry = False
-                app_name = None
                 has_brave_exec = False
                 for line in lines:
                     stripped = line.strip()
@@ -164,15 +127,12 @@
                     if not in_entry or "=" not in stripped or stripped.startswith("#"):
                         continue
                     key, val = stripped.split("=", 1)
-                    if key == "Name":
-                        app_name = val
-                    elif key == "Exec" and "com.brave.Browser" in val:
+                    if key == "Exec" and "com.brave.Browser" in val:
                         has_brave_exec = True
 
                 if not has_brave_exec:
                     return None
 
-                container = containers_by_name.get(app_name) if app_name else None
                 out = []
                 in_entry = False
                 seen_wm = False
@@ -198,7 +158,7 @@
                             seen_icon = True
                             continue
                         if key == "Exec":
-                            out.append(f"Exec={update_exec(val, container)}\n")
+                            out.append(f"Exec={update_exec(val)}\n")
                             continue
                     out.append(line)
 
@@ -231,8 +191,6 @@
                     "BraveSoftware",
                     "Brave-Browser",
                 )
-                with open(os.environ["BRAVE_PWA_CONTAINERS"], encoding="utf-8") as f:
-                    containers_by_name = json.load(f)
 
                 if not os.path.isdir(apps):
                     return
@@ -247,7 +205,7 @@
                         old_text = f.read()
 
                     icon_path = sync_icons(profiles, icons_dir, profile, appid, name, dry)
-                    new_text = rewrite_desktop(old_text, name, icon_path, containers_by_name)
+                    new_text = rewrite_desktop(old_text, name, icon_path)
                     if new_text is None or new_text == old_text:
                         continue
 

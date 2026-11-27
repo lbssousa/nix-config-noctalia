@@ -68,6 +68,7 @@ lugar para ajustes locais do próprio usuário, que o Nix nunca apaga:
 | starship | `~/.config/starship.toml.local` | mescla na ativação (`my.mutableConfigs`; `config-diff starship.toml`) |
 | herdr | o próprio `~/.config/herdr/config.toml` (gravável) | `programs.herdr.mutableSettings` |
 | apps padrão (PDF, pastas, navegador) | `~/.config/mimeapps.list` / `xdg-mime default` | defaults via `XDG_CONFIG_DIRS` |
+| Firefox (web apps) | o próprio Firefox; os web apps declarados voltam a ter URL e container | `firefox-webapps` (home/desktop/firefox.nix) |
 | Flatpaks (permissões) | `flatpak override --user` ou o Flatseal | `services.flatpak.overrides` (nixos/desktop/flatpak.nix) |
 | agente SSH | `~/.config/environment.d/*.conf` posterior ou `IdentityAgent` em `~/.ssh/config.d/` | `SSH_AUTH_SOCK` do Bitwarden (`home/security/bitwarden.nix`) |
 
@@ -103,12 +104,13 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
   do GDM, toda conta nova nasce sem senha e expirada: ao escolher o usuário,
   o greeter pede direto a nova senha e a confirmação (`nullresetok` no PAM:
   senha vazia só entra enquanto expirada).
-- **Brave** (Flatpak) é o navegador padrão de todos (salvo `my.browser` por usuário).
-  - **Políticas** (`/etc/brave/policies`): extensão do Bitwarden, as cores da Noctalia (`BrowserThemeColor`, do template `chromium-based` da comunidade) e os web apps (`my.brave.webapps`, via `WebAppInstallForceList`).
-  - **Bitwarden:** o app em Flatpak não suporta o Brave em Flatpak. O native messaging funciona por um ajuste declarado (`modules/home/desktop/brave.nix`).
-  - **Web apps (PWAs):** WhatsApp, Teams, YouTube e Google Maps/Photos/Messages/Contacts, abertos por `webapp <id>` (cada um no seu container do Brave). O override `~/.local/share/icons:create` restaura a escrita de ícones do Brave em Flatpak e o `brave-pwa-fix` corrige `StartupWMClass`, `Exec=` (`--container`) e o ícone nos lançadores no Wayland (brave/brave-browser#60360).
-- **Firefox** (Flatpak) é o segundo navegador.
+- **Firefox** (Flatpak) é o navegador padrão de todos (salvo `my.browser` por usuário).
   - **Políticas:** vão na extensão `org.mozilla.firefox.systemconfig`. Instalam o Bitwarden, o Multi-Account Containers e os "<empresa> Container" (Facebook, Google, Microsoft, Twitter, Discord, Amazon e TikTok). As demais extensões vêm da sincronização com a conta Mozilla.
+  - **Web apps:** são Taskbar Tabs, cada um no container da sua empresa, abertos por `webapp <id>` em *tiled fullscreen* no Umbriel: WhatsApp (Facebook), Teams (Microsoft), YouTube e Google Maps/Photos/Messages/Contacts (Google).
+- **Brave** (Flatpak) é o segundo navegador.
+  - **Políticas** (`/etc/brave/policies`): extensão do Bitwarden, Brave Origin (`my.brave.origin`) e as cores da Noctalia (`BrowserThemeColor`, do template `chromium-based` da comunidade).
+  - **Bitwarden:** o app em Flatpak não suporta o Brave em Flatpak. O native messaging funciona por um ajuste declarado (`modules/home/desktop/brave.nix`).
+  - **PWAs manuais:** o override `~/.local/share/icons:create` e o `brave-pwa-fix` corrigem `StartupWMClass`, `Exec=` e o ícone nos lançadores no Wayland (brave/brave-browser#60360).
 - **Luciole**, o gerenciador de arquivos da Noctalia, é o padrão de todos:
   pastas, "Mostrar na pasta" (`org.freedesktop.FileManager1`) e o diálogo de
   abrir/salvar (portal FileChooser, com o GTK de reserva), também nos apps Qt.
@@ -130,7 +132,7 @@ Exemplos: o leitor de PDF é Papers para todos e Zathura para o `abutre`.
 | Atalho | Ação | Atalho | Ação |
 |---|---|---|---|
 | `Super+Return` | terminal (ghostty) | `Super` (sozinho) | launcher |
-| `Super+Shift+B` | Brave | `Super+Alt+Space` | central de controle |
+| `Super+Shift+B` | Firefox | `Super+Alt+Space` | central de controle |
 | `Super+Shift+F` | arquivos (Luciole) | `Super+Escape` | menu de sessão |
 | `Super+Shift+N` | neovim | `Super+K` | cheatsheet de atalhos |
 | `Super+Alt+Return` | tmux | `Super+Ctrl+V` | histórico do clipboard |

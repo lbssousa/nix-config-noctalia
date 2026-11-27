@@ -81,7 +81,7 @@
         };
         browser = lib.mkOption {
           type = lib.types.enum (lib.attrNames browsers);
-          default = "brave";
+          default = "firefox";
           description = "Navegador web padrão (associações MIME, BROWSER e dock).";
         };
         browserApp = lib.mkOption {
